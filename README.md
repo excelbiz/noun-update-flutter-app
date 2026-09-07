@@ -13,6 +13,7 @@ This is the first working Flutter foundation for the NOUN Update student operati
 - Local demo repository so every screen works before the production APIs are connected.
 - API client with secure bearer-token storage and production fallback behaviour.
 - Low-data design: compact screens, no heavy animation, local demo/cache-ready data and graceful offline messaging.
+- Transparent NOUN Update brand artwork used in the splash screen, app header and Android launcher icon.
 
 ## Run locally
 

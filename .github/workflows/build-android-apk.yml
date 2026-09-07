@@ -49,6 +49,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Apply Android branding
+        run: |
+          sed -i 's/android:label="noun_update_student_app"/android:label="NOUN Update"/' android/app/src/main/AndroidManifest.xml
+          dart run flutter_launcher_icons
+
       - name: Run tests
         run: flutter test
 

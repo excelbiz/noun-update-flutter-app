@@ -60,7 +60,7 @@ class _SplashScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                BrandMark(onDark: true),
+                BrandMark(),
                 SizedBox(height: 22),
                 Text(
                   'Information. Resources. Success.',

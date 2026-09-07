@@ -6,52 +6,22 @@ import '../core/app_theme.dart';
 import '../models/app_models.dart';
 
 class BrandMark extends StatelessWidget {
-  const BrandMark({super.key, this.compact = false, this.onDark = false});
+  const BrandMark({super.key, this.compact = false});
 
   final bool compact;
-  final bool onDark;
 
   @override
-  Widget build(BuildContext context) {
-    final primary = onDark ? Colors.white : AppColours.green900;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: compact ? 34 : 42,
-          height: compact ? 34 : 42,
-          decoration: BoxDecoration(
-            color: onDark ? Colors.white : AppColours.mint,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.school_rounded,
-            color: AppColours.green700,
-            size: 24,
-          ),
+  Widget build(BuildContext context) => Semantics(
+        image: true,
+        label: 'NOUN Update',
+        child: Image.asset(
+          'assets/images/noun_update_logo.png',
+          width: compact ? 54 : 210,
+          height: compact ? 48 : 210,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
         ),
-        const SizedBox(width: 10),
-        RichText(
-          text: TextSpan(
-            style: TextStyle(
-              fontSize: compact ? 17 : 20,
-              fontWeight: FontWeight.w900,
-              color: primary,
-              height: .95,
-            ),
-            children: const [
-              TextSpan(text: 'NOUN\n'),
-              TextSpan(
-                text: 'UPDATE',
-                style: TextStyle(color: AppColours.green500),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+      );
 }
 
 class SectionHeader extends StatelessWidget {
