@@ -32,10 +32,11 @@ flutter run \
 ## Build an installable Android preview
 
 The GitHub Actions workflow in `.github/workflows/build-android-apk.yml`
-generates the Android runner, runs the tests and publishes
-`NOUN-Update-Student-App-debug.apk` as a downloadable workflow artifact. The
-debug build enables the bundled demo data so the interface can be tested before
-the production API is ready.
+generates the Android runner, runs the tests and publishes signed, verified
+release-mode APKs. Use `NOUN-Update-Student-App-universal.apk` on any physical
+ARM Android phone, or the smaller `NOUN-Update-Student-App-arm64.apk` on most
+modern devices. These preview builds enable bundled demo data so the interface
+can be tested before the production API is ready.
 
 ## Production configuration
 
