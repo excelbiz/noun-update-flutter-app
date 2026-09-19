@@ -18,6 +18,10 @@ class DirectoryApi extends ApiClient {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late List<dynamic> services;
+  setUpAll(() async {
+    services = jsonDecode(await rootBundle.loadString('assets/data/services.json')) as List<dynamic>;
+  });
   for (final width in [320.0, 390.0]) {
     testWidgets('Home, service search and wallet fit a $width phone', (tester) async {
       FlutterSecureStorage.setMockInitialValues({});
@@ -25,7 +29,6 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final services = jsonDecode(await rootBundle.loadString('assets/data/services.json')) as List<dynamic>;
       await tester.pumpWidget(MaterialApp(theme: buildAppTheme(), home: LivePortal(apiClient: DirectoryApi(services))));
       await tester.pumpAndSettle();
       expect(find.text('Make today count'), findsOneWidget);

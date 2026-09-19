@@ -125,6 +125,7 @@ final class NuStore {
         try {
             $intent=$this->row('SELECT * FROM payment_intents WHERE reference=?',[$ref]);
             if ($intent && ((int)$intent['user_id']!==(int)$u['id'] || (int)$intent['amount_kobo']!==$amount)) throw new NuFailure(409,'KEY_REUSED','Use a new request key for a different amount.');
+            if ($intent && $intent['status']==='credited') return ['reference'=>$ref,'status'=>'credited'];
             if ($intent && !empty($intent['authorization_url'])) return ['reference'=>$ref,'authorization_url'=>$intent['authorization_url'],'status'=>$intent['status']];
             if (!$intent) $this->run('INSERT INTO payment_intents(user_id,customer_email,reference,amount_naira,amount_kobo,currency,status,created_at,updated_at) VALUES (?,?,?,?,?,"NGN","pending",NOW(),NOW())',
                 [$u['id'],strtolower($u['email']),$ref,nu_decimal($amount),$amount]);

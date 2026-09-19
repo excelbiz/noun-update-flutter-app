@@ -1,3 +1,5 @@
+> Historical target design, not the implemented endpoint list. See [mobile_api_v1.md](mobile_api_v1.md) for the current PHP API.
+
 # NOUN Update Mobile API Contract (v1)
 
 Base URL: `https://nounupdate.com/api/v1`

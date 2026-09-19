@@ -76,6 +76,18 @@ check($store->wallet(1)['balance_kobo']===$before,'ledger failure rolls back wal
 check((int)$db->query("SELECT COUNT(*) FROM nu_app_orders WHERE request_key='rollback-request-01'")->fetchColumn()===0,'ledger failure rolls back order');
 // The existing Course Summary verifier must credit the same wallet once.
 require_once __DIR__.'/fixtures/legacy-paystack.php';
+// Funding retries must reuse the intent without another gateway call.
+@mkdir($root.'/course',0777,true);
+file_put_contents($root.'/course/paystack.php','<?php // Payment helpers already loaded from the reviewed fixture.');
+$fundKey='fund-retry-request-01';
+$fundRef='NUW-1-'.strtoupper(substr(hash('sha256','1|'.$fundKey),0,20));
+$db->prepare('INSERT INTO payment_intents(user_id,customer_email,reference,amount_naira,amount_kobo,currency,status,authorization_url) VALUES (1,?,?,500,50000,"NGN","initialized",?)')->execute(['a@example.test',$fundRef,'https://checkout.paystack.com/test-reuse']);
+$fundUser=['id'=>1,'email'=>'a@example.test'];
+$fund=$store->fund($fundUser,50000,$fundKey);
+check($fund['reference']===$fundRef&&$fund['authorization_url']==='https://checkout.paystack.com/test-reuse','funding retry reuses checkout and valid database lock');
+fails(fn()=>$store->fund($fundUser,60000,$fundKey),'KEY_REUSED');
+$db->prepare('UPDATE payment_intents SET status="credited",authorization_url=NULL WHERE reference=?')->execute([$fundRef]);
+check($store->fund($fundUser,50000,$fundKey)['status']==='credited','credited funding retry does not initialise again');
 $ref='NUW-1-'.str_repeat('A',20);
 $db->prepare('INSERT INTO payment_intents(user_id,customer_email,reference,amount_naira,amount_kobo,currency,status) VALUES (1,?,?,100,10000,"NGN","initialized")')->execute(['a@example.test',$ref]);
 $payment=['reference'=>$ref,'status'=>'success','currency'=>'NGN','amount'=>10000,'customer'=>['email'=>'a@example.test'],'id'=>100,'channel'=>'card'];

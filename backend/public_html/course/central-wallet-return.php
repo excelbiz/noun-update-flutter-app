@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
-// The return URL performs NO crediting. Only authenticated verification or the
-// existing signed Paystack webhook can credit a locally stored funding intent.
+// A browser return alone never credits money. Authenticated gateway verification
+// or the existing signed webhook must verify the stored funding intent.
 require_once __DIR__.'/central-common.php';
 $message='Return to the app and tap Recheck payment, or open your website wallet.';
 $reference=(string)($_GET['reference']??'');
