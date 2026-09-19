@@ -8,3 +8,4 @@ void main() {
   NotificationService.initialise();
   runApp(const NounUpdateApp());
 }
+

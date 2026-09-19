@@ -47,6 +47,11 @@ jobs:
             .
           rm -f test/widget_test.dart
 
+      - name: Fetch current website logo
+        run: |
+          python -m pip install Pillow
+          python tools/prepare_brand_assets.py
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -54,6 +59,18 @@ jobs:
         run: |
           sed -i 's/android:label="noun_update_student_app"/android:label="NOUN Update"/' android/app/src/main/AndroidManifest.xml
           dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          if "android.permission.INTERNET" not in s:
+              s = s.replace("<application", '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+          p.write_text(s)
+          PY
+
+      - name: Analyse live app
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test
@@ -63,7 +80,7 @@ jobs:
           flutter build apk
           --release
           --target-platform android-arm,android-arm64
-          --dart-define=ENABLE_DEMO_FALLBACK=true
+          --dart-define=ENABLE_DEMO_FALLBACK=false
 
       - name: Preserve universal APK
         run: |
@@ -76,7 +93,7 @@ jobs:
           --release
           --split-per-abi
           --target-platform android-arm,android-arm64
-          --dart-define=ENABLE_DEMO_FALLBACK=true
+          --dart-define=ENABLE_DEMO_FALLBACK=false
 
       - name: Stage per-device APKs
         run: |
@@ -102,3 +119,4 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+

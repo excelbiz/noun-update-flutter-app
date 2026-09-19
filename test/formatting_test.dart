@@ -7,3 +7,4 @@ void main() {
     expect(formatNaira(-50000), '-₦500');
   });
 }
+

@@ -307,3 +307,4 @@ String formatNaira(int amountKobo) {
   }
   return '${negative ? '-' : ''}₦${chunks.join(',')}';
 }
+

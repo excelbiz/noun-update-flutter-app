@@ -72,3 +72,4 @@ Every course is a mini learning portal:
 - Premium status is checked server-side for each protected resource.
 - Result and student data are encrypted in transit and excluded from analytics payloads.
 - Alerts open an allow-listed in-app route; raw notification URLs are not executed.
+

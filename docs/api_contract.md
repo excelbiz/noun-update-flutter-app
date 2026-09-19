@@ -66,3 +66,4 @@ All responses use JSON. Authenticated calls require `Authorization: Bearer <acce
 ```
 
 Recommended status codes: `400` invalid request, `401` expired/missing token, `403` entitlement failure, `404` missing resource, `409` idempotency conflict, `422` validation error and `429` rate limit.
+

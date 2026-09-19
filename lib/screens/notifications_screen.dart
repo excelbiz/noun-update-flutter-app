@@ -56,3 +56,4 @@ class NotificationsScreen extends StatelessWidget {
         _ => Icons.notifications_rounded,
       };
 }
+

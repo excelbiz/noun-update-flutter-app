@@ -1,0 +1,31 @@
+name: Backend API and wallet checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [codex/mobile-api-central-wallet]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-only-password
+          MYSQL_DATABASE: nu_mobile_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ptest-only-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mysqli, mbstring, curl
+      - name: Lint PHP
+        run: find backend -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Test transactions, authentication and feed visibility
+        run: php backend/tests/integration.php

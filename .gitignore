@@ -13,3 +13,11 @@ ios/Flutter/ephemeral/
 *.keystore
 *.jks
 key.properties
+
+
+# Server credentials, uploads and local validation artifacts
+**/config.local.php
+**/.noun-summary.env
+**/error_log
+backend/tests/output/
+ui-previews/

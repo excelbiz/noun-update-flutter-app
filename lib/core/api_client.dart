@@ -24,6 +24,7 @@ class SessionStore {
   static const _refreshTokenKey = 'noun_refresh_token';
 
   Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
+  Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
 
   Future<void> saveTokens({
     required String accessToken,
@@ -47,11 +48,33 @@ class ApiClient {
 
   final http.Client _client;
   final SessionStore _sessionStore;
+  Future<bool>? _refreshing;
+
+  Future<bool> _refresh() async {
+    final token = await _sessionStore.readRefreshToken();
+    if (token == null) return false;
+    final response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}/auth/refresh'),
+      headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refresh_token': token}))
+      .timeout(const Duration(seconds: 20));
+    if (response.statusCode == 401) { await _sessionStore.clear(); return false; }
+    final data = _decode(response)['data'] as Map<String, dynamic>;
+    await _sessionStore.saveTokens(accessToken: data['access_token'] as String, refreshToken: data['refresh_token'] as String);
+    return true;
+  }
+
+  Future<bool> _refreshOnce() async {
+    if (_refreshing != null) return _refreshing!;
+    _refreshing = _refresh();
+    try { return await _refreshing!; } finally { _refreshing = null; }
+  }
 
   Future<Map<String, dynamic>> getJson(String path) async {
-    final response = await _client
+    var response = await _client
         .get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: await _headers())
         .timeout(const Duration(seconds: 12));
+    if (response.statusCode == 401 && await _refreshOnce()) {
+      response = await _client.get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: await _headers()).timeout(const Duration(seconds: 20));
+    }
     return _decode(response);
   }
 
@@ -64,13 +87,19 @@ class ApiClient {
     if (idempotencyKey != null) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
-    final response = await _client
+    var response = await _client
         .post(
           Uri.parse('${AppConfig.apiBaseUrl}$path'),
           headers: headers,
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 60));
+    if (response.statusCode == 401 && !path.startsWith('/auth/') && await _refreshOnce()) {
+      final retryHeaders = await _headers();
+      if (idempotencyKey != null) retryHeaders['Idempotency-Key'] = idempotencyKey;
+      response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: retryHeaders,
+        body: jsonEncode(body)).timeout(const Duration(seconds: 60));
+    }
     return _decode(response);
   }
 

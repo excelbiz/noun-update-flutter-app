@@ -158,3 +158,4 @@ class AppBootstrap {
   final List<LearningResource> saved;
   final List<StudentAlert> alerts;
 }
+

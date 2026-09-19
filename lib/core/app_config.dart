@@ -13,6 +13,6 @@ class AppConfig {
 
   static const enableDemoFallback = bool.fromEnvironment(
     'ENABLE_DEMO_FALLBACK',
-    defaultValue: true,
+    defaultValue: false,
   );
 }
