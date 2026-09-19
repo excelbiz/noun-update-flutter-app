@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,10 +11,12 @@ import 'package:noun_update_student_app/screens/live_portal.dart';
 class DirectoryApi extends ApiClient {
   DirectoryApi(this.services);
   final List<dynamic> services;
+  final directoryReady = Completer<void>();
   @override
-  Future<Map<String, dynamic>> getJson(String path) async => {
-    'data': {'items': path == '/services' ? services : <dynamic>[]}
-  };
+  Future<Map<String, dynamic>> getJson(String path) async {
+    if (path == '/services' && !directoryReady.isCompleted) directoryReady.complete();
+    return {'data': {'items': path == '/services' ? services : <dynamic>[]}};
+  }
 }
 
 void main() {
@@ -29,7 +32,10 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(MaterialApp(theme: buildAppTheme(), home: LivePortal(apiClient: DirectoryApi(services))));
+      final api = DirectoryApi(services);
+      await tester.pumpWidget(MaterialApp(theme: buildAppTheme(), home: LivePortal(apiClient: api)));
+      // Asset I/O completes outside the widget test's fake clock.
+      await tester.runAsync(() => api.directoryReady.future.timeout(const Duration(seconds: 10)));
       await tester.pumpAndSettle();
       expect(find.text('Make today count'), findsOneWidget);
       expect(tester.takeException(), isNull);
