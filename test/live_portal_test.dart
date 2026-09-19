@@ -37,7 +37,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'summary');
       await tester.pumpAndSettle();
-      await tester.testTextInput.hide();
+      tester.testTextInput.hide();
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Exam Summary'), 150, scrollable: find.byType(Scrollable).first);
       await tester.pumpAndSettle();
