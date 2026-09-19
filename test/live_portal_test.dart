@@ -39,6 +39,10 @@ void main() {
       await tester.pumpAndSettle();
       tester.testTextInput.hide();
       await tester.pumpAndSettle();
+      if (find.text('Exam Summary').evaluate().isEmpty) {
+        debugPrint('Directory rows: ${services.length}');
+        debugPrint('Visible text: ${tester.widgetList<Text>(find.byType(Text)).map((w) => w.data).toList()}');
+      }
       await tester.scrollUntilVisible(find.text('Exam Summary'), 150, scrollable: find.byType(Scrollable).first);
       await tester.pumpAndSettle();
       expect(find.text('Exam Summary'), findsOneWidget);
