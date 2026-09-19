@@ -32,8 +32,9 @@ class SiteLogo extends StatelessWidget {
 }
 
 class LivePortal extends StatefulWidget {
-  const LivePortal({this.apiClient, super.key});
+  const LivePortal({this.apiClient, this.serviceBundle, super.key});
   final ApiClient? apiClient;
+  final AssetBundle? serviceBundle;
   @override
   State<LivePortal> createState()=>_LivePortalState();
 }
@@ -56,7 +57,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&profile!=null)_loadAccount();}
   Future<Map<String,dynamic>> _feed()=>api.getJson('/posts/$category').then(_data);
   Future<void> _loadServices() async {
-    final bundled=_items(jsonDecode(await rootBundle.loadString('assets/data/services.json')));
+    final bundled=_items(jsonDecode(await (widget.serviceBundle??rootBundle).loadString('assets/data/services.json')));
     if(mounted)setState(()=>services=bundled);
     try{final result=_data(await api.getJson('/services'));if(mounted)setState(()=>services=_items(result['items']));}catch(_){/* Local directory is functional offline; no fabricated account data. */}
   }
