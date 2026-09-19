@@ -202,7 +202,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   ]);
   @override
   Widget build(BuildContext context)=>Scaffold(backgroundColor:_paper,
-    appBar:AppBar(backgroundColor:_paper,title:const Row(children:[SiteLogo(),SizedBox(width:10),Text('NOUN UPDATE',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,letterSpacing:.5))]),
+    appBar:AppBar(backgroundColor:_paper,title:const Row(children:[SiteLogo(size:40),SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Text('NOUN UPDATE',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,letterSpacing:.5))))]),
       actions:[IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh))]),
     body:Column(children:[if(busy)const LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_explore(),2=>_updates(),3=>_walletPage(),_=>_account()}))]),
     bottomNavigationBar:NavigationBar(selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[
