@@ -109,7 +109,7 @@ class ApiClient {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.1.0',
+      'X-App-Version': '0.2.0',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }

@@ -61,8 +61,8 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     try{final result=_data(await api.getJson('/services'));if(mounted)setState(()=>services=_items(result['items']));}catch(_){/* Local directory is functional offline; no fabricated account data. */}
   }
   Future<void> _loadAccount() async {
-    if(await const SessionStore().readAccessToken()==null)return;
     try{
+      if(await const SessionStore().readAccessToken()==null)return;
       final b=_data(await api.getJson('/app/bootstrap'));
       final p=b['profile']==null?null:Map<String,dynamic>.from(b['profile'] as Map);
       final prefs=await SharedPreferences.getInstance();
