@@ -51,6 +51,7 @@ void main() {
       final captureKey=GlobalKey();
       await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
       await tester.pumpAndSettle();
+      if(scale>1)await tester.scrollUntilVisible(find.text('Quick access'),150,scrollable:find.byType(Scrollable).first);
       expect(find.text('Quick access'), findsOneWidget);
       if(width==390)await capture(tester,captureKey,'home');
       await tester.tap(find.text('Study').last);await tester.pumpAndSettle();
