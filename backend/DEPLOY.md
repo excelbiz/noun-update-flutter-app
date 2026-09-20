@@ -5,10 +5,10 @@ This package connects the existing Flutter app to Power Space content and the ex
 ## What is connected
 
 - Power Space news (`news_upload`), guides (`guides_upload`), scholarships (`scholarship_upload`), careers and blog feeds. Publishing/editing/deleting a row changes what the app reads on refresh; no duplicated posts or second admin workflow.
-- Course Summary remains in `/course/summary` with its existing generation, pricing and access rules.
+- Course Summary has a native reader/generator using the existing generation engine, pricing, entitlement and wallet rules. Its website version remains available separately.
 - The app and website Exam Summary checkout spend the **existing `summary_users.balance`**, with the existing account password and transaction ledger. Existing Course Summary balances need no copying or migration.
 - Exam Summary catalogue reads the existing `files` table. New wallet orders and their file snapshots are recorded in `nu_app_orders` and `nu_app_order_items` in the wallet database. Downloads require ownership and short-lived single-use tickets.
-- Native article reading, account login, wallet funding/status, Exam Summary selection, order confirmation and downloads. Other tools open their website pages through labelled Website links.
+- Native article reading, account login, wallet funding/status, Exam Summary selection, order confirmation and downloads. The native revision adds course materials, notes, calendar, fee records, registration and password reset. Unconnected tools show an in-app unavailable state; no website navigation.
 - 78 directory entries, including currently unavailable entries labelled Coming soon. Native sculpted icons and branding generated from `/images/logo.webp`.
 
 ## Before upload
@@ -33,7 +33,7 @@ This package connects the existing Flutter app to Power Space content and the ex
 
 ## Existing balances and purchases
 
-The shared wallet deliberately reuses Course Summary's account and balance. It does not create a second money ledger or add together unrelated accounts based only on matching emails. Any other existing wallets (Study Hub, mock exams, AI tools, etc.) are **not automatically merged**. Those systems need verified account linking and service-specific charging adapters after their backend is available. Their pages remain accessible in this app release.
+The shared wallet deliberately reuses Course Summary's account and balance. It does not create a second money ledger or add together unrelated accounts based only on matching emails. Any other existing wallets (Study Hub, mock exams, AI tools, etc.) are **not automatically merged**. Those systems need verified account linking and service-specific charging adapters after their backend is available. Their native screens need those adapters before becoming available.
 
 Old Exam Summary email orders keep their current download links. They are not automatically imported into an account: the uploaded legacy My Account page accepts an email without verifying ownership. Importing those orders into mobile access requires ownership verification. New central-wallet orders are available in the app and `/course/central-wallet.php`.
 
@@ -46,7 +46,7 @@ The existing `file_storage` files may still have public URLs used by old emailed
 - Payments are credited only by the existing verified server payment handler. The app never supplies a balance or a successful payment flag.
 - Local paid files must exist under the configured download roots; missing files and remote/unmapped file paths fail before debit.
 - All wallet/order writes require InnoDB. If old tables are MyISAM, preflight refuses. Use the existing reviewed wallet upgrade procedure after backup; no silent conversion.
-- App tokens expire after 15 minutes; refresh tokens rotate and last up to 30 days. Password changes invalidate them. Signing out revokes that device session. Other website tools keep their own login sessions; complete cross-service SSO is not claimed.
+- App tokens expire after 15 minutes; refresh tokens rotate and last up to 30 days. Password changes invalidate them. Signing out revokes that device session. The shared Course Summary account is used by the supported native tools; cross-service SSO for unconnected systems is not claimed.
 - Existing OneSignal publishing remains unchanged. Native push delivery still needs mobile Firebase/APNs setup and notification handling; content feeds work without push.
 - Calendar API delegates to your existing `academic-calendar-core/calendar.php`; that file was not uploaded but is expected on the live site.
 - GitHub builds are installable **preview APKs** using the generated runner's debug signing key in release mode. Production updates need a stable private release keystore/signing setup before Play Store publication. iOS store signing is separate.
@@ -58,3 +58,7 @@ Restore the original `cart.php` and `paystack.php` to resume legacy checkout. Re
 ## Retention
 
 Run a daily CLI cleanup of expired `nu_app_downloads`, expired/revoked `nu_app_sessions`, expired `nu_app_rate_limits`, and unpurchased quotes older than seven days. Keep orders, ledger rows and payment receipts for accounting. Never delete a quote referenced by `nu_app_orders`.
+
+## Native revision (0.3.0)
+
+Re-import the additive SQL to create `nu_app_profiles`, `nu_app_resets` and `nu_app_study_state`. Upload all new `nu-mobile` files and the updated API router. Keep `course/lib/summary_engine.php` installed. Course materials read `pdf_upload_cm` and `/file-course-materials/`; fee lookup reads `fee_check`. The calendar adapter needs `academic-calendar-core/calendar.php`. Password reset needs working PHP mail delivery. See the included `NATIVE-APP.md` for remaining service controllers and schema requirements.

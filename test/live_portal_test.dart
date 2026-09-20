@@ -37,7 +37,7 @@ void main() {
   setUpAll(() async {
     services = jsonDecode(File('assets/data/services.json').readAsStringSync()) as List<dynamic>;
     final font = File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
-    if(font.existsSync()){final loader=FontLoader('Roboto')..addFont(Future.value(ByteData.sublistView(font.readAsBytesSync())));await loader.load();}
+    if(font.existsSync()){final loader=FontLoader('sans-serif')..addFont(Future.value(ByteData.sublistView(font.readAsBytesSync())));await loader.load();}
   });
   for (final width in [320.0, 390.0, 430.0]) {
     testWidgets('Native navigation and summaries fit a $width phone', (tester) async {

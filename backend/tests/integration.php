@@ -139,4 +139,18 @@ check($fees['total_kobo']===3550000&&$fees['units']===4,'fee totals use integer 
 check($fees['items'][1]['examinable']===false,'zero exam fee is reflected in breakdown');
 $db->exec("UPDATE fee_check SET csfee=40000 WHERE ccode='GST101'");
 check(nu_fees($db,['program'=>'Accounting','level'=>'100','semester'=>'1'])['total_kobo']===null,'inconsistent semester charges cannot produce misleading total');
+// Exercise the same Course Summary unlock implementation used by the API.
+function json_response(array $payload,int $status=200):never {throw new NuFailure($status,'SUMMARY_ERROR',(string)($payload['error']??'Unexpected response'));}
+require_once __DIR__.'/../public_html/nu-mobile/summary-library.php';
+$db->exec('CREATE TABLE user_summaries(id INT AUTO_INCREMENT PRIMARY KEY,user_id INT,course_code VARCHAR(20),UNIQUE KEY user_course(user_id,course_code)) ENGINE=InnoDB');
+$db->exec('UPDATE summary_users SET balance=1000 WHERE id='.$nativeId);
+$unlock=unlock_course($db,$nativeId,'ACC101',500);
+check($unlock['deducted']&&$store->wallet($nativeId)['balance_kobo']===50000,'native Course Summary debits central wallet');
+check(!unlock_course($db,$nativeId,'ACC101',500)['deducted']&&$store->wallet($nativeId)['balance_kobo']===50000,'repeat summary unlock does not debit twice');
+fails(fn()=>unlock_course($db,$nativeId,'ACC102',1000),'SUMMARY_ERROR');
+check((int)$db->query("SELECT COUNT(*) FROM user_summaries WHERE course_code='ACC102'")->fetchColumn()===0,'insufficient summary funds grant no access');
+$db->exec("CREATE TRIGGER fail_summary_ledger BEFORE INSERT ON summary_transactions FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Injected summary ledger failure'");
+try{unlock_course($db,$nativeId,'ACC103',200);throw new LogicException('Expected summary rollback');}catch(PDOException $e){}
+$db->exec('DROP TRIGGER fail_summary_ledger');
+check($store->wallet($nativeId)['balance_kobo']===50000&&(int)$db->query("SELECT COUNT(*) FROM user_summaries WHERE course_code='ACC103'")->fetchColumn()===0,'summary ledger failure rolls back debit and entitlement');
 echo "ALL BACKEND INTEGRATION CHECKS PASSED\n";

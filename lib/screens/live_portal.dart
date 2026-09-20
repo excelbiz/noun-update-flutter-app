@@ -72,14 +72,14 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     await _loadAccount();
   }
  void _service(Map<String,dynamic> s){
-  final id='${s['id']}',title='${s['label']}';
+  final id='${s['id']}',title='${s['id']=='courses'?'Course Materials':s['label']}';
   if(id=='wallet'){setState(()=>tab=4);return;}
   if(['news','guides','scholarships','career','blog'].contains(id)){setState((){tab=3;category=id;feed=_feed();});return;}
   final Widget page=switch(id){
    'courses'||'course-materials'||'study-hub'=>MaterialLibrary(api:api,userId:profile?['id']?.toString()),
    'course-summary'=>MaterialLibrary(api:api,userId:profile?['id']?.toString(),summaries:true),
    'exam-summary'=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);setState(()=>tab=4);}),
-   'calendar'=>NativeCalendar(api),'fee-check'=>NativeFees(api),'cgpa-calculator'=>const NativeCgpa(),
+   'calendar'=>NativeCalendar(api),'fees'||'fee-check'=>NativeFees(api),'cgpa-calculator'=>const NativeCgpa(),
    _=>NativeUnavailable(title),
   };
   pushNu(context,page).then((_)=>_loadAccount());
@@ -89,15 +89,14 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final columns=compact?(box.maxWidth>=350&&scale<1.3?5:4):(box.maxWidth>=330&&scale<1.3?3:2);
   return GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:entries.length,
    gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:compact?8:10,mainAxisSpacing:12,mainAxisExtent:(compact?104:143)+math.max(0,scale-1)*70),
-   itemBuilder:(c,i){final s=entries[i],id='${s['id']}';return Material(color:compact?Colors.transparent:Color.lerp(Colors.white,serviceColour(id),.055),borderRadius:BorderRadius.circular(16),child:InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>_service(s),child:Padding(padding:EdgeInsets.all(compact?2:10),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[GlossIcon(serviceIcon(id),color:serviceColour(id),size:compact?44:52),const SizedBox(height:10),Text('${s['label']}',textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:compact?10:12,fontWeight:FontWeight.w700,height:1.15))]))));});
+   itemBuilder:(c,i){final s=entries[i],id='${s['id']}';return Material(color:compact?Colors.transparent:Color.lerp(Colors.white,serviceColour(id),.055),borderRadius:BorderRadius.circular(16),child:InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>_service(s),child:Padding(padding:EdgeInsets.all(compact?2:10),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[GlossIcon(serviceIcon(id),color:serviceColour(id),size:compact?44:52),const SizedBox(height:10),Text('${s['id']=='courses'?'Course Materials':s['label']}',textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:compact?10:12,fontWeight:FontWeight.w700,height:1.15))]))));});
  });
  Widget _home()=>ListView(padding:const EdgeInsets.fromLTRB(16,18,16,28),children:[
   TextField(readOnly:true,onTap:()=>setState(()=>tab=2),decoration:const InputDecoration(hintText:'Search courses, materials and tools',prefixIcon:Icon(Icons.search))),
   NuTitle('Welcome${profile==null?'':', ${profile!['name']}'} 👋',subtitle:'What would you like to achieve today?'),
-  Row(children:[for(final entry in [('Study',Icons.menu_book_rounded,1),('Tools',Icons.apps_rounded,2),('Updates',Icons.notifications_rounded,3),('Wallet',Icons.account_balance_wallet_rounded,4)])Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:InkWell(onTap:()=>setState(()=>tab=entry.$3),child:NuPanel(padding:9,child:Column(children:[Icon(entry.$2,color:nuGreen,size:24),const SizedBox(height:7),FittedBox(child:Text(entry.$1,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)))])))))]),
-  GreenBanner(title:'Your next step\nstarts here.',text:'Keep your studies, academic dates and revision together.',icon:Icons.school_rounded,action:FilledButton(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:()=>pushNu(context,NativeCalendar(api)),child:const Text('Academic calendar'))),
+  AcademicOverview(api:api),
   const NuTitle('Quick access',subtitle:'Your student essentials, all in one place'),
-  _grid(services.where((s)=>['courses','course-summary','exam-summary','fee-check','calendar','mock','result','cgpa-calculator','personalized-timetable','wallet'].contains(s['id'])).take(10).toList(),compact:true),
+  _grid(services.where((s)=>['courses','course-summary','exam-summary','fees','calendar','mock','result','cgpa-calculator','personalized-timetable','wallet'].contains(s['id'])).take(10).toList(),compact:true),
   const NuTitle('Recommended for you'),
   Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:_recommend('Course Summary','Understand each unit',nuGold,()=>pushNu(context,MaterialLibrary(api:api,userId:profile?['id']?.toString(),summaries:true)))),const SizedBox(width:12),Expanded(child:_recommend('Exam Summary','Focus your revision',nuRed,()=>_service({'id':'exam-summary','label':'Exam Summary'})))]),
   const NuTitle('Latest updates'),_news(compact:true),

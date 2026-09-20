@@ -11,7 +11,7 @@ class BrandLogo extends StatelessWidget {
  @override Widget build(BuildContext context)=>Image.asset('assets/images/noun_update_logo.png',width:size,height:size,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Icon(Icons.school_rounded,size:size,color:nuGold));
 }
 IconData serviceIcon(String id)=>switch(id){
- 'fee-check'||'wallet'=>Icons.account_balance_wallet_rounded,'courses'||'course-materials'=>Icons.menu_book_rounded,
+ 'fees'||'fee-check'||'wallet'=>Icons.account_balance_wallet_rounded,'courses'||'course-materials'=>Icons.menu_book_rounded,
  'course-summary'||'study-hub'=>Icons.lightbulb_rounded,'exam-summary'=>Icons.description_rounded,'calendar'=>Icons.calendar_month_rounded,
  'mock'=>Icons.desktop_windows_rounded,'result'=>Icons.bar_chart_rounded,'cgpa-calculator'=>Icons.calculate_rounded,
  'personalized-timetable'=>Icons.more_time_rounded,'marketplace'=>Icons.shopping_cart_rounded,'news'=>Icons.campaign_rounded,
@@ -24,7 +24,7 @@ class GlossIcon extends StatelessWidget {
 class NuTitle extends StatelessWidget {const NuTitle(this.title,{super.key,this.subtitle,this.trailing});final String title;final String? subtitle;final Widget? trailing;
  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(top:20,bottom:12),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w800,color:Color(0xff101d18))),if(subtitle!=null)Padding(padding:const EdgeInsets.only(top:5),child:Text(subtitle!,style:const TextStyle(fontSize:13,color:Color(0xff687787))))])),if(trailing!=null)trailing!]));}
 class NuPanel extends StatelessWidget {const NuPanel({required this.child,super.key,this.color=Colors.white,this.padding=16});final Widget child;final Color color;final double padding;
- @override Widget build(BuildContext context)=>Container(margin:const EdgeInsets.only(bottom:12),padding:EdgeInsets.all(padding),decoration:BoxDecoration(color:color,borderRadius:BorderRadius.circular(18),border:Border.all(color:Color.lerp(color,nuGreen,.10)!),boxShadow:const [BoxShadow(color:Color(0x06003422),blurRadius:12,offset:Offset(0,4))]),child:child);}
+ @override Widget build(BuildContext context)=>Container(margin:const EdgeInsets.only(bottom:12),padding:EdgeInsets.all(padding),decoration:BoxDecoration(color:color,borderRadius:BorderRadius.circular(18),border:Border.all(color:Color.lerp(color,nuGreen,.10)!),boxShadow:const [BoxShadow(color:Color(0x06003422),blurRadius:12,offset:Offset(0,4))]),child:Material(color:Colors.transparent,child:child));}
 class NuPage extends StatelessWidget {const NuPage({super.key,required this.title,required this.child,this.actions});final String title;final Widget child;final List<Widget>? actions;
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Text(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700)),actions:actions),body:ClipRRect(borderRadius:const BorderRadius.vertical(top:Radius.circular(24)),child:ColoredBox(color:const Color(0xfff8faf9),child:SafeArea(top:false,child:child))));}
 class NativeUnavailable extends StatelessWidget {const NativeUnavailable(this.title,{super.key});final String title;

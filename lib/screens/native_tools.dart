@@ -54,3 +54,23 @@ class _FocusTimerState extends State<FocusTimer>{int seconds=1500;Timer? timer;@
 
 class NativeCgpa extends StatefulWidget{const NativeCgpa({super.key});@override State<NativeCgpa> createState()=>_NativeCgpaState();}
 class _NativeCgpaState extends State<NativeCgpa>{final units=TextEditingController();List<(int,int)> rows=[];int grade=5;@override void dispose(){units.dispose();super.dispose();}@override Widget build(BuildContext context){final total=rows.fold<int>(0,(v,r)=>v+r.$1),points=rows.fold<int>(0,(v,r)=>v+r.$1*r.$2);return NuPage(title:'CGPA Calculator',child:ListView(padding:const EdgeInsets.all(20),children:[GreenBanner(title:total==0?'Your CGPA':'${(points/total).toStringAsFixed(2)} / 5.00',text:'Manual estimate · $total course units',icon:Icons.calculate),const NuTitle('Add a course'),TextField(controller:units,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Course units')),DropdownButton<int>(value:grade,items:[for(var i=5;i>=0;i--)DropdownMenuItem(value:i,child:Text('${['F','E','D','C','B','A'][i]} · $i points'))],onChanged:(v)=>setState(()=>grade=v!)),FilledButton(onPressed:(){final n=int.tryParse(units.text);if(n==null||n<1||n>30){nuMessage(context,'Enter valid course units.');return;}setState(()=>rows.add((n,grade)));units.clear();},child:const Text('Add course')),for(var i=0;i<rows.length;i++)ListTile(title:Text('Course ${i+1} · ${rows[i].$1} units'),subtitle:Text('${rows[i].$2} grade points'),trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>setState(()=>rows.removeAt(i)))),const Text('This is a manual estimate. Your institution’s official result remains authoritative.') ]));}}
+
+class AcademicOverview extends StatefulWidget {
+ const AcademicOverview({super.key,required this.api});final ApiClient api;
+ @override State<AcademicOverview> createState()=>_AcademicOverviewState();
+}
+class _AcademicOverviewState extends State<AcademicOverview>{
+ late Future<Map<String,dynamic>> calendar;
+ @override void initState(){super.initState();calendar=widget.api.getJson('/calendar').then(unpack);}
+ @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:calendar,builder:(c,s){
+  final events=records(s.data?['events']);
+  final upcoming=events.where((e){final date=DateTime.tryParse('${e['start_at']}');return date!=null&&date.isAfter(DateTime.now());}).toList()..sort((a,b)=>'${a['start_at']}'.compareTo('${b['start_at']}'));
+  final next=upcoming.isEmpty?null:upcoming.first;
+  final known=s.hasData&&s.data!['events'] is List;
+  String count(String term)=>known?'${upcoming.where((e)=>'${e['category']} ${e['title']}'.toLowerCase().contains(term)).length}':'—';
+  return Column(children:[Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   for(final r in [('TMA',count('tma'),Icons.assignment_rounded,nuGreen),('Exams',count('exam'),Icons.school_rounded,nuRed),('Fees','Check',Icons.account_balance_wallet_rounded,nuGold),('Calendar',known?'${upcoming.length}':'—',Icons.calendar_month_rounded,nuGreen)])
+    Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Material(color:Color.lerp(Colors.white,r.$4,.07),borderRadius:BorderRadius.circular(13),child:InkWell(borderRadius:BorderRadius.circular(13),onTap:()=>pushNu(context,r.$1=='Fees'?NativeFees(widget.api):NativeCalendar(widget.api)),child:Padding(padding:const EdgeInsets.symmetric(vertical:12,horizontal:5),child:Column(children:[GlossIcon(r.$3,color:r.$4,size:29),const SizedBox(height:8),Text(r.$1,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)),Text(r.$2,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800,color:nuDeep))])))))),
+  ]),const SizedBox(height:16),GreenBanner(title:next==null?'Your next step\nstarts here.':'${next['title']}',text:next==null?'Keep your studies, academic dates and revision together.':'${DateTime.parse('${next['start_at']}').difference(DateTime.now()).inDays} days to go · ${next['start_at']}',icon:Icons.school_rounded,action:FilledButton(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:()=>pushNu(context,NativeCalendar(widget.api)),child:const Text('Academic calendar')))]);
+ });
+}

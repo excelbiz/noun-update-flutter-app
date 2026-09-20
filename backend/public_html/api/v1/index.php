@@ -29,7 +29,7 @@ try {
     $content=nu_connect($nuConfig['content_db']);
     $store=new NuStore($db,$content,$nuConfig);
     if($method==='GET'&&$path==='/health'){
-        $store->transactional(['summary_users','summary_transactions','nu_app_sessions','nu_app_orders','nu_app_order_items','nu_app_quotes']);
+        $store->transactional(['summary_users','summary_transactions','nu_app_sessions','nu_app_orders','nu_app_order_items','nu_app_quotes','nu_app_profiles','nu_app_resets','nu_app_study_state']);
         nu_send(['status'=>'ok','version'=>'1.0']);
     }
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
