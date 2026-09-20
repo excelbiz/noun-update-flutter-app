@@ -110,4 +110,33 @@ foreach([$qa,$qb] as $idx=>$q){$pipes=[];$p=proc_open([PHP_BINARY,__FILE__,'--pu
 $codes=[];foreach($workers as [$p,$pipes]){stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);foreach($pipes as $pipe)fclose($pipe);$codes[]=proc_close($p);if($err)echo $err;}
 sort($codes);check($codes===[0,2],'concurrent purchases cannot overspend');
 check($store->wallet(1)['balance_kobo']===48500,'concurrent purchases preserve exact balance');
+require_once __DIR__.'/../public_html/nu-mobile/native.php';
+// Native registration shares the same account and starts with no invented funds.
+$registered=nu_register($store,['name'=>'Native Student','email'=>'native@example.test','password'=>'native-password-123'],'127.0.0.9');
+$nativeUser=$store->authenticate($registered['access_token']);$nativeId=(int)$nativeUser['id'];
+check($store->wallet($nativeId)['balance_kobo']===0,'native registration shares zero-balance wallet');
+fails(fn()=>nu_register($store,['name'=>'N','email'=>'invalid','password'=>'short'],'127.0.0.9'),'INVALID_ACCOUNT');
+nu_profile_save($store,$nativeId,['name'=>'New Name','programme'=>'Accounting','level'=>'200','matric_number'=>'PROFILE-ONLY']);
+check(nu_profile_details($store,$nativeId)['programme']==='Accounting'&&nu_profile_details($store,2)['programme']==='','native profile stays scoped to its account');
+check($store->wallet($nativeId)['balance_kobo']===0,'profile edits cannot change wallet');
+$db->prepare('INSERT INTO nu_app_resets(user_id,code_hash,expires_at) VALUES (?,?,?)')->execute([$nativeId,password_hash('12345678',PASSWORD_DEFAULT),gmdate('Y-m-d H:i:s',time()+600)]);
+fails(fn()=>nu_reset_finish($store,['email'=>'native@example.test','password'=>'replacement-password','code'=>'00000000'],'127.0.0.9'),'INVALID_CODE');
+check((int)$db->query('SELECT attempts FROM nu_app_resets WHERE user_id='.$nativeId)->fetchColumn()===1,'bad reset attempt is committed');
+nu_reset_finish($store,['email'=>'native@example.test','password'=>'replacement-password','code'=>'12345678'],'127.0.0.9');
+fails(fn()=>$store->authenticate($registered['access_token']),'SESSION_EXPIRED');
+fails(fn()=>nu_reset_finish($store,['email'=>'native@example.test','password'=>'another-password','code'=>'12345678'],'127.0.0.9'),'INVALID_CODE');
+check(isset($store->login('native@example.test','replacement-password','127.0.0.9')['access_token']),'native reset changes password and revokes sessions');
+$db->exec('CREATE TABLE pdf_upload_cm(id INT PRIMARY KEY,course_code VARCHAR(20),filename TEXT) ENGINE=InnoDB');
+@mkdir($root.'/file-course-materials',0777,true);file_put_contents($root.'/file-course-materials/ACC101.pdf',"%PDF-1.4\nfixture");
+$db->exec("INSERT INTO pdf_upload_cm VALUES (1,'ACC101','ACC101.pdf'),(2,'BAD101','../../outside.pdf')");
+check(nu_materials($db,'ACC',1)['items'][0]['title']==='ACC101','materials work without optional course title column');
+check(is_file(nu_material_file($db,$config,1)),'public course PDF resolves within course storage');
+fails(fn()=>nu_material_file($db,$config,2),'NOT_FOUND');
+$db->exec('CREATE TABLE fee_check(program VARCHAR(100),level VARCHAR(10),semester VARCHAR(10),ccode VARCHAR(20),ctitle VARCHAR(100),cfee DECIMAL(12,2),efee DECIMAL(12,2),csfee DECIMAL(12,2),cstatus VARCHAR(20),cunit INT) ENGINE=InnoDB');
+$db->exec("INSERT INTO fee_check VALUES ('Accounting','100','1','ACC101','Intro',2000,1500,30000,'C',2),('Accounting','100','1','GST101','Use of English',2000,0,30000,'C',2)");
+$fees=nu_fees($db,['program'=>'Accounting','level'=>'100','semester'=>'1']);
+check($fees['total_kobo']===3550000&&$fees['units']===4,'fee totals use integer kobo and one semester fee');
+check($fees['items'][1]['examinable']===false,'zero exam fee is reflected in breakdown');
+$db->exec("UPDATE fee_check SET csfee=40000 WHERE ccode='GST101'");
+check(nu_fees($db,['program'=>'Accounting','level'=>'100','semester'=>'1'])['total_kobo']===null,'inconsistent semester charges cannot produce misleading total');
 echo "ALL BACKEND INTEGRATION CHECKS PASSED\n";

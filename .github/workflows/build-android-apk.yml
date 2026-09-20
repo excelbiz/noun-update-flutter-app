@@ -75,6 +75,13 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Upload native screen previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-screen-previews
+          path: screenshots/
+          if-no-files-found: error
+
       - name: Build physical-device APKs
         run: >-
           flutter build apk

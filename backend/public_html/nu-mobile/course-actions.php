@@ -658,6 +658,8 @@ try {
     }
 
     json_response(['error' => 'Invalid action.'], 404);
+} catch (NuFailure $e) {
+    throw $e;
 } catch (InvalidArgumentException $e) {
     json_response(['error' => $e->getMessage()], 422);
 } catch (Throwable $e) {
@@ -669,6 +671,6 @@ try {
         $context .= ', section=' . $sectionIndex;
     }
     error_log('NOUN summary API error (' . $context . '): ' . $e->getMessage());
-    $message = $appDebug ? $e->getMessage() : 'The request could not be completed. Please try again.';
+    $message = 'The request could not be completed. Please try again.';
     json_response(['error' => $message], 500);
 }
