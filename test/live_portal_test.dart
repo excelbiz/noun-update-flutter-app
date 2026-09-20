@@ -35,8 +35,8 @@ void main() {
   setUpAll(() {
     services = jsonDecode(File('assets/data/services.json').readAsStringSync()) as List<dynamic>;
   });
-  for (final width in [320.0, 390.0]) {
-    testWidgets('Home, service search and wallet fit a $width phone', (tester) async {
+  for (final width in [320.0, 390.0, 430.0]) {
+    testWidgets('Native navigation and summaries fit a $width phone', (tester) async {
       FlutterSecureStorage.setMockInitialValues({});
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
@@ -45,9 +45,9 @@ void main() {
       final api = DirectoryApi(services);
       await tester.pumpWidget(MaterialApp(theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services)))));
       await tester.pumpAndSettle();
-      expect(find.text('Make today count'), findsOneWidget);
+      expect(find.text('Quick access'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Explore'));
+      await tester.tap(find.text('Tools').last);
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'summary');
       await tester.pumpAndSettle();
@@ -58,7 +58,7 @@ void main() {
       expect(find.text('Exam Summary'), findsOneWidget);
       expect(find.text('Course Summary'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Wallet'));
+      await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
       expect(find.text('Sign in'), findsOneWidget);
       expect(find.text('One account. One balance.'), findsOneWidget);

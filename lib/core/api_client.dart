@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -93,14 +94,29 @@ class ApiClient {
           headers: headers,
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 60));
+        .timeout(Duration(seconds: path.startsWith('/course-summary') ? 300 : 60));
     if (response.statusCode == 401 && !path.startsWith('/auth/') && await _refreshOnce()) {
       final retryHeaders = await _headers();
       if (idempotencyKey != null) retryHeaders['Idempotency-Key'] = idempotencyKey;
       response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: retryHeaders,
-        body: jsonEncode(body)).timeout(const Duration(seconds: 60));
+        body: jsonEncode(body)).timeout(Duration(seconds: path.startsWith('/course-summary') ? 300 : 60));
     }
     return _decode(response);
+  }
+
+  Future<Uint8List> getPdf(String path) async {
+    final base=Uri.parse(AppConfig.apiBaseUrl);
+    final uri=path.startsWith('https://')?Uri.parse(path):Uri.parse('${AppConfig.apiBaseUrl}$path');
+    if(uri.origin!=base.origin||!uri.path.startsWith('${base.path}/'))throw const ApiException('Invalid document location.');
+    final request=http.Request('GET',uri)..followRedirects=false;
+    request.headers.addAll(await _headers());
+    final response=await _client.send(request).timeout(const Duration(seconds:45));
+    if(response.statusCode!=200)throw const ApiException('Unable to load this document. Reopen your purchase and try again.');
+    final bytes=BytesBuilder();
+    await for(final part in response.stream.timeout(const Duration(seconds:45))){bytes.add(part);if(bytes.length>50000000)throw const ApiException('This document is too large to open on this device.');}
+    final data=bytes.takeBytes();
+    if(data.length<5||ascii.decode(data.sublist(0,5),allowInvalid:true)!='%PDF-')throw const ApiException('This resource is not a readable PDF.');
+    return data;
   }
 
   Future<Map<String, String>> _headers() async {
@@ -109,7 +125,7 @@ class ApiClient {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.2.0',
+      'X-App-Version': '0.3.0',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }

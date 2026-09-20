@@ -58,3 +58,19 @@ CREATE TABLE IF NOT EXISTS nu_app_downloads (
  used_at DATETIME NULL,
  KEY expiry(expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Native app extension. Profile fields do not grant institutional identity/access.
+CREATE TABLE IF NOT EXISTS nu_app_profiles (
+ user_id BIGINT UNSIGNED PRIMARY KEY,programme VARCHAR(150) NOT NULL DEFAULT '',
+ level VARCHAR(10) NOT NULL DEFAULT '',matric_number VARCHAR(40) NOT NULL DEFAULT '',
+ preferences_json TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS nu_app_resets (
+ user_id BIGINT UNSIGNED PRIMARY KEY,code_hash VARCHAR(255) NOT NULL,
+ expires_at DATETIME NOT NULL,attempts INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS nu_app_study_state (
+ user_id BIGINT UNSIGNED NOT NULL,course_code VARCHAR(20) NOT NULL,
+ state_json MEDIUMTEXT NOT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(user_id,course_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

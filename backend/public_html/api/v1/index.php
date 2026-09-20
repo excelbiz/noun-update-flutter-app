@@ -17,6 +17,7 @@ function nu_body(): array {
 }
 try {
     require_once dirname(__DIR__,2).'/nu-mobile/bootstrap.php';
+    require_once dirname(__DIR__,2).'/nu-mobile/native.php';
     $method=$_SERVER['REQUEST_METHOD']??'GET';
     $path=parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH)?:'';
     $path='/'.trim(preg_replace('#^/api/v1(?:/index\.php)?#','',$path)??'','/');
@@ -32,6 +33,16 @@ try {
         nu_send(['status'=>'ok','version'=>'1.0']);
     }
     $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
+    if($method==='POST'&&$path==='/auth/register')nu_send(nu_register($store,nu_body(),$ip));
+    if($method==='POST'&&$path==='/auth/reset-request')nu_send(nu_reset_request($store,nu_body(),$ip));
+    if($method==='POST'&&$path==='/auth/reset-finish')nu_send(nu_reset_finish($store,nu_body(),$ip));
+    if($method==='GET'&&$path==='/materials')nu_send(nu_materials($content,(string)($_GET['q']??''),(int)($_GET['page']??1)));
+    if($method==='GET'&&preg_match('#^/materials/([0-9]+)/pdf$#D',$path,$m)){
+        $file=nu_material_file($content,$nuConfig,(int)$m[1]);header('Content-Type: application/pdf');header('Content-Length: '.filesize($file));readfile($file);exit;
+    }
+    if($method==='GET'&&$path==='/fees/options')nu_send(nu_fee_options($content));
+    if($method==='POST'&&$path==='/fees/calculate')nu_send(nu_fees($content,nu_body()));
+    if($method==='GET'&&preg_match('#^/study/([A-Z]{2,5}[0-9]{3})$#D',$path,$m))nu_send(nu_study($store,$m[1]));
     if($method==='POST'&&$path==='/auth/login'){$b=nu_body();nu_send($store->login((string)($b['email']??''),(string)($b['password']??''),$ip));}
     if($method==='POST'&&$path==='/auth/refresh'){$store->rate('refresh',$ip,60,900);$b=nu_body();nu_send($store->refresh((string)($b['refresh_token']??'')));}
     if($method==='GET'&&preg_match('#^/posts/([a-z]+)(?:/([0-9]+))?$#D',$path,$m)){
@@ -60,6 +71,19 @@ try {
     if(!$u)throw new NuFailure(401,'LOGIN_REQUIRED','Sign in using your Course Summary account.');
     $uid=(int)$u['id'];
     if($method==='POST'&&$path==='/auth/logout'){$store->run('UPDATE nu_app_sessions SET revoked=1 WHERE id=?',[$u['session_id']]);nu_send(['signed_out'=>true]);}
+    if($method==='GET'&&$path==='/profile')nu_send(nu_profile_details($store,$uid));
+    if($method==='POST'&&$path==='/profile')nu_send(nu_profile_save($store,$uid,nu_body()));
+    if(preg_match('#^/study/([A-Z]{2,5}[0-9]{3})/state$#D',$path,$m)){
+        if($method==='GET'){$r=$store->row('SELECT state_json FROM nu_app_study_state WHERE user_id=? AND course_code=?',[$uid,$m[1]]);nu_send($r?json_decode($r['state_json'],true):[]);}
+        if($method==='POST'){$b=nu_body();$store->rate('study-save',(string)$uid,120,900);$store->run('INSERT INTO nu_app_study_state(user_id,course_code,state_json) VALUES (?,?,?) ON DUPLICATE KEY UPDATE state_json=VALUES(state_json),updated_at=NOW()',[$uid,$m[1],json_encode($b,JSON_THROW_ON_ERROR)]);nu_send(['saved'=>true]);}
+    }
+    if($path==='/course-summary'){
+        $allowed=['get_courses'=>'GET','check_access'=>'GET','summarize_init'=>'POST','summarize_section'=>'POST'];$action=(string)($_GET['action']??'');
+        if(($allowed[$action]??null)!==$method)throw new NuFailure(404,'NOT_FOUND','Summary action unavailable.');
+        $store->rate('course-summary',(string)$uid,60,900);$store->transactional(['summary_users','summary_transactions','user_summaries']);
+        if($method==='POST'){$b=nu_body();if($action==='summarize_init'&&(!is_numeric($b['expected_price']??null)||(float)$b['expected_price']!== (float)max(0,(int)(env_value('SUMMARY_PRICE','500')??'500'))))throw new NuFailure(409,'PRICE_CHANGED','The summary price has changed. Review the current price and try again.');}
+        $nuNativeUser=$u;$pdo=$db;require dirname(__DIR__,2).'/nu-mobile/course-actions.php';exit;
+    }
     if($method==='GET'&&$path==='/wallet')nu_send($store->wallet($uid));
     if($method==='POST'&&$path==='/wallet/fund'){
         $store->rate('fund',(string)$uid,15,900);$b=nu_body();
