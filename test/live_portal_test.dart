@@ -70,6 +70,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Exam Summary'), findsOneWidget);
       expect(find.text('Course Summary'), findsOneWidget);
+      await tester.tap(find.text('Exam Summary'));await tester.pumpAndSettle();
+      expect(find.text('Open central wallet'),findsOneWidget);
+      await tester.tap(find.text('Open central wallet'));await tester.pumpAndSettle();
+      expect(find.text('One account. One balance.'),findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Notifications'));await tester.pumpAndSettle();
       expect(find.text('Published updates from NOUN Update'),findsOneWidget);
