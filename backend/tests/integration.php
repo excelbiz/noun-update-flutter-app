@@ -153,4 +153,12 @@ $db->exec("CREATE TRIGGER fail_summary_ledger BEFORE INSERT ON summary_transacti
 try{unlock_course($db,$nativeId,'ACC103',200);throw new LogicException('Expected summary rollback');}catch(PDOException $e){}
 $db->exec('DROP TRIGGER fail_summary_ledger');
 check($store->wallet($nativeId)['balance_kobo']===50000&&(int)$db->query("SELECT COUNT(*) FROM user_summaries WHERE course_code='ACC103'")->fetchColumn()===0,'summary ledger failure rolls back debit and entitlement');
+require_once __DIR__.'/../public_html/nu-mobile/course-environment.php';
+ensure_summary_tracking_tables($db);
+$refunded=refund_unstarted_summary($db,$nativeId,'ACC101',str_repeat('a',64),9999);
+check($refunded['refunded']&&$store->wallet($nativeId)['balance_kobo']===100000,'summary refund uses original debit rather than changed price');
+check(!refund_unstarted_summary($db,$nativeId,'ACC101',str_repeat('a',64),9999)['refunded'],'summary refund cannot replay');
+unlock_course($db,$nativeId,'FREE101',0);
+check($store->wallet($nativeId)['balance_kobo']===100000,'free summary grants access without changing balance');
+check(!refund_unstarted_summary($db,$nativeId,'FREE101',str_repeat('b',64),500)['refunded'],'free entitlement cannot produce a paid refund');
 echo "ALL BACKEND INTEGRATION CHECKS PASSED\n";

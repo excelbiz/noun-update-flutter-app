@@ -39,8 +39,9 @@ void main() {
     final font = File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
     if(font.existsSync()){final loader=FontLoader('sans-serif')..addFont(Future.value(ByteData.sublistView(font.readAsBytesSync())));await loader.load();}
   });
-  for (final width in [320.0, 390.0, 430.0]) {
-    testWidgets('Native navigation and summaries fit a $width phone', (tester) async {
+  for (final scenario in [(320.0,1.0),(390.0,1.0),(430.0,1.0),(320.0,1.5)]) {
+    final width=scenario.$1,scale=scenario.$2;
+    testWidgets('Native navigation and summaries fit a $width phone at text scale $scale', (tester) async {
       FlutterSecureStorage.setMockInitialValues({});
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
@@ -48,7 +49,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final api = DirectoryApi(services);
       final captureKey=GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
+      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
       await tester.pumpAndSettle();
       expect(find.text('Quick access'), findsOneWidget);
       if(width==390)await capture(tester,captureKey,'home');

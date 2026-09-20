@@ -201,33 +201,13 @@ function refund_unstarted_summary(
     string $sourceHash,
     int $price
 ): array {
-    if ($price <= 0) {
-        return ['refunded' => false, 'new_balance' => null];
-    }
-
     $pdo = ensure_database_connection($pdo);
-    $reference = 'SUM-REFUND-' . strtoupper(substr(hash(
-        'sha256',
-        $userId . '|' . $courseCode . '|' . $sourceHash . '|' . SUMMARY_PROMPT_VERSION
-    ), 0, 60));
-
     $pdo->beginTransaction();
     try {
-        $progress = user_summary_progress($pdo, $userId, $courseCode, $sourceHash);
-        if ($progress >= 0) {
-            $pdo->commit();
-            return ['refunded' => false, 'new_balance' => null];
-        }
-
-        $existingRefund = $pdo->prepare(
-            'SELECT id FROM summary_transactions WHERE reference = ? LIMIT 1 FOR UPDATE'
-        );
-        $existingRefund->execute([$reference]);
-        if ($existingRefund->fetchColumn()) {
-            $pdo->commit();
-            return ['refunded' => false, 'new_balance' => null];
-        }
-
+        // Never refund a new source revision after this course has delivered content.
+        $progress=$pdo->prepare('SELECT MAX(last_revealed_section) FROM user_summary_progress WHERE user_id=? AND course_code=?');
+        $progress->execute([$userId,$courseCode]);$last=$progress->fetchColumn();
+        if($last!==false&&$last!==null&&(int)$last>=0){$pdo->commit();return ['refunded'=>false,'new_balance'=>null];}
         $access = $pdo->prepare(
             'SELECT id FROM user_summaries
              WHERE user_id = ? AND REPLACE(UPPER(course_code), " ", "") = ? LIMIT 1 FOR UPDATE'
@@ -245,6 +225,15 @@ function refund_unstarted_summary(
             throw new RuntimeException('User account not found while reversing the summary charge.');
         }
 
+        // Refund the recorded debit, never today's configurable catalogue price.
+        $charge=$pdo->prepare('SELECT amount,reference FROM summary_transactions WHERE user_id=? AND type="debit" AND description=? ORDER BY id DESC LIMIT 1 FOR UPDATE');
+        $charge->execute([$userId,'Unlocked course summary: '.$courseCode]);$paid=$charge->fetch();
+        if(!$paid||nu_money_to_kobo($paid['amount'])<=0){$pdo->commit();return ['refunded'=>false,'new_balance'=>null];}
+        $price=nu_money_to_kobo($paid['amount'])/100;
+        $reference='SUM-REFUND-'.strtoupper(substr(hash('sha256',$paid['reference']),0,60));
+        $existing=$pdo->prepare('SELECT id FROM summary_transactions WHERE reference=? LIMIT 1 FOR UPDATE');
+        $existing->execute([$reference]);
+        if($existing->fetchColumn()){$pdo->commit();return ['refunded'=>false,'new_balance'=>null];}
         $pdo->prepare('UPDATE summary_users SET balance = balance + ? WHERE id = ?')
             ->execute([$price, $userId]);
         $pdo->prepare(
@@ -306,7 +295,7 @@ function unlock_course(PDO $pdo, int $userId, string $courseCode, int $price): a
             'UPDATE summary_users SET balance = balance - ? WHERE id = ? AND balance >= ?'
         );
         $update->execute([$price, $userId, $price]);
-        if ($update->rowCount() !== 1) {
+        if ($price > 0 && $update->rowCount() !== 1) {
             throw new RuntimeException('Your wallet could not be updated. Please retry.');
         }
 
