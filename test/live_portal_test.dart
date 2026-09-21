@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
@@ -15,6 +16,11 @@ class DirectoryApi extends ApiClient {
   final List<dynamic> services;
   @override
   Future<Map<String, dynamic>> getJson(String path) async {
+    if(path=='/posts/news')return {'data':{'items':[
+      {'id':1,'category':'news','title':'TMA study reminder','excerpt':'Plan time to review your course material before assessment.','published_at':DateTime.now().toIso8601String()},
+      {'id':2,'category':'news','title':'Examination preparation guide','excerpt':'Organise your revision and check your academic calendar.','published_at':DateTime.now().subtract(const Duration(days:2)).toIso8601String()},
+      {'id':3,'category':'news','title':'General student update','excerpt':'Find study materials and revision resources in the app.','published_at':DateTime.now().subtract(const Duration(days:9)).toIso8601String()},
+    ]}};
     return {'data': {'items': path == '/services' ? services : <dynamic>[]}};
   }
 }
@@ -37,19 +43,24 @@ void main() {
   setUpAll(() async {
     services = jsonDecode(File('assets/data/services.json').readAsStringSync()) as List<dynamic>;
     final font = File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
-    if(font.existsSync()){final loader=FontLoader('sans-serif')..addFont(Future.value(ByteData.sublistView(font.readAsBytesSync())));await loader.load();}
+    if(font.existsSync()){for(final family in ['sans-serif','Roboto']){final loader=FontLoader(family)..addFont(Future.value(ByteData.sublistView(font.readAsBytesSync())));await loader.load();}}
+    final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+    if(!icons.existsSync())throw StateError('Material icon font missing from preview environment');
+    await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
   });
   for (final scenario in [(320.0,1.0),(390.0,1.0),(430.0,1.0),(320.0,1.5)]) {
     final width=scenario.$1,scale=scenario.$2;
     testWidgets('Native navigation and summaries fit a $width phone at text scale $scale', (tester) async {
       FlutterSecureStorage.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final api = DirectoryApi(services);
       final captureKey=GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
+      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(debugShowCheckedModeBanner:false,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
+      await tester.runAsync(()async{for(final path in ['assets/images/noun_update_logo.png','assets/images/student-hero.webp']){await precacheImage(AssetImage(path),tester.element(find.byType(LivePortal)));}});
       await tester.pumpAndSettle();
       if(scale>1)await tester.scrollUntilVisible(find.text('Quick access'),150,scrollable:find.byType(Scrollable).first);
       expect(find.text('Quick access'), findsOneWidget);

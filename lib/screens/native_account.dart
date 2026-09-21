@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
+import 'native_tools.dart';
 
 class NativeAuth extends StatefulWidget {
  const NativeAuth(this.api,{super.key,this.initialMode='login'});
@@ -9,7 +10,7 @@ class NativeAuth extends StatefulWidget {
 }
 class _NativeAuthState extends State<NativeAuth>{
  final email=TextEditingController(),password=TextEditingController(),name=TextEditingController(),code=TextEditingController();
- late String mode;bool busy=false;String? message;
+ late String mode;bool busy=false,hidden=true;String? message;
  @override void initState(){super.initState();mode=widget.initialMode;}
  @override void dispose(){email.dispose();password.dispose();name.dispose();code.dispose();super.dispose();}
  Future<void> submit()async{if(busy)return;setState((){busy=true;message=null;});try{
@@ -19,16 +20,19 @@ class _NativeAuthState extends State<NativeAuth>{
   else if(mode=='code'){password.clear();if(mounted)setState((){mode='login';message='${d['message']}';});}
   else{await const SessionStore().saveTokens(accessToken:d['access_token'] as String,refreshToken:d['refresh_token'] as String);if(mounted)Navigator.pop(context,true);}
  }catch(e){if(mounted)setState(()=>message='$e');}finally{if(mounted)setState(()=>busy=false);}}
- @override Widget build(BuildContext context)=>NuPage(title:'NOUN Update',child:ListView(padding:const EdgeInsets.all(22),children:[const Center(child:BrandLogo(size:92)),const SizedBox(height:20),const GreenBanner(title:'Welcome to your\nstudent space.',text:'Study, prepare and stay connected.',icon:Icons.school_rounded),NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password','code'=>'Enter your reset code',_=>'Welcome back!'},subtitle:mode=='login'?'Sign in with your Course Summary email and password.':'One account for the website and app.'),
+ @override Widget build(BuildContext context)=>NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
+ StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
+ Container(transform:Matrix4.translationValues(0,-18,0),padding:const EdgeInsets.fromLTRB(20,23,20,18),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+ if(mode!='login')NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password',_=>'Enter your reset code'}),
  if(mode=='register')Padding(padding:const EdgeInsets.only(bottom:12),child:TextField(controller:name,autofillHints:const [AutofillHints.name],decoration:const InputDecoration(labelText:'Full name',prefixIcon:Icon(Icons.person_outline)))),
  TextField(controller:email,keyboardType:TextInputType.emailAddress,autofillHints:const [AutofillHints.username],decoration:const InputDecoration(labelText:'Email address',prefixIcon:Icon(Icons.email_outlined))),const SizedBox(height:12),
  if(mode=='code')... [TextField(controller:code,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'8-digit reset code')),const SizedBox(height:12)],
- if(mode!='reset')TextField(controller:password,obscureText:true,autofillHints:mode=='login'?const [AutofillHints.password]:const [AutofillHints.newPassword],decoration:InputDecoration(labelText:mode=='code'?'New password':'Password',helperText:mode=='register'||mode=='code'?'Use 10–128 characters':null,prefixIcon:const Icon(Icons.lock_outline)),onSubmitted:(_)=>submit()),
+ if(mode!='reset')TextField(controller:password,obscureText:hidden,autofillHints:mode=='login'?const [AutofillHints.password]:const [AutofillHints.newPassword],decoration:InputDecoration(labelText:mode=='code'?'New password':'Password',helperText:mode=='register'||mode=='code'?'Use 10–128 characters':null,prefixIcon:const Icon(Icons.lock_outline),suffixIcon:IconButton(tooltip:hidden?'Show password':'Hide password',onPressed:()=>setState(()=>hidden=!hidden),icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined))),onSubmitted:(_)=>submit()),
+ if(mode=='login')Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>setState(()=>mode='reset'),child:const Text('Forgot password?'))),
  if(message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Text(message!)),const SizedBox(height:20),FilledButton(onPressed:busy?null:submit,child:Text(busy?'Please wait…':switch(mode){'register'=>'Create account','reset'=>'Send reset code','code'=>'Change password',_=>'Sign in'})),
- if(mode=='login')TextButton(onPressed:()=>setState(()=>mode='reset'),child:const Text('Forgot password?')),
- TextButton(onPressed:()=>setState((){mode=mode=='login'?'register':'login';message=null;}),child:Text(mode=='login'?'Create an account':'Back to sign in')),
- OutlinedButton.icon(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.person_outline),label:const Text('Continue as guest')),
- ]));
+ const SizedBox(height:10),OutlinedButton(onPressed:()=>setState((){mode=mode=='login'?'register':'login';message=null;}),child:Text(mode=='login'?'Create an account':'Back to sign in')),
+ const SizedBox(height:14),const Row(children:[Expanded(child:Divider()),Padding(padding:EdgeInsets.symmetric(horizontal:12),child:Text('Explore at your pace',style:TextStyle(fontSize:11))),Expanded(child:Divider())]),TextButton.icon(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.person_outline),label:const Text('Continue as guest')),const SizedBox(height:8),NuPanel(color:nuMint,padding:12,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Inside NOUN Update',style:TextStyle(fontWeight:FontWeight.w800,color:nuDeep)),const SizedBox(height:14),Row(crossAxisAlignment:CrossAxisAlignment.start,children:[for(final item in [('Fee Checker',Icons.account_balance_wallet_rounded,nuGreen),('Study Hub',Icons.lightbulb_rounded,nuGold),('Mock e-Exam',Icons.desktop_windows_rounded,nuRed)])Expanded(child:InkWell(onTap:()=>pushNu(context,item.$1=='Fee Checker'?NativeFees(widget.api):item.$1=='Study Hub'?MaterialLibrary(api:widget.api):const NativeUnavailable('Mock e-Exam')),child:Column(children:[GlossIcon(item.$2,color:item.$3,size:46),const SizedBox(height:8),Text(item.$1,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))])))]))])),const Text('One account. More possibilities.',textAlign:TextAlign.center,style:TextStyle(fontSize:11,color:nuGreen)),
+ ])),]));
 }
 class NativeProfile extends StatefulWidget {
  const NativeProfile({super.key,required this.api,required this.name});final ApiClient api;final String name;
