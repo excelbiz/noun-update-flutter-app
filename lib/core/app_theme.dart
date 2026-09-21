@@ -16,92 +16,24 @@ class AppColours {
   static const danger = Color(0xFFD64545);
 }
 
-ThemeData buildAppTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: AppColours.green700,
-    brightness: Brightness.light,
-    primary: AppColours.green700,
-    secondary: AppColours.green500,
-    surface: Colors.white,
-    error: AppColours.danger,
-  );
-
-  return ThemeData(
-    useMaterial3: true,
-    colorScheme: scheme,
-    scaffoldBackgroundColor: AppColours.surface,
-    fontFamily: 'sans-serif',
-    textTheme: const TextTheme(
-      headlineLarge: TextStyle(
-        color: AppColours.ink,
-        fontSize: 30,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.8,
-      ),
-      headlineMedium: TextStyle(
-        color: AppColours.ink,
-        fontSize: 24,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-      ),
-      titleLarge: TextStyle(
-        color: AppColours.ink,
-        fontSize: 20,
-        fontWeight: FontWeight.w800,
-      ),
-      titleMedium: TextStyle(
-        color: AppColours.ink,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-      ),
-      bodyLarge: TextStyle(color: AppColours.ink, height: 1.45),
-      bodyMedium: TextStyle(color: AppColours.muted, height: 1.4),
+ThemeData buildAppTheme({Brightness brightness=Brightness.light, String? fontFamily='NUSans', Color accent=AppColours.green700}) {
+  final dark=brightness==Brightness.dark;
+  final scheme=ColorScheme.fromSeed(seedColor:accent,brightness:brightness);
+  final base=ThemeData(useMaterial3:true,colorScheme:scheme,fontFamily:fontFamily);
+  return base.copyWith(
+    scaffoldBackgroundColor:dark?const Color(0xff101715):const Color(0xfff8faf9),
+    textTheme:base.textTheme.copyWith(
+      headlineLarge:base.textTheme.headlineLarge?.copyWith(fontSize:30,fontWeight:FontWeight.w700),
+      headlineMedium:base.textTheme.headlineMedium?.copyWith(fontSize:24,fontWeight:FontWeight.w700),
+      titleLarge:base.textTheme.titleLarge?.copyWith(fontSize:20,fontWeight:FontWeight.w700),
+      titleMedium:base.textTheme.titleMedium?.copyWith(fontSize:15,fontWeight:FontWeight.w700),
+      bodyLarge:base.textTheme.bodyLarge?.copyWith(height:1.45),
+      bodyMedium:base.textTheme.bodyMedium?.copyWith(height:1.4),
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColours.surface,
-      foregroundColor: AppColours.ink,
-      elevation: 0,
-      centerTitle: false,
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      color: Colors.white,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white,
-      hintStyle: const TextStyle(color: AppColours.muted),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFE5EAE7)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColours.green600, width: 1.5),
-      ),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: AppColours.green700,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(0, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontFamily: 'sans-serif', fontWeight: FontWeight.w700),
-      ),
-    ),
-    navigationBarTheme: const NavigationBarThemeData(
-      backgroundColor: Colors.white,
-      indicatorColor: AppColours.mint,
-      labelTextStyle: WidgetStatePropertyAll(
-        TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-      ),
-    ),
+    appBarTheme:AppBarTheme(backgroundColor:dark?const Color(0xff17201d):AppColours.green900,foregroundColor:Colors.white,elevation:0,centerTitle:false),
+    cardTheme:CardThemeData(elevation:0,color:scheme.surfaceContainerLow,margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),
+    inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:scheme.surfaceContainerLow,hintStyle:TextStyle(color:scheme.onSurfaceVariant),border:OutlineInputBorder(borderRadius:BorderRadius.circular(16)),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide(color:scheme.outlineVariant)),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide(color:scheme.primary,width:1.5))),
+    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(minimumSize:const Size(0,48),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),textStyle:base.textTheme.labelLarge?.copyWith(fontWeight:FontWeight.w700))),
+    navigationBarTheme:NavigationBarThemeData(backgroundColor:scheme.surface,indicatorColor:scheme.secondaryContainer,labelTextStyle:WidgetStatePropertyAll(base.textTheme.labelSmall?.copyWith(fontSize:11,fontWeight:FontWeight.w700,color:scheme.onSurface))),
   );
 }
-

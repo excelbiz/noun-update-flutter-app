@@ -1,7 +1,7 @@
 name: noun_update_student_app
 description: Native NOUN Update student companion for Android and iOS.
 publish_to: none
-version: 0.3.1+4
+version: 0.4.0+5
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -28,12 +28,23 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: NUSans
+      fonts:
+        - asset: assets/fonts/NUSans-Regular.ttf
+        - asset: assets/fonts/NUSans-Bold.ttf
+          weight: 700
+    - family: NUReading
+      fonts:
+        - asset: assets/fonts/NUReading.ttf
   assets:
     - assets/images/noun_update_logo.png
     - assets/images/launcher_foreground.png
     - assets/images/student-hero.webp
     - assets/images/logo.webp
     - assets/data/services.json
+    - assets/fonts/Lato-OFL.txt
+    - assets/fonts/SourceSerif4-OFL.txt
 
 flutter_launcher_icons:
   android: true

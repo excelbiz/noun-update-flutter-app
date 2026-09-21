@@ -125,7 +125,7 @@ class ApiClient {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.3.0',
+      'X-App-Version': '0.4.0',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
@@ -136,7 +136,7 @@ class ApiClient {
       payload = jsonDecode(response.body) as Map<String, dynamic>;
     } on Object {
       throw ApiException(
-        'The server returned an unreadable response.',
+        'NOUN Update is temporarily unavailable. Please try again shortly.',
         statusCode: response.statusCode,
       );
     }
