@@ -92,7 +92,7 @@ ThemeData buildAppTheme() {
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: 'sans-serif', fontWeight: FontWeight.w700),
       ),
     ),
     navigationBarTheme: const NavigationBarThemeData(
