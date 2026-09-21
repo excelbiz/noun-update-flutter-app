@@ -69,7 +69,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final api = DirectoryApi(services);
       final captureKey=GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(debugShowCheckedModeBanner:false,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(brightness:dark?Brightness.dark:Brightness.light), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
+      await tester.pumpWidget(RepaintBoundary(key:captureKey,child:MaterialApp(debugShowCheckedModeBanner:false,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scale)),child:child!),theme: buildAppTheme(brightness:dark?Brightness.dark:Brightness.light,fontFamily:dark&&width==320?'NUReading':width==430?null:'NUSans'), home: LivePortal(apiClient: api, serviceBundle: ServiceBundle(jsonEncode(services))))));
       await tester.runAsync(()async{for(final path in ['assets/images/noun_update_logo.png','assets/images/student-hero.webp']){await precacheImage(AssetImage(path),tester.element(find.byType(LivePortal)));}});
       await tester.pumpAndSettle();
       if(scale>1)await tester.scrollUntilVisible(find.text('Quick access'),150,scrollable:find.byType(Scrollable).first);
