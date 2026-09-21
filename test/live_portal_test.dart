@@ -10,12 +10,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/screens/live_portal.dart';
+import 'package:noun_update_student_app/screens/native_tools.dart';
 
 class DirectoryApi extends ApiClient {
-  DirectoryApi(this.services);
+  DirectoryApi(this.services,{this.signedIn=false});
+  final bool signedIn;
   final List<dynamic> services;
   @override
   Future<Map<String, dynamic>> getJson(String path) async {
+    if(path=='/app/bootstrap')return {'data':{'profile':signedIn?{'id':'12','name':'Preview Student','email':'student@example.test'}:null,'wallet':signedIn?{'balance_kobo':525000,'transactions':[]}:null}};
+    if(path=='/study/GST302')return {'data':{'sections':[
+      for(var i=0;i<5;i++){'index':i,'module_title':'Module ${i+1}','unit_title':['Introduction to Entrepreneurship','Opportunity Identification','Business Planning','Financing New Ventures','Venture Growth and Sustainability'][i],'source_text':'Preview course content used only by the widget test fixture.'}
+    ]}};
     if(path=='/posts/news')return {'data':{'items':[
       {'id':1,'category':'news','title':'TMA study reminder','excerpt':'Plan time to review your course material before assessment.','published_at':DateTime.now().toIso8601String()},
       {'id':2,'category':'news','title':'Examination preparation guide','excerpt':'Organise your revision and check your academic calendar.','published_at':DateTime.now().subtract(const Duration(days:2)).toIso8601String()},
@@ -103,6 +109,22 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+  testWidgets('Course layout and signed-in wallet render with fixture data',(tester)async{
+    FlutterSecureStorage.setMockInitialValues({'noun_access_token':'fixture-token'});
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey(),api=DirectoryApi(services,signedIn:true);
+    await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildAppTheme(),home:LivePortal(apiClient:api,serviceBundle:ServiceBundle(jsonEncode(services))))));
+    await tester.pumpAndSettle();await tester.tap(find.text('Profile'));await tester.pumpAndSettle();
+    expect(find.text('₦5250.00'),findsOneWidget);expect(tester.takeException(),isNull);
+    await capture(tester,key,'wallet');
+    await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildAppTheme(),home:NativeStudy(api:api,row:const {'id':1,'course_code':'GST302','title':'Entrepreneurship'}))));
+    await tester.pumpAndSettle();expect(find.text('Introduction to Entrepreneurship'),findsOneWidget);
+    expect(tester.takeException(),isNull);await capture(tester,key,'study-course');
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }
 
 Future<void> capture(WidgetTester tester,GlobalKey key,String name) async {

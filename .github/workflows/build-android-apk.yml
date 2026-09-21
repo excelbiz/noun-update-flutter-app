@@ -76,6 +76,7 @@ jobs:
         run: flutter test
 
       - name: Upload native screen previews
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: native-screen-previews
