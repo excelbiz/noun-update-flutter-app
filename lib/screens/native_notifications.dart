@@ -16,9 +16,9 @@ class _NativeNotificationsState extends State<NativeNotifications>{
  String category(String text){final t=text.toLowerCase();if(t.contains('tma'))return 'TMAs';if(t.contains('result'))return 'Results';if(t.contains('exam'))return 'Exams';if(t.contains('fee')||t.contains('payment'))return 'Fees';return 'General';}
  Future<void> load()async{try{
   final prefs=await SharedPreferences.getInstance();final fetched=<Map<String,dynamic>>[];Object? failure;
-  for(final source in ['news','guides','scholarships','career','blog']){
+  await Future.wait(['news','guides','scholarships','career','blog'].map((source)async{
    try{final d=unpack(await widget.api.getJson('/posts/$source'));for(final p in records(d['items'])){fetched.add({'key':'$source:${p['id']}','title':p['title'],'text':p['excerpt']??'Read the published update.','date':p['published_at'],'category':category('${p['title']}'),'article':p});}}catch(e){failure=e;}
-  }
+  }));
   fetched.sort((a,b)=>'${b['date']}'.compareTo('${a['date']}'));
   if(mounted)setState((){rows=fetched;read=(prefs.getStringList(slot)??[]).toSet();loading=false;error=failure;});
  }catch(e){if(mounted)setState((){loading=false;error=e;});}}

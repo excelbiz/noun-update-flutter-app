@@ -20,6 +20,20 @@ class _NativeAuthState extends State<NativeAuth>{
   else if(mode=='code'){password.clear();if(mounted)setState((){mode='login';message='${d['message']}';});}
   else{await const SessionStore().saveTokens(accessToken:d['access_token'] as String,refreshToken:d['refresh_token'] as String);if(mounted)Navigator.pop(context,true);}
  }catch(e){if(mounted)setState(()=>message='$e');}finally{if(mounted)setState(()=>busy=false);}}
+ Widget _insideTools()=>NuPanel(color:nuMint,padding:12,child:Column(
+  crossAxisAlignment:CrossAxisAlignment.start,
+  children:[
+   const Text('Inside NOUN Update',style:TextStyle(fontWeight:FontWeight.w800,color:nuDeep)),
+   const SizedBox(height:14),
+   Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    for(final item in [('Fee Checker',Icons.account_balance_wallet_rounded,nuGreen),('Study Hub',Icons.lightbulb_rounded,nuGold),('Mock e-Exam',Icons.desktop_windows_rounded,nuRed)])
+     Expanded(child:InkWell(
+      onTap:()=>pushNu(context,item.$1=='Fee Checker'?NativeFees(widget.api):item.$1=='Study Hub'?MaterialLibrary(api:widget.api):const NativeUnavailable('Mock e-Exam')),
+      child:Column(children:[GlossIcon(item.$2,color:item.$3,size:46),const SizedBox(height:8),Text(item.$1,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))]),
+     )),
+   ]),
+  ],
+ ));
  @override Widget build(BuildContext context)=>NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
  StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
  Container(transform:Matrix4.translationValues(0,-18,0),padding:const EdgeInsets.fromLTRB(20,23,20,18),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -31,7 +45,7 @@ class _NativeAuthState extends State<NativeAuth>{
  if(mode=='login')Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>setState(()=>mode='reset'),child:const Text('Forgot password?'))),
  if(message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:16),child:Text(message!)),const SizedBox(height:20),FilledButton(onPressed:busy?null:submit,child:Text(busy?'Please wait…':switch(mode){'register'=>'Create account','reset'=>'Send reset code','code'=>'Change password',_=>'Sign in'})),
  const SizedBox(height:10),OutlinedButton(onPressed:()=>setState((){mode=mode=='login'?'register':'login';message=null;}),child:Text(mode=='login'?'Create an account':'Back to sign in')),
- const SizedBox(height:14),const Row(children:[Expanded(child:Divider()),Padding(padding:EdgeInsets.symmetric(horizontal:12),child:Text('Explore at your pace',style:TextStyle(fontSize:11))),Expanded(child:Divider())]),TextButton.icon(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.person_outline),label:const Text('Continue as guest')),const SizedBox(height:8),NuPanel(color:nuMint,padding:12,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Inside NOUN Update',style:TextStyle(fontWeight:FontWeight.w800,color:nuDeep)),const SizedBox(height:14),Row(crossAxisAlignment:CrossAxisAlignment.start,children:[for(final item in [('Fee Checker',Icons.account_balance_wallet_rounded,nuGreen),('Study Hub',Icons.lightbulb_rounded,nuGold),('Mock e-Exam',Icons.desktop_windows_rounded,nuRed)])Expanded(child:InkWell(onTap:()=>pushNu(context,item.$1=='Fee Checker'?NativeFees(widget.api):item.$1=='Study Hub'?MaterialLibrary(api:widget.api):const NativeUnavailable('Mock e-Exam')),child:Column(children:[GlossIcon(item.$2,color:item.$3,size:46),const SizedBox(height:8),Text(item.$1,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))])))]))])),const Text('One account. More possibilities.',textAlign:TextAlign.center,style:TextStyle(fontSize:11,color:nuGreen)),
+ const SizedBox(height:14),const Row(children:[Expanded(child:Divider()),Padding(padding:EdgeInsets.symmetric(horizontal:12),child:Text('Explore at your pace',style:TextStyle(fontSize:11))),Expanded(child:Divider())]),TextButton.icon(onPressed:()=>Navigator.pop(context),icon:const Icon(Icons.person_outline),label:const Text('Continue as guest')),const SizedBox(height:8),_insideTools(),const Text('One account. More possibilities.',textAlign:TextAlign.center,style:TextStyle(fontSize:11,color:nuGreen)),
  ])),]));
 }
 class NativeProfile extends StatefulWidget {
