@@ -128,7 +128,11 @@ void main() {
     await tester.drag(find.byType(ListView).first,const Offset(0,1000));await tester.pumpAndSettle();
     expect(tester.takeException(),isNull);await capture(tester,key,'settings-dark-serif');
     await Appearance.instance.change(mode:ThemeMode.light,font:'Modern sans',accent:'Emerald');await tester.pumpAndSettle();
-    await capture(tester,key,'settings-light');await tester.pumpWidget(const SizedBox.shrink());
+    await capture(tester,key,'settings-light');
+    await Appearance.instance.change(textSize:'Extra Large');await tester.pumpAndSettle();
+    expect(tester.takeException(),isNull);
+    await Appearance.instance.change(textSize:'Default');await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('Course layout and signed-in wallet render with fixture data',(tester)async{
     FlutterSecureStorage.setMockInitialValues({'noun_access_token':'fixture-token'});
