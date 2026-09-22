@@ -1,7 +1,7 @@
 name: noun_update_student_app
 description: Native NOUN Update student companion for Android and iOS.
 publish_to: none
-version: 0.4.0+5
+version: 0.5.0+6
 
 environment:
   sdk: ">=3.6.0 <4.0.0"

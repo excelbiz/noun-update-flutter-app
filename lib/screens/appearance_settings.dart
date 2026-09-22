@@ -33,6 +33,6 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Reading preview',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),const SizedBox(height:8),const Text('Prepare with purpose. Read your course materials, organise your notes and make steady progress.'),const SizedBox(height:12),FilledButton(onPressed:(){},child:const Text('Sample button'))])),
     TextButton(onPressed:saving?null:()=>save(automatic:true,textSize:'Default',mode:ThemeMode.system,font:'Modern sans',accent:'Emerald'),child:const Text('Restore default appearance')),
     const NuTitle('Connection'),NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Website updates, course resources and account details are securely loaded from NOUN Update.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:checking?null:check,icon:const Icon(Icons.sync_rounded),label:Text(checking?'Checking…':'Check connection')),if(connection!=null)Padding(padding:const EdgeInsets.only(top:10),child:Text(connection!,semanticsLabel:connection))])),
-    const Text('NOUN Update · Version 0.4.0',textAlign:TextAlign.center),
+    const Text('NOUN Update · Version 0.5.0',textAlign:TextAlign.center),
   ]));});
 }
