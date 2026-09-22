@@ -135,7 +135,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('Course layout and signed-in wallet render with fixture data',(tester)async{
-    FlutterSecureStorage.setMockInitialValues({'noun_access_token':'fixture-token'});
+    FlutterSecureStorage.setMockInitialValues({'noun_central_access_token':'fixture-token'});
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
     addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);

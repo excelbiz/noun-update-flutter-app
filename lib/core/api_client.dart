@@ -21,8 +21,8 @@ class SessionStore {
   const SessionStore();
 
   static const _storage = FlutterSecureStorage();
-  static const _accessTokenKey = 'noun_access_token';
-  static const _refreshTokenKey = 'noun_refresh_token';
+  static const _accessTokenKey = 'noun_central_access_token';
+  static const _refreshTokenKey = 'noun_central_refresh_token';
 
   Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
   Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
@@ -53,7 +53,7 @@ class ApiClient {
 
   Future<bool> _refresh() async {
     final token = await _sessionStore.readRefreshToken();
-    if (token == null) return false;
+    if (token == null || token.isEmpty) return false;
     final response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}/auth/refresh'),
       headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refresh_token': token}))
       .timeout(const Duration(seconds: 20));
@@ -69,12 +69,20 @@ class ApiClient {
     try { return await _refreshing!; } finally { _refreshing = null; }
   }
 
+  bool _central(String path) => path.startsWith('/auth/') || path.startsWith('/wallet') || path == '/app/bootstrap' || path.startsWith('/profile') || path.startsWith('/course-summary') || path.startsWith('/orders') || path.contains('/state') || (path.startsWith('/exam-summaries/') && !path.endsWith('/pdf'));
+
+  Uri _uri(String path) {
+    if (!_central(path)) return Uri.parse('${AppConfig.apiBaseUrl}$path');
+    final route = Uri.parse(path);
+    return Uri.parse(AppConfig.apiBaseUrl).replace(path: '/api/central/index.php', queryParameters: {...route.queryParameters, 'route': route.path});
+  }
+
   Future<Map<String, dynamic>> getJson(String path) async {
     var response = await _client
-        .get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: await _headers())
+        .get(_uri(path), headers: await _headers(path))
         .timeout(const Duration(seconds: 12));
     if (response.statusCode == 401 && await _refreshOnce()) {
-      response = await _client.get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: await _headers()).timeout(const Duration(seconds: 20));
+      response = await _client.get(_uri(path), headers: await _headers(path)).timeout(const Duration(seconds: 20));
     }
     return _decode(response);
   }
@@ -84,21 +92,21 @@ class ApiClient {
     Map<String, dynamic> body, {
     String? idempotencyKey,
   }) async {
-    final headers = await _headers();
+    final headers = await _headers(path);
     if (idempotencyKey != null) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
     var response = await _client
         .post(
-          Uri.parse('${AppConfig.apiBaseUrl}$path'),
+          _uri(path),
           headers: headers,
           body: jsonEncode(body),
         )
         .timeout(Duration(seconds: path.startsWith('/course-summary') ? 300 : 60));
     if (response.statusCode == 401 && !path.startsWith('/auth/') && await _refreshOnce()) {
-      final retryHeaders = await _headers();
+      final retryHeaders = await _headers(path);
       if (idempotencyKey != null) retryHeaders['Idempotency-Key'] = idempotencyKey;
-      response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: retryHeaders,
+      response = await _client.post(_uri(path), headers: retryHeaders,
         body: jsonEncode(body)).timeout(Duration(seconds: path.startsWith('/course-summary') ? 300 : 60));
     }
     return _decode(response);
@@ -106,10 +114,10 @@ class ApiClient {
 
   Future<Uint8List> getPdf(String path) async {
     final base=Uri.parse(AppConfig.apiBaseUrl);
-    final uri=path.startsWith('https://')?Uri.parse(path):Uri.parse('${AppConfig.apiBaseUrl}$path');
+    final uri=path.startsWith('https://')?Uri.parse(path):_uri(path);
     if(uri.origin!=base.origin||!uri.path.startsWith('${base.path}/'))throw const ApiException('Invalid document location.');
     final request=http.Request('GET',uri)..followRedirects=false;
-    request.headers.addAll(await _headers());
+    request.headers.addAll(await _headers(path));
     final response=await _client.send(request).timeout(const Duration(seconds:45));
     if(response.statusCode!=200)throw const ApiException('Unable to load this document. Reopen your purchase and try again.');
     final bytes=BytesBuilder();
@@ -119,14 +127,15 @@ class ApiClient {
     return data;
   }
 
-  Future<Map<String, String>> _headers() async {
+  Future<Map<String, String>> _headers(String path) async {
     final token = await _sessionStore.readAccessToken();
     return {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'User-Agent': 'NOUNUpdateMobile/central-v1',
       'X-App-Platform': 'flutter',
       'X-App-Version': '0.4.0',
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      if (_central(path) && token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
 
