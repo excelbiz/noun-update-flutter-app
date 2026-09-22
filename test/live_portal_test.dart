@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/core/appearance.dart';
+import 'package:noun_update_student_app/screens/student_workspace.dart';
 import 'package:noun_update_student_app/app/noun_update_app.dart';
 import 'package:noun_update_student_app/screens/appearance_settings.dart';
 import 'package:noun_update_student_app/screens/live_portal.dart';
@@ -115,6 +116,22 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+  testWidgets('My Courses persists and opens a course hub',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    final workspace=StudentWorkspace('test-student');await workspace.load();
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildAppTheme(),home:MyCoursesPage(workspace:workspace,openResource:(_,__){}))));
+    await tester.enterText(find.byType(TextField),'CIT411');
+    await tester.tap(find.text('Add course'));await tester.pumpAndSettle();
+    final restored=StudentWorkspace('test-student');await restored.load();expect(restored.courses,['CIT411']);
+    await capture(tester,key,'my-courses');
+    await tester.tap(find.text('CIT411'));await tester.pumpAndSettle();
+    expect(find.text('CIT411 Course Hub'),findsOneWidget);expect(tester.takeException(),isNull);
+    await capture(tester,key,'course-hub');await tester.pumpWidget(const SizedBox.shrink());
+    workspace.dispose();restored.dispose();
+  });
   testWidgets('Appearance applies immediately and survives a reload',(tester)async{
     SharedPreferences.setMockInitialValues({});await Appearance.instance.load();
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
@@ -143,8 +160,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
     final key=GlobalKey(),api=DirectoryApi(services,signedIn:true);
     await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildAppTheme(),home:LivePortal(apiClient:api,serviceBundle:ServiceBundle(jsonEncode(services))))));
-    await tester.pumpAndSettle();await tester.pageBack();await tester.pumpAndSettle();
-      await tester.tap(find.text('Profile').last);await tester.pumpAndSettle();
+    await tester.pumpAndSettle();await tester.tap(find.text('Profile').last);await tester.pumpAndSettle();
     expect(find.text('₦5250.00'),findsOneWidget);expect(tester.takeException(),isNull);
     await capture(tester,key,'wallet');
     await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildAppTheme(),home:NativeStudy(api:api,row:const {'id':1,'course_code':'GST302','title':'Entrepreneurship'}))));
