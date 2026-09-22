@@ -10,7 +10,7 @@ class NativeNotifications extends StatefulWidget {
  @override State<NativeNotifications> createState()=>_NativeNotificationsState();
 }
 class _NativeNotificationsState extends State<NativeNotifications>{
- List<Map<String,dynamic>> rows=[];Set<String> read={};String filter='All';bool loading=true;Object? error;
+ List<Map<String,dynamic>> rows=[];Set<String> read={};String filter='All';bool unreadOnly=false;bool loading=true;Object? error;
  String get slot=>'nu-read-notices-${widget.userId??'guest'}';
  @override void initState(){super.initState();load();}
  String category(String text){final t=text.toLowerCase();if(t.contains('tma'))return 'TMAs';if(t.contains('result'))return 'Results';if(t.contains('exam'))return 'Exams';if(t.contains('fee')||t.contains('payment'))return 'Fees';return 'General';}
@@ -25,8 +25,8 @@ class _NativeNotificationsState extends State<NativeNotifications>{
  Future<void> mark(Iterable<String> keys)async{setState(()=>read.addAll(keys));await (await SharedPreferences.getInstance()).setStringList(slot,read.toList());}
  String displayDate(Object? value){final d=DateTime.tryParse('$value');if(d==null)return 'Published update';final months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return '${d.day} ${months[d.month-1]} ${d.year}';}
  String group(Map<String,dynamic> r){final date=DateTime.tryParse('${r['date']}');if(date==null)return 'Earlier';final now=DateTime.now(),today=DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day);if(!date.isBefore(today))return 'Today';if(now.difference(date).inDays<7)return 'This week';return 'Earlier';}
- @override Widget build(BuildContext context){final shown=rows.where((r)=>filter=='All'||r['category']==filter).toList();return RefreshIndicator(onRefresh:load,child:ListView(key:PageStorageKey('notifications'),physics:AlwaysScrollableScrollPhysics(),padding:EdgeInsets.all(16),children:[
-  ServiceHero(title:'Notifications',subtitle:'Published updates from NOUN Update',icon:Icons.notifications_active_rounded),Align(alignment:Alignment.centerRight,child:TextButton(onPressed:rows.isEmpty?null:()=>mark(rows.map((r)=>'${r['key']}')),child:Text('Mark all read',style:TextStyle(fontSize:10)))),
+ @override Widget build(BuildContext context){final shown=rows.where((r)=>(filter=='All'||r['category']==filter)&&(!unreadOnly||!read.contains(r['key']))).toList();return RefreshIndicator(onRefresh:load,child:ListView(key:PageStorageKey('notifications'),physics:AlwaysScrollableScrollPhysics(),padding:EdgeInsets.all(16),children:[
+  NuTitle('Your inbox',subtitle:'Published updates from NOUN Update'),NuPanel(child:Row(children:[GlossIcon(Icons.notifications_active_outlined,size:44),SizedBox(width:14),Expanded(child:Text('${rows.where((r)=>!read.contains(r['key'])).length} unread updates',style:TextStyle(fontSize:19,fontWeight:FontWeight.w800))])),SwitchListTile(contentPadding:EdgeInsets.zero,title:Text('Unread only'),value:unreadOnly,onChanged:(v)=>setState(()=>unreadOnly=v)),Align(alignment:Alignment.centerRight,child:TextButton(onPressed:rows.isEmpty?null:()=>mark(rows.map((r)=>'${r['key']}')),child:Text('Mark all read',style:TextStyle(fontSize:10)))),
   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final c in ['All','TMAs','Exams','Results','Fees','General'])Padding(padding:EdgeInsets.only(right:6),child:ChoiceChip(showCheckmark:false,label:Text(c,style:TextStyle(fontSize:11)),selected:filter==c,onSelected:(_)=>setState(()=>filter=c)))])),
   if(loading)Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator())),
   if(error!=null)AsyncError('Some updates could not load.',load),
