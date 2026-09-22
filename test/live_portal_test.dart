@@ -121,7 +121,7 @@ void main() {
     await tester.pumpWidget(RepaintBoundary(key:key,child:NounUpdateApp(home:AppearanceSettings(api:DirectoryApi(services)))));await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('mode-dark')));await tester.pumpAndSettle();
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).brightness,Brightness.dark);
-    await tester.tap(find.text('Classic serif'));await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Classic serif'));await tester.tap(find.text('Classic serif'));await tester.pumpAndSettle();
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).textTheme.bodyMedium?.fontFamily,'NUReading');
     await tester.ensureVisible(find.text('Ocean'));await tester.tap(find.text('Ocean'));await tester.pumpAndSettle();
     final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(restored.accent,'Ocean');restored.dispose();
