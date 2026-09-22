@@ -105,10 +105,11 @@ void main() {
       await tester.pageBack();await tester.pumpAndSettle();
       await tester.tap(find.text('Profile').last);
       await tester.pumpAndSettle();
+      if(width==390)await capture(tester,captureKey,'${dark?'dark-':''}profile');
+      await tester.scrollUntilVisible(find.text('Sign in'),120,scrollable:find.byType(Scrollable).first);
       expect(find.text('Sign in'), findsOneWidget);
       expect(find.text('One account. One balance.'), findsOneWidget);
       expect(find.text('₦0.00'), findsNothing);
-      if(width==390)await capture(tester,captureKey,'${dark?'dark-':''}profile');
       await tester.ensureVisible(find.text('Sign in'));await tester.tap(find.text('Sign in'));await tester.pumpAndSettle();
       expect(find.text('Welcome back!'),findsOneWidget);
       if(width==390)await capture(tester,captureKey,'${dark?'dark-':''}login');
@@ -142,7 +143,7 @@ void main() {
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).brightness,Brightness.dark);
     await tester.ensureVisible(find.text('Classic serif'));await tester.tap(find.text('Classic serif'));await tester.pumpAndSettle();
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).textTheme.bodyMedium?.fontFamily,'NUReading');
-    await tester.ensureVisible(find.text('Ocean'));await tester.tap(find.text('Ocean'));await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ocean'));await tester.pumpAndSettle();await tester.tap(find.text('Ocean'));await tester.pumpAndSettle();
     final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(restored.accent,'Ocean');restored.dispose();
     await tester.drag(find.byType(ListView).first,const Offset(0,1000));await tester.pumpAndSettle();
     expect(tester.takeException(),isNull);await capture(tester,key,'settings-dark-serif');
