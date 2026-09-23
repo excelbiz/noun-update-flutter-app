@@ -1,0 +1,64 @@
+name: noun_update_student_app
+description: Native NOUN Update student companion for Android and iOS.
+publish_to: none
+version: 0.5.0+6
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.3.0
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.3.5
+  connectivity_plus: ^6.1.2
+  onesignal_flutter: ^5.6.8
+  url_launcher: ^6.3.1
+  pdfx: ^2.11.0
+  webview_flutter: ^4.14.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: NUSans
+      fonts:
+        - asset: assets/fonts/NUSans-Regular.ttf
+        - asset: assets/fonts/NUSans-Bold.ttf
+          weight: 700
+    - family: NUReading
+      fonts:
+        - asset: assets/fonts/NUReading.ttf
+  assets:
+    - assets/images/noun_update_logo.png
+    - assets/images/launcher_foreground.png
+    - assets/images/student-hero.webp
+    - assets/images/logo.webp
+    - assets/data/services.json
+    - assets/fonts/Lato-OFL.txt
+    - assets/fonts/SourceSerif4-OFL.txt
+
+flutter_launcher_icons:
+  android: true
+  image_path: assets/images/launcher_foreground.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/launcher_foreground.png
+  min_sdk_android: 21
+
+
+flutter_native_splash:
+  color: "#F4F7F2"
+  image: assets/images/launcher_foreground.png
+  android_12:
+    color: "#F4F7F2"
+    image: assets/images/launcher_foreground.png
+  ios: true
+  web: false
