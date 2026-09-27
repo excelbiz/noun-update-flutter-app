@@ -107,7 +107,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     Widget resource(Map<String,dynamic> s,bool grid){final id='${s['id']}';return SkinResourceCard(title:serviceLabel(id,'${s['label']}'),subtitle:serviceCaption(id),icon:serviceIcon(id),tone:skinServiceColour(id),grid:grid,onTap:()=>_service(s));}
     if(tokens.resourceList)return Column(children:[for(final s in entries)resource(s,false)]);
     final large=MediaQuery.textScalerOf(context).scale(14)>19;
-    return GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:large?1:2,mainAxisSpacing:12,crossAxisSpacing:12,childAspectRatio:large?2:1.05,children:[for(final s in entries)resource(s,true)]);
+    return GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:entries.length,gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:large?1:2,mainAxisSpacing:12,crossAxisSpacing:12,mainAxisExtent:178+math.max(0,MediaQuery.textScalerOf(context).scale(14)/14-1)*100),itemBuilder:(_,i)=>resource(entries[i],true));
   }
   final scale=MediaQuery.textScalerOf(context).scale(14)/14;
   final columns=compact?(box.maxWidth>=350&&scale<1.3?5:4):(box.maxWidth>=330&&scale<1.3?3:2);
@@ -132,8 +132,8 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  ]));
  Widget _study()=>ListView(key:PageStorageKey('study'),padding:EdgeInsets.all(20),children:[
   NuTitle('Study smarter',subtitle:'Your courses. Your pace. Your next step.'),
-  ServiceHero(title:'Make room for understanding',subtitle:'Start with a course, then choose how you want to learn.',icon:Icons.menu_book_rounded),
-  NuTitle('Continue Studying'),NuPanel(child:Text('Your course resources are ready to explore. Reading progress synchronisation is not yet connected.')),
+  ServiceHero(title:SkinTokens.of(context).skin.isPremium?'Learn smart. Study confidently.':'Make room for understanding',subtitle:'Your courses, notes and revision in one place.',icon:Icons.menu_book_rounded),
+  if(!SkinTokens.of(context).skin.isPremium)...[NuTitle('Continue Studying'),NuPanel(child:Text('Choose a course below to open your study resources.'))],
   NuPanel(padding:0,child:_row('My Courses','${workspace.courses.length} courses · open your course hubs',Icons.school_outlined,_courses)),
   NuTitle('Your study library'),_grid(services.where((s)=>['courses','course-summary','exam-summary','past-questions','mock','study-hub','pop-practice'].contains(s['id'])).toList()),
   NuTitle('Your collection'),NuPanel(padding:0,child:Column(children:[_row('Saved resources','Bookmarks and reading lists',Icons.bookmark_border,()=>_unavailable('Saved resources')),_row('Downloads','Offline study resources',Icons.download_outlined,()=>_unavailable('Downloads'))])),
@@ -152,7 +152,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final groups=rows.map((s)=>'${s['group']??'Academic tools'}').toSet().toList();
   const groupOrder=['Academics','Study','Projects & services','AI tools','Student life','Help & tools','Account','Admission','Faculties','Updates'];
   groups.sort((a,b)=>groupOrder.indexOf(a).compareTo(groupOrder.indexOf(b)));
-  return ListView(key:PageStorageKey('tools'),padding:EdgeInsets.all(20),children:[NuTitle('Tools',subtitle:'Useful shortcuts for every stage of your semester.'),TextField(onChanged:(v)=>setState(()=>search=v),decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Find a tool')),NuTitle('Pinned tools',subtitle:'Tap the pin beside any tool to keep it here.'),if(pinned.isEmpty)NuPanel(child:Text('Your favourite tools will appear here.')),for(final s in pinned)tool(s),for(final group in groups)...[NuTitle(group),for(final s in rows.where((s)=>'${s['group']??'Academic tools'}'==group&&!workspace.pins.contains(s['id'])))tool(s)],if(rows.isEmpty)NuPanel(child:Text('No tools match your search.'))]);
+  return ListView(key:PageStorageKey('tools'),padding:EdgeInsets.all(20),children:[NuTitle('Tools',subtitle:'Useful shortcuts for every stage of your semester.'),TextField(onChanged:(v)=>setState(()=>search=v),decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Find a tool')),if(pinned.isNotEmpty||!SkinTokens.of(context).skin.isPremium)NuTitle('Pinned tools',subtitle:'Tap the pin beside any tool to keep it here.'),if(pinned.isEmpty&&!SkinTokens.of(context).skin.isPremium)NuPanel(child:Text('Your favourite tools will appear here.')),for(final s in pinned)tool(s),for(final group in groups)...[NuTitle(group),for(final s in rows.where((s)=>'${s['group']??'Academic tools'}'==group&&!workspace.pins.contains(s['id'])))tool(s)],if(rows.isEmpty)NuPanel(child:Text('No tools match your search.'))]);
  }
  Widget _updates()=>ListView(key:PageStorageKey('updates'),padding:EdgeInsets.all(20),children:[NuTitle('Updates',subtitle:'Stay informed. Know what matters.'),Wrap(spacing:8,runSpacing:6,children:[for(final c in [('news','News'),('guides','Guides'),('scholarships','Scholarships'),('career','Careers')])ChoiceChip(label:Text(c.$2),selected:category==c.$1,onSelected:(_)=>setState((){category=c.$1;feed=_feed();}))]),SizedBox(height:18),_news()]);
  Widget _news({bool compact=false})=>FutureBuilder<Map<String,dynamic>>(future:feed,builder:(context,s){

@@ -36,12 +36,12 @@ class SkinHero extends StatelessWidget {
       child:ClipRRect(borderRadius:BorderRadius.circular(t.radius-1),child:Stack(children:[
         Positioned.fill(child:ExcludeSemantics(child:Image.asset(path,fit:BoxFit.cover,alignment:login?Alignment.topCenter:Alignment.centerRight,cacheWidth:960))),
         Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.centerLeft,end:Alignment.centerRight,
-          colors:[const Color(0xff002c20).withValues(alpha:.96),const Color(0xff003524).withValues(alpha:friendly ? .45:.3),Colors.transparent],stops:const [0,.58,1])))),
+          colors:[const Color(0xff002c20).withValues(alpha:.96),const Color(0xff003524).withValues(alpha:friendly ? .72:.60),Colors.transparent],stops:const [0,.58,1])))),
         if(login)const Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Color(0xcc00271c)])))),
         Padding(padding:EdgeInsets.all(minimal?24:20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(login?'YOUR ACADEMIC JOURNEY':'LEARN · PLAN · SUCCEED',style:const TextStyle(color:Color(0xffffdb8b),fontSize:10,letterSpacing:1.7,fontWeight:FontWeight.w700)),
-          SizedBox(height:login?74:20),
-          FractionallySizedBox(widthFactor:login ? .94:.66,child:Text(title,style:TextStyle(fontFamily:editorial?'NUReading':null,fontSize:login?28:24,height:1.15,fontWeight:FontWeight.w800,color:Colors.white))),
+          SizedBox(height:login?74:12),
+          FractionallySizedBox(widthFactor:login ? .94:.63,child:Text(title,style:TextStyle(fontFamily:editorial?'NUReading':null,fontSize:login?28:24,height:1.15,fontWeight:FontWeight.w800,color:Colors.white))),
           const SizedBox(height:12),FractionallySizedBox(widthFactor:.72,child:Text(subtitle,style:const TextStyle(fontSize:12,height:1.5,color:Color(0xffe5f2e9)))),
           if(action!=null)Padding(padding:const EdgeInsets.only(top:16),child:action),
           if(login)const SizedBox(height:24),

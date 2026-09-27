@@ -42,18 +42,25 @@ void main(){
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
-   await tester.runAsync(()async{for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
+   await tester.runAsync(()async{await rootBundle.loadString('assets/data/services.json');for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
    expect(tester.takeException(),isNull);await capture(tester,key,'skin-${skin.name}-light');
    await tester.tap(find.byTooltip('Preview dark'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await capture(tester,key,'skin-${skin.name}-dark');expect(PremiumService.instance.isPremium,isFalse);
    expect(find.byType(LivePortal),findsOneWidget);
    for(final label in ['Study','Tools','Updates','Profile']){
      await tester.tap(find.text(label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     if(label=='Tools')expect(find.text('No tools match your search.'),findsNothing);
      if(label=='Study'||label=='Tools')await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-dark');
    }
    await tester.tap(find.byTooltip('Preview sign-in'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await capture(tester,key,'skin-${skin.name}-login-dark');
    expect((await SharedPreferences.getInstance()).getString('nu-daily-motivation'),isNull);
+   await tester.tap(find.byTooltip('Preview dashboard'));await tester.pumpAndSettle();
+   tester.view.physicalSize=const Size(320,844);
+   await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(1.5)),child:child!),home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
+   await tester.tap(find.text('Study').last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+   await tester.drag(find.byKey(const PageStorageKey('study')),const Offset(0,-430));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+
 
    await tester.pumpWidget(const SizedBox.shrink());
   });
