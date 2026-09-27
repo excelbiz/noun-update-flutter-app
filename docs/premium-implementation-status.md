@@ -1,43 +1,32 @@
-# Premium companion extension — v0.7 wallet checkout
+# Premium companion extension — v0.9 analytics reports
 
 ## Implemented
-- One unchanged default theme and ten named Premium skins, each with light/dark variants. Shared components, no duplicated app screens.
-- Premium skin artwork now includes the reference-inspired background imagery, overlays, gradients, texture and dimensional resource-card treatment while preserving readable foreground surfaces.
-- Free skin previews; applying a Premium skin requires the authenticated preference endpoint to validate a current server entitlement.
-- Account-specific preferred skin, restored after server verification; expiry falls back to default while preserving preference. Offline verification failure falls back to free access. No locally stored Premium boolean grants access.
-- Server plans with integer minor-unit prices, UTC promotion windows, original price and promotional display. No mobile price constants.
-- Premium wallet checkout is implemented against the existing central wallet. The server rechecks the live plan, promotion, entitlement and NGN wallet balance before debit; it locks the wallet row, writes an idempotent central order and ledger debit, activates the subscription in the same database transaction, and rolls everything back on failure.
-- Purchase retry keys are retained on-device until the server gives a definitive no-debit response or confirms success, reducing duplicate purchases after interrupted responses. Successful retries return the original purchase instead of debiting again.
-- New subscriptions and renewals are separate administrator switches and remain OFF by default after migration. Existing free educational features are never moved behind Premium.
-- Birthday month/day, opt-out and removal, free birthday greeting and share card.
-- Daily Nigerian-date motivation selection, same-day offline cache, free server-saved favourites, PNG cards shared through the native social sharing menu.
-- Website administrator page for Premium master enablement, wallet purchase/renewal switches, plan price, promotion timing, quote editing/scheduling, complimentary access and expiry, with audit records. Access requires the central login plus an explicit server-side account ID allowlist.
+- One unchanged default theme and ten named Premium skins, each with light/dark variants and reference-inspired artwork/background treatments.
+- Free skin previews; applying a Premium skin requires server-verified Premium entitlement.
+- Central-wallet Premium checkout with server-side live-price validation, wallet row locking, idempotent order/ledger writes, rollback on failure and separate new-purchase/renewal switches that remain OFF by default.
+- Birthday month/day celebration, opt-out/removal, free birthday greeting and branded share card.
+- Daily Nigeria-date motivation, same-day offline cache and saved favourites.
+- Real Premium Mock e-Exam analytics and POP Exam Practice analytics sourced from completed attempt data. No fabricated scores are introduced.
+- Downloadable/shareable Premium analytics PDF reports. Reports are generated on-device from the same analytics payload shown in the app and require the server-verified `reports` Premium feature.
+- Website administration remains responsible for Premium master control, purchase/renewal switches, pricing, promotions, quotes and complimentary access.
 
-## Integration files
-- `backend/sql/companion.sql`: additive migration in the central account database. Its `new_subscriptions_enabled` and `renewals_enabled` defaults remain `0`.
-- `backend/public_html/nu-mobile/companion/service.php`: preference, entitlement, plan, quote and transactional Premium wallet-purchase service.
-- `backend/public_html/api/central/index.php`: routes using existing central authentication and the established account-to-wallet link. `POST /premium/purchase` requires an idempotency key and never accepts a client-supplied wallet account or debit amount as authority.
-- `backend/public_html/admin/mobile/index.php`: protected website management UI, including explicit switches for opening new Premium purchases and renewals.
-- `lib/screens/personalisation.dart`: exact-price confirmation, central-wallet purchase, retry-safe idempotency key handling and access recovery.
-- Set server environment `NU_MOBILE_ADMIN_ACCOUNT_IDS` to verified central account IDs, comma-separated. It grants no access when unset. This is separate from legacy administrator IDs.
-
-Requires existing `includes/central-auth.php`, `central-wallet-bootstrap.php`, `central-wallet-auth.php`, the central wallet tables and their existing database configuration. No passwords or provider keys belong in the APK.
+## Report behaviour
+- The report includes aggregate attempts, course count, average/best performance, Mock timing metrics, POP answer coverage, difficulty analytics where available, and course-performance tables.
+- It is generated as `noun-update-premium-analytics.pdf` and handed to the phone's native share/save sheet.
+- The app never invents missing analytics. If a source is unavailable, not linked or has no completed attempts, the report states that condition instead of fabricating values.
 
 ## Deployment
-Back up the central database. Apply the additive SQL, upload the files to corresponding paths and configure the administrator allowlist. Sign in using the existing website account, then visit `/admin/mobile/`. The service imports the current website quote from `public_html/power-space/quote.json`. Scheduled/featured admin quotes take priority for the next daily selection. No fixture quotes are installed.
+Back up the central database, apply `backend/sql/companion.sql`, then deploy the matching backend and app build. The additive migration enables implemented analytics/report feature flags but does not open Premium sales, alter wallet balances or grant Premium entitlement.
 
-The initial three plans are NGN 1000/month, NGN 3500/semester and NGN 6000/year; semester initially means six calendar months in this migration and can be edited by the admin. The launch offer is disabled until the admin sets price and start/end dates.
+Keep **Allow new Premium purchases** and **Allow Premium renewals/extensions** OFF until a controlled live-account validation confirms debit amount, duplicate retry safety, insufficient-balance handling, entitlement activation, analytics retrieval and PDF report generation.
 
-After deploying v0.7, leave **Allow new Premium purchases** and **Allow Premium renewals/extensions** OFF while validating with a controlled account. Check: correct debit, insufficient balance, changed-price rejection, duplicate retry, entitlement activation, wallet ledger entry, expiry extension and the app's “Check Premium access” action. Only then open the required switch from the website admin page.
+## Still pending
+- Alternate launcher icons, profile cosmetics, seasonal assets and enhanced milestone celebrations.
+- No ad SDK is introduced by this work; existing Premium ad-suppression logic is retained for future ad inventory.
+- Full cross-device profile/course preference synchronisation remains incomplete.
+- Live deployment to nounupdate.com is outside this repository commit and must be performed separately.
 
-## Not complete
-- This code has NOT been deployed to nounupdate.com by this repository change. Live hosting must still receive the matching backend files/migration before sales can be enabled.
-- Advanced Mock/POP analytics, report downloads, alternate launcher icons, profile cosmetics, seasonal assets and milestone celebrations remain pending and stay disabled in the seeded feature configuration.
-- No ad SDK currently exists in this app. `PremiumService` exposes suppression for future ad inventory integration; this release does not introduce ads.
-- Appearance mode/font remain local; selected skin and birthday are server preferences. Full cross-device student profile/course sync remains pending.
-- Provider-specific reconciliation for a payment made outside the central wallet is not part of this purchase route. Existing central-wallet funding/recovery remains the source of wallet credit.
-
-## Validation
-Backend CI covers promotion expiry, account isolation, birthday validation/removal, free-vs-Premium skin authorisation, subscription expiry, daily quote stability, disabled-sale no-debit behaviour, changed-price no-debit behaviour, insufficient balance, exact wallet debit, entitlement activation, successful idempotent retry and renewal-from-existing-expiry. Flutter checks cover palette/default preservation, entitlement fallback, skin/share-card screenshot previews, light/dark navigation, narrow layouts and increased text scale.
-
-A successful build is evidence that the repository version compiles and its automated checks pass; it is not evidence that nounupdate.com has already been deployed or that live payments have been enabled.
+## Validation expectations
+- Backend CI continues to cover Premium entitlement, purchase safety and Mock/POP analytics retrieval.
+- Flutter validation should run `flutter pub get`, `flutter analyze`, tests and Android release builds with the added `pdf` package.
+- A successful repository build is not evidence that the corresponding backend is already live on nounupdate.com.
