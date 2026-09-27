@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/appearance.dart';
+import 'skin_gallery.dart';
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
 
@@ -24,6 +25,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
   }
   @override Widget build(BuildContext context)=>ListenableBuilder(listenable:Appearance.instance,builder:(context,_){final a=Appearance.instance;return NuPage(title:'Settings',child:ListView(padding:const EdgeInsets.all(18),children:[
     const ServiceHero(title:'Make it yours',subtitle:'Choose a comfortable reading style and appearance.',icon:Icons.tune_rounded),
+    ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('Appearance & Personalisation'),subtitle:const Text('Default skin + 10 Premium skin previews'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,const SkinGallery())),
     const NuTitle('Appearance',subtitle:'Your preferences are saved on this device.'),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Display mode',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:4,children:[ChoiceChip(key:const ValueKey('mode-auto'),label:const Text('Auto'),selected:a.automatic,onSelected:saving?null:(_)=>save(automatic:true)),for(final m in [ThemeMode.light,ThemeMode.dark,ThemeMode.system])ChoiceChip(key:ValueKey('mode-${m.name}'),label:Text(switch(m){ThemeMode.system=>'System',ThemeMode.light=>'Light',ThemeMode.dark=>'Dark'}),selected:!a.automatic&&a.mode==m,onSelected:saving?null:(_)=>save(mode:m))])])),
     const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('Auto uses light mode from 06:00 to 18:59 and dark mode from 19:00 to 05:59, using your device’s local time.')),
