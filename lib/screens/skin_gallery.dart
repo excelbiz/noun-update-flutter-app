@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/skin_theme.dart';
 import '../core/appearance.dart';
 import '../core/api_client.dart';
 import '../core/premium_service.dart';
 import '../widgets/native_ui.dart';
+import 'live_portal.dart';
+import 'native_account.dart';
 
 /// Preview never modifies account entitlement or the persisted active skin.
 class SkinGallery extends StatelessWidget {
@@ -16,7 +20,7 @@ class SkinGallery extends StatelessWidget {
       const Text('The current NOUN Update design stays free. Explore ten Premium styles in light and dark.'),
       const SizedBox(height:18),
       for(final skin in AppSkin.values) Card(margin:const EdgeInsets.only(bottom:10),child:ListTile(
-        minVerticalPadding:18,leading:Icon(skin.isPremium?Icons.auto_awesome:Icons.school_outlined),
+        minVerticalPadding:18,leading:ClipRRect(borderRadius:BorderRadius.circular(8),child:skin.isPremium?Image.asset(SkinTokens.forSkin(skin,Brightness.light).heroAsset,width:68,height:62,fit:BoxFit.cover,cacheWidth:160):const BrandLogo(size:48)),
         title:Text(skin.label),subtitle:Text(skin.isPremium?'PREMIUM · Preview':'FREE · Current design'),
         trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,SkinPreview(skin:skin,api:api)))),
     ]));
@@ -29,7 +33,8 @@ class SkinPreview extends StatefulWidget {
   @override State<SkinPreview> createState()=>_SkinPreviewState();
 }
 class _SkinPreviewState extends State<SkinPreview> {
-  bool dark=false,saving=false;
+  bool dark=false,saving=false,login=false;
+  late final previewApi=_SkinPreviewApi();
   Future<void> apply()async{
     final api=widget.api;if(api==null)return;
     final service=PremiumService.instance;
@@ -41,26 +46,29 @@ class _SkinPreviewState extends State<SkinPreview> {
   @override Widget build(BuildContext context) => Theme(
     data:buildSkinTheme(widget.skin,brightness:dark?Brightness.dark:Brightness.light,fontFamily:Appearance.instance.family),
     child:Builder(builder:(context)=>Scaffold(
-      appBar:AppBar(title:Text(widget.skin.label),actions:[IconButton(tooltip:dark?'Preview light':'Preview dark',onPressed:()=>setState(()=>dark=!dark),icon:Icon(dark?Icons.light_mode:Icons.dark_mode))]),
-      body:ListView(padding:const EdgeInsets.all(18),children:[
-        const Text('STYLE PREVIEW · SAMPLE CONTENT',style:TextStyle(fontSize:11,letterSpacing:1.2)),
-        const SizedBox(height:18),
-        Text('Good morning, student',style:Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height:8),const Text('Learn at your pace. Make today count.'),
-        const SizedBox(height:20),
-        NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('TODAY’S MOTIVATION',style:TextStyle(color:Theme.of(context).colorScheme.secondary,fontWeight:FontWeight.w700)),
-          const SizedBox(height:12),const Text('“Small progress is still progress. Keep going.”',style:TextStyle(fontSize:23,height:1.4)),
-          const SizedBox(height:8),const Text('Sample quote · NOUN Update'),
-        ])),
-        const NuTitle('Continue studying'),
-        NuPanel(child:ListTile(contentPadding:EdgeInsets.zero,leading:const GlossIcon(Icons.menu_book_rounded),title:const Text('Your course workspace'),subtitle:const Text('Materials, notes and practice'),trailing:const Icon(Icons.chevron_right))),
-        const NuTitle('Study resources'),
-        for(final item in [('Course Summary',Icons.menu_book_rounded),('Exam Summary',Icons.description_rounded),('Past Questions',Icons.quiz_rounded)])
-          NuPanel(child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(item.$2,color:Theme.of(context).colorScheme.primary),title:Text(item.$1),trailing:const Icon(Icons.chevron_right))),
-        const SizedBox(height:12),
-        ListenableBuilder(listenable:PremiumService.instance,builder:(context,_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Text(widget.skin.isPremium?'Previewing is free. Applying requires server-verified Premium access.':'This is your free default design.'),const SizedBox(height:12),FilledButton(onPressed:saving||widget.api==null||(widget.skin.isPremium&&!PremiumService.instance.allows('premium_skins'))?null:apply,child:Text(saving?'Saving…':'Apply this skin'))])),
-        const SizedBox(height:18),OutlinedButton(onPressed:()=>Navigator.pop(context),child:const Text('Back to skins')),
+      appBar:AppBar(toolbarHeight:48,title:Text(widget.skin.label,style:const TextStyle(fontSize:16)),actions:[
+        IconButton(tooltip:login?'Preview dashboard':'Preview sign-in',onPressed:()=>setState(()=>login=!login),icon:Icon(login?Icons.dashboard_outlined:Icons.login)),
+        IconButton(tooltip:dark?'Preview light':'Preview dark',onPressed:()=>setState(()=>dark=!dark),icon:Icon(dark?Icons.light_mode:Icons.dark_mode)),
+      ]),
+      body:Column(children:[
+        Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),color:Theme.of(context).colorScheme.secondaryContainer,child:const Text('STYLE PREVIEW · SAMPLE CONTENT',style:TextStyle(fontSize:10,letterSpacing:1))),
+        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true)),
+        SafeArea(top:false,child:Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),child:ListenableBuilder(listenable:PremiumService.instance,builder:(context,_)=>Row(children:[
+          Expanded(child:Text(widget.skin.isPremium?'Free preview · Premium to apply':'Your free default design',style:const TextStyle(fontSize:11))),
+          FilledButton(onPressed:saving||widget.api==null||(widget.skin.isPremium&&!PremiumService.instance.allows('premium_skins'))?null:apply,child:Text(saving?'Saving…':'Apply skin')),
+        ])))),
       ]),
     )));
+}
+
+/// Isolated read-only fixture: previews never contact payment/auth endpoints,
+/// grant access or write to the real account. LivePortal is the real screen tree.
+class _SkinPreviewApi extends ApiClient {
+  @override Future<Map<String,dynamic>> getJson(String path)async{
+    if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
+    if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':'Discipline today, a brighter tomorrow.','author':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(path.startsWith('/posts/'))return {'data':{'items':[]}};
+    return {'data':{'items':[]}};
+  }
+  @override Future<Map<String,dynamic>> postJson(String path,Map<String,dynamic> body,{String? idempotencyKey})async=>throw const ApiException('This is a design preview. Return to the app to use your account.');
 }

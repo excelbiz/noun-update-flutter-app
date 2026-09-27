@@ -7,6 +7,8 @@ import '../core/api_client.dart';
 import '../core/premium_service.dart';
 import 'personalisation.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/skin_art.dart';
+import '../core/skin_theme.dart';
 import 'native_tools.dart';
 import 'native_account.dart';
 import 'native_notifications.dart';
@@ -19,7 +21,8 @@ List<Map<String,dynamic>> _items(dynamic v)=>records(v);
 String _key()=>List.generate(24,(_)=>math.Random.secure().nextInt(256).toRadixString(16).padLeft(2,'0')).join();
 
 class LivePortal extends StatefulWidget {
- const LivePortal({this.apiClient,this.serviceBundle,super.key});
+ const LivePortal({this.apiClient,this.serviceBundle,this.preview=false,super.key});
+ final bool preview;
  final ApiClient? apiClient;final AssetBundle? serviceBundle;
  @override State<LivePortal> createState()=>_LivePortalState();
 }
@@ -38,7 +41,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  String? accountError,pendingReference;
  late Future<Map<String,dynamic>> feed;
  final amount=TextEditingController(text:'1000');
- @override void initState(){super.initState();api=widget.apiClient??ApiClient();WidgetsBinding.instance.addObserver(this);feed=_feed();_loadServices();_workspace('guest');_loadAccount();}
+ @override void initState(){super.initState();api=widget.apiClient??ApiClient();WidgetsBinding.instance.addObserver(this);feed=_feed();_loadServices();if(widget.preview){workspace=StudentWorkspace('skin-preview');}else{_workspace('guest');_loadAccount();}}
  @override void dispose(){WidgetsBinding.instance.removeObserver(this);amount.dispose();super.dispose();}
  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&profile!=null)_loadAccount();}
  Future<Map<String,dynamic>> _feed()=>api.getJson('/posts/$category').then(unpack);
@@ -47,7 +50,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   if(mounted)setState(()=>services=rows.where((s)=>s['id']!='quizly').toList());
   try{final d=unpack(await api.getJson('/services'));if(mounted)setState(()=>services=records(d['items']).where((s)=>s['id']!='quizly').toList());}catch(_){/* Retain bundled directory. */}
  }
- Future<void> _loadAccount()async{try{
+ Future<void> _loadAccount()async{if(widget.preview)return;try{
   if(await SessionStore().readAccessToken()==null)return;
   final b=unpack(await api.getJson('/app/bootstrap'));final p=b['profile']==null?null:Map<String,dynamic>.from(b['profile'] as Map);
   final prefs=await SharedPreferences.getInstance();
@@ -99,6 +102,13 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   pushNu(context,page).then((_)=>_loadAccount());
  }
  Widget _grid(List<Map<String,dynamic>> entries,{bool compact=false})=>LayoutBuilder(builder:(context,box){
+  final tokens=SkinTokens.of(context);
+  if(tokens.skin.isPremium&&!compact){
+    Widget resource(Map<String,dynamic> s,bool grid){final id='${s['id']}';return SkinResourceCard(title:serviceLabel(id,'${s['label']}'),subtitle:serviceCaption(id),icon:serviceIcon(id),tone:skinServiceColour(id),grid:grid,onTap:()=>_service(s));}
+    if(tokens.resourceList)return Column(children:[for(final s in entries)resource(s,false)]);
+    final large=MediaQuery.textScalerOf(context).scale(14)>19;
+    return GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:large?1:2,mainAxisSpacing:12,crossAxisSpacing:12,childAspectRatio:large?2:1.05,children:[for(final s in entries)resource(s,true)]);
+  }
   final scale=MediaQuery.textScalerOf(context).scale(14)/14;
   final columns=compact?(box.maxWidth>=350&&scale<1.3?5:4):(box.maxWidth>=330&&scale<1.3?3:2);
   return GridView.builder(shrinkWrap:true,physics:NeverScrollableScrollPhysics(),itemCount:entries.length,
@@ -109,9 +119,9 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   Text('YOUR STUDENT DASHBOARD',style:TextStyle(fontSize:11,letterSpacing:1.5,fontWeight:FontWeight.w700,color:Theme.of(context).colorScheme.primary)),
   NuTitle('${DateTime.now().hour<12?'Good morning':DateTime.now().hour<18?'Good afternoon':'Good evening'}${(workspace.details['Name']??profile?['name']??'').toString().isEmpty?'':', ${workspace.details['Name']??profile?['name']}'}',subtitle:[workspace.details['Programme'],workspace.details['Level'],workspace.details['Semester']].whereType<String>().where((v)=>v.isNotEmpty).join(' · ')),
   BirthdayBanner(name:'${profile?['name']??'Student'}'),
-  MotivationCard(api:api),
+  MotivationCard(api:api,preview:widget.preview),
   if(workspace.details.isEmpty)NuPanel(padding:0,child:_row('Make it your semester','Set up your student details',Icons.person_outline,_setup)),
-  NuPanel(color:nuDeep,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('YOUR NEXT STEP',style:TextStyle(color:nuGold,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.4)),SizedBox(height:14),Text(workspace.courses.isEmpty?'Bring your courses together.':'Build a little progress today.',style:TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w800)),SizedBox(height:10),Text(workspace.courses.isEmpty?'Add your registered courses to organise your study resources.':'${workspace.courses.length} courses saved. Choose a course and open its study resources.',style:TextStyle(color:Colors.white70,height:1.5)),SizedBox(height:18),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:_courses,icon:Icon(Icons.arrow_forward),label:Text(workspace.courses.isEmpty?'Add My Courses':'Open My Courses'))])),
+  if(SkinTokens.of(context).skin.isPremium)SkinHero(title:workspace.courses.isEmpty?'Your next chapter starts here.':'Build a little progress today.',subtitle:workspace.courses.isEmpty?'Bring your courses and study resources together.':'${workspace.courses.length} courses saved. Make time for your next chapter.',action:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:_courses,icon:const Icon(Icons.arrow_forward),label:Text(workspace.courses.isEmpty?'Add My Courses':'Open My Courses'))) else NuPanel(color:nuDeep,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('YOUR NEXT STEP',style:TextStyle(color:nuGold,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.4)),SizedBox(height:14),Text(workspace.courses.isEmpty?'Bring your courses together.':'Build a little progress today.',style:TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w800)),SizedBox(height:10),Text(workspace.courses.isEmpty?'Add your registered courses to organise your study resources.':'${workspace.courses.length} courses saved. Choose a course and open its study resources.',style:TextStyle(color:Colors.white70,height:1.5)),SizedBox(height:18),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:_courses,icon:Icon(Icons.arrow_forward),label:Text(workspace.courses.isEmpty?'Add My Courses':'Open My Courses'))])),
   NuPanel(padding:0,child:_row('Next examination','No verified personal timetable is available yet.',Icons.event_outlined,()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),
   NuTitle('Continue Studying'),NuPanel(padding:0,child:_row('Choose your next chapter','Open your course library to begin a study session.',Icons.auto_stories_outlined,()=>setState(()=>tab=1))),
   NuTitle('Your wallet'),NuPanel(padding:0,child:_row(wallet==null?'Sign in to view your balance':naira(wallet!['balance_kobo']),'One account across NOUN Update',Icons.account_balance_wallet_outlined,()=>setState(()=>tab=4))),
@@ -132,7 +142,13 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Widget _tools(){
   final rows=services.where((s)=>'${s['label']} ${s['group']}'.toLowerCase().contains(search.toLowerCase())&&!['news','guides','scholarships','career','blog','wallet'].contains(s['id'])).toList();
   final pinned=rows.where((s)=>workspace.pins.contains(s['id'])).toList();
-  Widget tool(Map<String,dynamic> s)=>NuPanel(padding:0,child:ListTile(leading:GlossIcon(serviceIcon('${s['id']}'),color:serviceColour('${s['id']}'),size:42),title:Text(serviceLabel('${s['id']}','${s['label']}')),subtitle:Text(serviceCaption('${s['id']}')),onTap:()=>_service(s),trailing:IconButton(tooltip:workspace.pins.contains(s['id'])?'Unpin tool':'Pin tool',icon:Icon(workspace.pins.contains(s['id'])?Icons.push_pin:Icons.push_pin_outlined),onPressed:()=>_run(()async{final old=Set<String>.from(workspace.pins);if(!workspace.pins.add('${s['id']}'))workspace.pins.remove(s['id']);try{await workspace.save();}catch(_){workspace.pins=old;rethrow;}if(mounted)setState((){});})))) ;
+  Widget tool(Map<String,dynamic> s){
+    final id='${s['id']}';
+    final pin=IconButton(tooltip:workspace.pins.contains(id)?'Unpin tool':'Pin tool',icon:Icon(workspace.pins.contains(id)?Icons.push_pin:Icons.push_pin_outlined),onPressed:()=>_run(()async{final old=Set<String>.from(workspace.pins);if(!workspace.pins.add(id))workspace.pins.remove(id);try{await workspace.save();}catch(_){workspace.pins=old;rethrow;}if(mounted)setState((){});}));
+    if(SkinTokens.of(context).skin.isPremium)return SkinResourceCard(title:serviceLabel(id,'${s['label']}'),subtitle:serviceCaption(id),icon:serviceIcon(id),tone:skinServiceColour(id),onTap:()=>_service(s),trailing:pin);
+    return NuPanel(padding:0,child:ListTile(leading:GlossIcon(serviceIcon(id),color:serviceColour(id),size:42),title:Text(serviceLabel(id,'${s['label']}')),subtitle:Text(serviceCaption(id)),onTap:()=>_service(s),trailing:pin));
+  }
+
   final groups=rows.map((s)=>'${s['group']??'Academic tools'}').toSet().toList();
   const groupOrder=['Academics','Study','Projects & services','AI tools','Student life','Help & tools','Account','Admission','Faculties','Updates'];
   groups.sort((a,b)=>groupOrder.indexOf(a).compareTo(groupOrder.indexOf(b)));
@@ -159,8 +175,8 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   ],NuTitle('Library & membership'),NuPanel(padding:0,child:Column(children:[_row('Saved items','Your reading list',Icons.bookmark_border,()=>_unavailable('Saved items')),_row('Downloads','Manage offline resources',Icons.download_outlined,()=>_unavailable('Downloads')),_row('Premium','Membership and benefits',Icons.workspace_premium_outlined,()=>pushNu(context,PremiumPage(api:api)))])),if(profile!=null)NuPanel(padding:0,child:_row('Birthday','Let NOUN Update celebrate with you',Icons.cake_outlined,()=>pushNu(context,BirthdaySettings(api:api)).then((_){if(mounted)setState((){});}))),NuPanel(padding:0,child:_row('Saved Motivation','Your favourite quotes',Icons.favorite_border,()=>pushNu(context,SavedMotivation(api:api)))),NuTitle('Preferences'),NuPanel(padding:0,child:ListTile(leading:Icon(Icons.tune_rounded),title:Text('Appearance & settings'),subtitle:Text('Fonts, colours, display mode and connection'),trailing:Icon(Icons.chevron_right),onTap:()=>pushNu(context,AppearanceSettings(api:api)))),NuPanel(padding:0,child:Column(children:[_row('Notifications','Updates and notification preferences',Icons.notifications_outlined,()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))),_row('Security','Account and session information',Icons.lock_outline,()=>pushNu(context,NuPage(title:'Security',child:ListView(padding:EdgeInsets.all(20),children:[NuTitle('Your account security'),NuPanel(child:Text('Your login token is stored in secure device storage. Website passwords and payment keys are never stored in the app. Sign out from Profile to end your session.'))]))))])),NuTitle('Help & support'),NuPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869\n\nIndependent student support. Not an official arm of the National Open University of Nigeria.')),
  ]);
  Future<void> _fundDialog()async{await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:Text('Add funds'),content:TextField(controller:amount,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:InputDecoration(labelText:'Amount (₦)')),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:Text('Cancel')),FilledButton(onPressed:(){Navigator.pop(c);_run(_fund);},child:Text('Continue'))]));}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:38),SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());}),icon:Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:Icon(Icons.notifications_none_rounded))]),
- body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(25)),child:Material(color:Theme.of(context).scaffoldBackgroundColor,child:Column(children:[if(busy)LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),_=>_profile()}))]))),
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(flexibleSpace:SkinTokens.of(context).skin.isPremium?const SkinHeaderArt():null,backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:38),SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());}),icon:Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:Icon(Icons.notifications_none_rounded))]),
+ body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(25)),child:SkinBackdrop(child:Column(children:[if(busy)LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),_=>_profile()}))]))),
  bottomNavigationBar:NavigationBar(height:64,selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:[NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home_rounded,color:Theme.of(context).colorScheme.primary),label:'Home'),NavigationDestination(icon:Icon(Icons.menu_book_outlined),label:'Study'),NavigationDestination(icon:Icon(Icons.grid_view_rounded),label:'Tools'),NavigationDestination(icon:Icon(Icons.newspaper_outlined),label:'Updates'),NavigationDestination(icon:Icon(Icons.person_outline_rounded),label:'Profile')]));
 }
 class ArticlePage extends StatelessWidget {

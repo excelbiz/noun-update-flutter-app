@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../core/skin_theme.dart';
+import 'skin_art.dart';
 
 const nuGreen=Color(0xff006341),nuDeep=Color(0xff00452f),nuGold=Color(0xffffcf30),nuRed=Color(0xfff31e35),nuMint=Color(0xffe9f8f2);
 bool nuIsDark(BuildContext context)=>Theme.of(context).brightness==Brightness.dark;
@@ -84,7 +85,7 @@ class NuPanel extends StatelessWidget {
   final radius=tokens?.radius??18;
   final fill=skinned?tokens.surface:nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
   final panel=Container(padding:EdgeInsets.all(padding),decoration:BoxDecoration(
-   color:glass?fill.withValues(alpha:.82):fill,
+   color:glass?fill.withValues(alpha:.70):fill,
    gradient:skinned&&(tech||luxury)?LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill,Color.lerp(fill,tokens.primary,.07)!]):null,
    borderRadius:BorderRadius.circular(radius),
    border:Border.all(color:skinned&&(tech||luxury||glass)?tokens.primary.withValues(alpha:tech ? .45 : .22):theme.colorScheme.outlineVariant),
@@ -96,7 +97,7 @@ class NuPanel extends StatelessWidget {
  }
 }
 class NuPage extends StatelessWidget {const NuPage({super.key,required this.title,required this.child,this.actions});final String title;final Widget child;final List<Widget>? actions;
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:30),SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(24)),child:Material(color:Theme.of(context).scaffoldBackgroundColor,child:SafeArea(top:false,child:child))));}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(flexibleSpace:SkinTokens.of(context).skin.isPremium?const SkinHeaderArt():null,backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:30),SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(24)),child:SkinBackdrop(child:SafeArea(top:false,child:child))));}
 class NativeUnavailable extends StatelessWidget {const NativeUnavailable(this.title,{super.key});final String title;
  @override Widget build(BuildContext context)=>NuPage(title:title,child:Center(child:Padding(padding:EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[GlossIcon(serviceIcon(title)),SizedBox(height:24),Text('$title is not connected yet',textAlign:TextAlign.center,style:TextStyle(fontSize:22,fontWeight:FontWeight.w800)),SizedBox(height:12),Text('This service will become available here when its app integration is enabled. You can continue using the other app tools.',textAlign:TextAlign.center),SizedBox(height:20),OutlinedButton(onPressed:()=>Navigator.pop(context),child:Text('Back to tools'))]))));}
 class AsyncError extends StatelessWidget {const AsyncError(this.error,this.retry,{super.key});final Object error;final VoidCallback retry;
@@ -137,5 +138,19 @@ class ToolArtwork extends StatelessWidget {
 class ServiceHero extends StatelessWidget {
  const ServiceHero({super.key,required this.title,required this.subtitle,required this.icon});
  final String title,subtitle;final IconData icon;
- @override Widget build(BuildContext context)=>NuPanel(color:nuMint,child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:20,fontWeight:FontWeight.w700,color:nuInk(context))),SizedBox(height:8),Text(subtitle,style:TextStyle(fontSize:12,color:nuMuted(context),height:1.45))])),SizedBox(width:12),ToolArtwork(icon:icon)]));
+ @override Widget build(BuildContext context)=>SkinTokens.of(context).skin.isPremium?SkinHero(title:title,subtitle:subtitle):NuPanel(color:nuMint,child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:20,fontWeight:FontWeight.w700,color:nuInk(context))),SizedBox(height:8),Text(subtitle,style:TextStyle(fontSize:12,color:nuMuted(context),height:1.45))])),SizedBox(width:12),ToolArtwork(icon:icon)]));
+}
+
+class SkinQuotePanel extends StatelessWidget {
+ const SkinQuotePanel({super.key,required this.child});final Widget child;
+ @override Widget build(BuildContext context){
+  final t=SkinTokens.of(context);
+  if(!t.skin.isPremium)return NuPanel(child:child);
+  final dark=nuIsDark(context);
+  return Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(borderRadius:BorderRadius.circular(t.radius),border:Border.all(color:t.gold.withValues(alpha:.35))),child:ClipRRect(borderRadius:BorderRadius.circular(t.radius),child:Stack(children:[
+   Positioned.fill(child:ExcludeSemantics(child:Image.asset('assets/images/skins/study.webp',cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.centerRight))),
+   Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:dark?[const Color(0xfa102c22),const Color(0xe61b3022)]:[const Color(0xfffff2ca),const Color(0xecf8edca)])))),
+   Padding(padding:const EdgeInsets.all(18),child:child),
+  ])));
+ }
 }

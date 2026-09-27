@@ -20,6 +20,11 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   final AppSkin skin;
   final Color background, surface, primary, gold, ink;
   final double radius;
+  String get backdropAsset => 'assets/images/skins/${skin==AppSkin.minimalAcademic||skin==AppSkin.futureTech?'study':'campus'}.webp';
+  String get heroAsset => 'assets/images/skins/${switch(skin){AppSkin.friendlyModern=>'students',AppSkin.studentFriendly||AppSkin.minimalAcademic||AppSkin.futureTech||AppSkin.premiumDark||AppSkin.glassmorphism=>'study',_=>'campus'}}.webp';
+  String get loginAsset => skin==AppSkin.friendlyModern?'assets/images/skins/students.webp':backdropAsset;
+  bool get resourceList => [AppSkin.smartCampus,AppSkin.premiumDark,AppSkin.minimalAcademic,AppSkin.futureTech].contains(skin);
+
   static SkinTokens of(BuildContext context) => Theme.of(context).extension<SkinTokens>() ??
       forSkin(AppSkin.defaultNoun, Theme.of(context).brightness);
   static SkinTokens forSkin(AppSkin skin, Brightness brightness) {
@@ -56,7 +61,7 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
     primary:t.primary,secondary:t.gold,surface:t.surface,onSurface:t.ink,surfaceContainerLow:t.surface);
   final editorial=skin==AppSkin.elegantEditorial;
   return base.copyWith(colorScheme:scheme,scaffoldBackgroundColor:t.background,extensions:[t],
-    textTheme:base.textTheme.copyWith(
+    textTheme:base.textTheme.apply(bodyColor:t.ink,displayColor:t.ink).copyWith(
       headlineLarge:base.textTheme.headlineLarge?.copyWith(fontFamily:editorial?'NUReading':fontFamily),
       titleLarge:base.textTheme.titleLarge?.copyWith(fontFamily:editorial?'NUReading':fontFamily)),
     cardTheme:base.cardTheme.copyWith(color:t.surface,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),

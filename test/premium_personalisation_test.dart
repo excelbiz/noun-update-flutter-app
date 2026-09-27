@@ -8,6 +8,7 @@ import 'package:noun_update_student_app/core/premium_service.dart';
 import 'package:noun_update_student_app/core/skin_theme.dart';
 import 'package:noun_update_student_app/screens/skin_gallery.dart';
 import 'package:noun_update_student_app/screens/personalisation.dart';
+import 'package:noun_update_student_app/screens/live_portal.dart';
 import 'live_portal_test.dart' show capture;
 
 class PersonalisationApi extends ApiClient {
@@ -41,9 +42,19 @@ void main(){
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
+   await tester.runAsync(()async{for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
    expect(tester.takeException(),isNull);await capture(tester,key,'skin-${skin.name}-light');
    await tester.tap(find.byTooltip('Preview dark'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await capture(tester,key,'skin-${skin.name}-dark');expect(PremiumService.instance.isPremium,isFalse);
+   expect(find.byType(LivePortal),findsOneWidget);
+   for(final label in ['Study','Tools','Updates','Profile']){
+     await tester.tap(find.text(label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     if(label=='Study'||label=='Tools')await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-dark');
+   }
+   await tester.tap(find.byTooltip('Preview sign-in'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+   await capture(tester,key,'skin-${skin.name}-login-dark');
+   expect((await SharedPreferences.getInstance()).getString('nu-daily-motivation'),isNull);
+
    await tester.pumpWidget(const SizedBox.shrink());
   });
  }

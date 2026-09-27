@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/skin_art.dart';
+import '../core/skin_theme.dart';
 import 'native_tools.dart';
 
 class NativeAuth extends StatefulWidget {
@@ -35,7 +37,7 @@ class _NativeAuthState extends State<NativeAuth>{
   ],
  ));
  @override Widget build(BuildContext context)=>NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
- StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
+ if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
  Container(transform:Matrix4.translationValues(0,-18,0),padding:EdgeInsets.fromLTRB(20,23,20,18),decoration:BoxDecoration(color:Theme.of(context).colorScheme.surface,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  if(mode!='login')NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password',_=>'Enter your reset code'}),
  if(mode=='register')Padding(padding:EdgeInsets.only(bottom:12),child:TextField(controller:name,autofillHints:[AutofillHints.name],decoration:InputDecoration(labelText:'Full name',prefixIcon:Icon(Icons.person_outline)))),

@@ -89,7 +89,7 @@ class _BirthdayBannerState extends State<BirthdayBanner> with WidgetsBindingObse
 }
 
 class MotivationCard extends StatefulWidget {
-  const MotivationCard({super.key,required this.api});final ApiClient api;
+  const MotivationCard({super.key,required this.api,this.preview=false});final ApiClient api;final bool preview;
   @override State<MotivationCard> createState()=>_MotivationCardState();
 }
 class _MotivationCardState extends State<MotivationCard> with WidgetsBindingObserver {
@@ -106,13 +106,14 @@ class _MotivationCardState extends State<MotivationCard> with WidgetsBindingObse
     try{
       final r=unpack(await widget.api.getJson('/motivation/today'));
       final q=r['quote']==null?null:Map<String,dynamic>.from(r['quote'] as Map);
-      if(q==null){await prefs.remove('nu-daily-motivation');}else{await prefs.setString('nu-daily-motivation',jsonEncode(q));}
+      if(!widget.preview){if(q==null){await prefs.remove('nu-daily-motivation');}else{await prefs.setString('nu-daily-motivation',jsonEncode(q));}}
       if(mounted)setState(()=>quote=q);
     }catch(_){
+      if(widget.preview)return;
       try{final q=jsonDecode(prefs.getString('nu-daily-motivation')??'null');if(q is Map&&q['date']==today&&mounted)setState((){quote=Map<String,dynamic>.from(q);offline=true;});}catch(_){/* Discard damaged cache. */}
     }
   }
-  @override Widget build(BuildContext context){final q=quote;if(q==null||q['date']!=today)return const SizedBox.shrink();return NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  @override Widget build(BuildContext context){final q=quote;if(q==null||q['date']!=today)return const SizedBox.shrink();return SkinQuotePanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('TODAY’S MOTIVATION',style:TextStyle(color:Theme.of(context).colorScheme.primary,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.5)),const SizedBox(height:12),
     Text('“${q['quote']}”',style:const TextStyle(fontSize:21,height:1.4,fontWeight:FontWeight.w700)),const SizedBox(height:10),Text('— ${q['author']}'),
     if(offline)const Text('Saved for today · Offline',style:TextStyle(fontSize:11)),
