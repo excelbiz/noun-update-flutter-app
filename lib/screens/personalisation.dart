@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -17,7 +18,49 @@ class PremiumPage extends StatefulWidget {
 }
 class _PremiumPageState extends State<PremiumPage>{
   late Future<Map<String,dynamic>> config;
+  bool purchasing=false;
   @override void initState(){super.initState();config=widget.api.getJson('/premium/config').then(unpack);}
+  String _money(Map<String,dynamic> p)=>'${p['currency']} ${((p['price_minor'] as num)/100).toStringAsFixed(0)}';
+  String _purchaseStorageKey(String account,String plan)=>'nu-premium-purchase-key-$account-$plan';
+  Future<String> _purchaseKey(String account,String plan)async{
+    final prefs=await SharedPreferences.getInstance();final storage=_purchaseStorageKey(account,plan);
+    var key=prefs.getString(storage);
+    if(key==null||key.isEmpty){key='premium-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(0x7fffffff)}';await prefs.setString(storage,key);}
+    return key;
+  }
+  Future<void> _clearPurchaseKey(String account,String plan)async=>(await SharedPreferences.getInstance()).remove(_purchaseStorageKey(account,plan));
+  Future<void> _buy(Map<String,dynamic> plan)async{
+    final premium=PremiumService.instance;final account=premium.accountId;
+    if(account==null){nuMessage(context,'Sign in to your NOUN Update account before purchasing Premium.');return;}
+    if(purchasing)return;
+    final amount=_money(plan);
+    final confirmed=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+      title:Text('${plan['name']} Premium'),content:Text('Confirm $amount for ${plan['billing_period']}. The server will recheck the current plan price and your central wallet before any debit. Your free academic tools stay free.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:Text('Pay $amount'))],
+    ));
+    if(confirmed!=true||!mounted)return;
+    setState(()=>purchasing=true);
+    final planId='${plan['id']}';
+    try{
+      final key=await _purchaseKey(account,planId);
+      final result=unpack(await widget.api.postJson('/premium/purchase',{
+        'plan_id':planId,'expected_price_minor':(plan['price_minor'] as num).toInt(),'expected_currency':'${plan['currency']}',
+      },idempotencyKey:key));
+      await _clearPurchaseKey(account,planId);
+      await premium.refresh(widget.api,account);
+      if(!mounted)return;
+      final expires=DateTime.tryParse('${result['expires_at']}');
+      final expiry=expires==null?'': ' Access now runs until ${expires.toLocal().day}/${expires.toLocal().month}/${expires.toLocal().year}.';
+      nuMessage(context,'Premium activated successfully.$expiry');
+      setState(()=>config=widget.api.getJson('/premium/config').then(unpack));
+    }on ApiException catch(e){
+      const definitelyNoDebit={'INVALID_PLAN','INVALID_PRICE','INVALID_REQUEST_KEY','PREMIUM_DISABLED','PLAN_UNAVAILABLE','PRICE_CHANGED','RENEWALS_DISABLED','SUBSCRIPTIONS_DISABLED','WALLET_UNAVAILABLE','INSUFFICIENT_BALANCE','WALLET_LINK_REQUIRED'};
+      if(definitelyNoDebit.contains(e.code))await _clearPurchaseKey(account,planId);
+      if(e.code=='PRICE_CHANGED'&&mounted)setState(()=>config=widget.api.getJson('/premium/config').then(unpack));
+      if(mounted)nuMessage(context,e.message);
+    }catch(e){if(mounted)nuMessage(context,'The Premium purchase could not be confirmed. Use “Check Premium access” before trying a different payment.');}
+    finally{if(mounted)setState(()=>purchasing=false);}
+  }
   @override Widget build(BuildContext context)=>NuPage(title:'NOUN Update Premium',child:ListView(padding:const EdgeInsets.all(20),children:[
     const ServiceHero(title:'Make it yours.\nUnderstand your progress.',subtitle:'Your academic essentials stay free.',icon:Icons.workspace_premium_outlined),
     const SizedBox(height:16),OutlinedButton.icon(onPressed:()=>pushNu(context,SkinGallery(api:widget.api)),icon:const Icon(Icons.palette_outlined),label:const Text('Preview all 10 Premium skins')),
@@ -28,18 +71,21 @@ class _PremiumPageState extends State<PremiumPage>{
       if(c['premium_enabled']!=true)return const NuPanel(child:Text('Premium is currently unavailable. Your study tools remain available.'));
       final features=Map<String,dynamic>.from(c['premium_features'] as Map? ?? {});
       const labels={'ad_free':'Completely ad-free','premium_skins':'10 Premium skins','mock_analytics':'Advanced Mock analytics','pop_analytics':'Advanced POP analytics','reports':'Downloadable analytics reports','custom_icons':'Custom app icons','profile_frames':'Premium profile styles','seasonal_skins':'Seasonal skins','milestone_celebrations':'Enhanced milestone celebrations'};
+      final premium=PremiumService.instance;final saleOpen=premium.isPremium?c['renewals_enabled']==true:c['new_subscriptions_enabled']==true;
       return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const NuTitle('Your Premium experience'),for(final entry in labels.entries)if(features[entry.key]==true)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.check_circle_outline),title:Text(entry.value)),
         const NuTitle('Choose your plan'),for(final p in records(c['plans']))NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(p['badge']!=null)Chip(label:Text('${p['badge']}')),Text('${p['name']}',style:Theme.of(context).textTheme.titleLarge),
           if(p['promotion_active']==true)Text('${p['currency']} ${((p['regular_price_minor'] as num)/100).toStringAsFixed(0)}',style:const TextStyle(decoration:TextDecoration.lineThrough)),
           Text('${p['currency']} ${((p['price_minor'] as num)/100).toStringAsFixed(0)} / ${p['billing_period']}',style:const TextStyle(fontSize:26,fontWeight:FontWeight.w800)),
-          if(p['promotion_active']==true&&p['promotion_text']!=null)Text('${p['promotion_text']}'),
+          if(p['promotion_active']==true&&p['promotion_text']!=null)Text('${p['promotion_text']}'),const SizedBox(height:12),
+          FilledButton.icon(onPressed:saleOpen&&!purchasing?()=>_buy(p):null,icon:const Icon(Icons.account_balance_wallet_outlined),label:Text(premium.isPremium?'Extend with central wallet':'Buy with central wallet')),
         ])),
-        const NuPanel(child:Text('Purchasing is not enabled in this preview build. Plan prices are supplied by NOUN Update; no payment is taken here.')),
+        if(!saleOpen)NuPanel(child:Text(premium.isPremium?'Premium renewals are not open yet. Your current access remains unchanged.':'Premium purchases are not open yet. You can still preview every skin, and all free study tools remain available.')),
+        const NuPanel(child:Text('Premium payments use your existing NOUN Update central wallet. The server rechecks the live price, entitlement and wallet balance before any debit.')),
       ]);
     }),
-    TextButton.icon(onPressed:()async{final p=PremiumService.instance;final id=p.accountId;if(id==null){nuMessage(context,'Sign in to check your Premium access.');return;}await p.refresh(widget.api,id);if(context.mounted)nuMessage(context,p.isPremium?'Your Premium access is active.':p.error??'No active Premium access was returned. If you already paid, contact support with your payment reference. Do not pay again.');},icon:const Icon(Icons.sync),label:const Text('Recover Premium Payment · Check access')),
+    TextButton.icon(onPressed:purchasing?null:()async{final p=PremiumService.instance;final id=p.accountId;if(id==null){nuMessage(context,'Sign in to check your Premium access.');return;}await p.refresh(widget.api,id);if(context.mounted){setState((){});nuMessage(context,p.isPremium?'Your Premium access is active.':p.error??'No active Premium access was returned. If you already paid, contact support with your payment reference. Do not pay again.');}},icon:const Icon(Icons.sync),label:const Text('Check Premium access')),
   ]));
 }
 

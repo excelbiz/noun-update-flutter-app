@@ -60,13 +60,13 @@ try {
     $account = nu_current_account(true);
     header_remove('Set-Cookie');
     if (!$account) failure(401,'LOGIN_REQUIRED','Your session has expired. Please sign in again.');
+    $accountId=(int)$account['id'];
     if ($method === 'POST' && $route === '/auth/logout') {
         $stmt=$pdo->prepare('UPDATE nu_auth_sessions SET revoked_at=NOW() WHERE token_hash=? AND account_id=?');
-        $stmt->execute([hash('sha256',$match[1]),$account['id']]);
+        $stmt->execute([hash('sha256',$match[1]),$accountId]);
         response(['data'=>['signed_out'=>true]]);
     }
     if(isset($companion)) {
-        $accountId=(int)$account['id'];
         if($method==='GET' && $route==='/premium/status') response(['data'=>$companion->entitlement($accountId)]);
         if($method==='GET' && $route==='/profile/preferences') response(['data'=>$companion->preferences($accountId)]);
         if($method==='POST' && $route==='/profile/preferences') response(['data'=>$companion->savePreferences($accountId,$body)]);
@@ -79,13 +79,21 @@ try {
     }
     // Use only an established account-wallet link; never infer ownership by email.
     $stmt=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
-    $stmt->execute([$account['id']]);
+    $stmt->execute([$accountId]);
     $walletId=(int)$stmt->fetchColumn();
     if ($walletId < 1) failure(409,'WALLET_LINK_REQUIRED','Your account needs a wallet link. Please contact support.');
     $stmt=$pdo->prepare("SELECT a.balance_minor,a.currency,a.status FROM nu_cwallet_accounts a JOIN nu_cwallet_users u ON u.id=a.wallet_user_id WHERE a.wallet_user_id=? AND a.currency='NGN' AND u.status='active'");
     $stmt->execute([$walletId]);
     $wallet=$stmt->fetch(PDO::FETCH_ASSOC);
     if (!$wallet) failure(409,'WALLET_UNAVAILABLE','Your wallet is not available. Please contact support.');
+    if(isset($companion) && $method==='POST' && $route==='/premium/purchase') {
+        $plan=$body['plan_id']??null;$price=$body['expected_price_minor']??null;$currency=$body['expected_currency']??null;
+        $requestKey=(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??'');
+        if(!is_string($plan)||!is_int($price)||!is_string($currency))failure(422,'INVALID_PURCHASE','Refresh Premium plans and try again.');
+        $purchase=$companion->purchase($accountId,$walletId,$plan,$price,$currency,$requestKey);
+        $purchase['entitlement']=$companion->entitlement($accountId);
+        response(['data'=>$purchase]);
+    }
     $stmt=$pdo->prepare('SELECT ledger_reference,entry_type,amount_minor,currency,description,service_code,created_at FROM nu_cwallet_ledger WHERE wallet_user_id=? ORDER BY id DESC LIMIT 50');
     $stmt->execute([$walletId]);
     $transactions=[];
@@ -95,10 +103,12 @@ try {
     $result=['balance_kobo'=>(int)$wallet['balance_minor'],'currency'=>$wallet['currency'],'status'=>$wallet['status'],'transactions'=>$transactions];
     if ($method==='GET' && $route==='/wallet') response(['data'=>$result]);
     if ($method==='GET' && $route==='/app/bootstrap') response(['data'=>[
-        'profile'=>['id'=>$account['id'],'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
-        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false]
+        'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
+        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true]
     ]]);
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
+} catch (NuCompanionException $e) {
+    failure($e->status,$e->reason,$e->getMessage());
 } catch (InvalidArgumentException $e) {
     failure(422,'INVALID_PREFERENCE',$e->getMessage());
 } catch (Throwable $e) {
