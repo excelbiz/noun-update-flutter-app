@@ -63,7 +63,7 @@ class SkinResourceCard extends StatelessWidget {
     final ink=saturated?Colors.white:t.ink;
     final radius=BorderRadius.circular(t.radius);
     final content=Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[
-      Icon(icon,size:grid?30:26,color:saturated?const Color(0xffffdd87):dark?Color.lerp(tone,Colors.white,.65):Color.lerp(tone,Colors.black,.25)),
+      _SkinGlyph(icon:icon,tone:tone,flat:t.skin==AppSkin.minimalAcademic,size:40),
       const SizedBox(height:10),Text(title,style:TextStyle(color:ink,fontWeight:FontWeight.w800,fontSize:14,height:1.2)),
       const SizedBox(height:6),Text(subtitle,style:TextStyle(color:ink.withValues(alpha:.85),fontSize:11,height:1.35)),
     ]);
@@ -72,7 +72,7 @@ class SkinResourceCard extends StatelessWidget {
       border:Border.all(color:glass?Colors.white.withValues(alpha:.35):t.skin==AppSkin.futureTech?const Color(0xff38b986).withValues(alpha:.4):tone.withValues(alpha:.13)),
       boxShadow: [if(!dark&&t.skin!=AppSkin.minimalAcademic)BoxShadow(color:t.primary.withValues(alpha:.06),blurRadius:9,offset:const Offset(0,3))]),
       child:Material(color:Colors.transparent,child:InkWell(borderRadius:radius,onTap:onTap,child:Padding(padding:EdgeInsets.all(grid?16:14),child:grid?content:Row(children:[
-        Container(width:43,height:46,decoration:BoxDecoration(color:tone.withValues(alpha:dark ? .25:.1),borderRadius:BorderRadius.circular(12)),child:Icon(icon,color:dark?Color.lerp(tone,Colors.white,.65):Color.lerp(tone,Colors.black,.3),size:27)),
+        _SkinGlyph(icon:icon,tone:tone,flat:t.skin==AppSkin.minimalAcademic,size:44),
         const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(color:ink,fontSize:14,fontWeight:FontWeight.w800)),const SizedBox(height:4),Text(subtitle,style:TextStyle(color:ink.withValues(alpha:.8),fontSize:11,height:1.35))])),
         trailing??Icon(Icons.chevron_right,color:ink,size:20),
       ])))));
@@ -101,4 +101,22 @@ class SkinHeaderArt extends StatelessWidget {
   Image.asset(SkinTokens.of(context).backdropAsset,cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.topCenter),
   const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xe6003425),Color(0xb3003728)]))),
  ]));
+}
+
+/// Bounded vector relief, not a bitmap per icon or an animated 3D scene.
+class _SkinGlyph extends StatelessWidget {
+ const _SkinGlyph({required this.icon,required this.tone,required this.flat,required this.size});
+ final IconData icon;final Color tone;final bool flat;final double size;
+ @override Widget build(BuildContext context){
+  if(flat)return SizedBox(width:size,height:size,child:Icon(icon,color:SkinTokens.of(context).primary,size:size*.65));
+  return ExcludeSemantics(child:Container(width:size,height:size,decoration:BoxDecoration(
+   borderRadius:BorderRadius.circular(size*.23),
+   gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(tone,Colors.white,.32)!,tone,Color.lerp(tone,Colors.black,.30)!]),
+   border:Border.all(color:Colors.white.withValues(alpha:.45)),
+   boxShadow:[BoxShadow(color:tone.withValues(alpha:.22),blurRadius:5,offset:const Offset(0,3))]),
+   child:Stack(alignment:Alignment.center,children:[
+    Transform.translate(offset:const Offset(1.5,2),child:Icon(icon,size:size*.63,color:Color.lerp(tone,Colors.black,.55))),
+    Icon(icon,size:size*.63,color:const Color(0xfff7f8e9)),
+   ])));
+ }
 }
