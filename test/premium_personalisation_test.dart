@@ -24,6 +24,7 @@ class PersonalisationApi extends ApiClient {
 void main(){
  TestWidgetsFlutterBinding.ensureInitialized();
  setUpAll(()async{
+  await rootBundle.loadString('assets/data/services.json');
   for(final f in [('NUSans','NUSans-Regular.ttf'),('NUReading','NUReading.ttf')]){await (FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File('assets/fonts/${f.$2}').readAsBytesSync())))).load();}
   final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
   await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
@@ -42,8 +43,14 @@ void main(){
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
-   await tester.runAsync(()async{await rootBundle.loadString('assets/data/services.json');for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
+   await tester.runAsync(()async{for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
    expect(tester.takeException(),isNull);await capture(tester,key,'skin-${skin.name}-light');
+   for(final label in ['Study','Tools']){
+     await tester.tap(find.text(label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     if(label=='Tools')expect(find.text('No tools match your search.'),findsNothing);
+     await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-light');
+   }
+   await tester.tap(find.text('Home').last);await tester.pumpAndSettle();
    await tester.tap(find.byTooltip('Preview dark'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await capture(tester,key,'skin-${skin.name}-dark');expect(PremiumService.instance.isPremium,isFalse);
    expect(find.byType(LivePortal),findsOneWidget);
