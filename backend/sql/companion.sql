@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS nu_mobile_configuration (
  features_json JSON NOT NULL,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-INSERT IGNORE INTO nu_mobile_configuration(id,features_json) VALUES(1,'{"ad_free":true,"premium_skins":true,"mock_analytics":false,"pop_analytics":false,"reports":false,"custom_icons":false,"profile_frames":false,"seasonal_skins":false,"milestone_celebrations":false}');
+INSERT IGNORE INTO nu_mobile_configuration(id,features_json) VALUES(1,'{"ad_free":true,"premium_skins":true,"mock_analytics":true,"pop_analytics":true,"reports":false,"custom_icons":false,"profile_frames":false,"seasonal_skins":false,"milestone_celebrations":false}');
+-- These two analytics benefits are implemented in v0.8. Re-running this additive
+-- migration enables only those new Premium flags; it does not open sales or alter access.
+UPDATE nu_mobile_configuration SET features_json=JSON_SET(features_json,'$.mock_analytics',CAST('true' AS JSON),'$.pop_analytics',CAST('true' AS JSON)) WHERE id=1;
 CREATE TABLE IF NOT EXISTS nu_mobile_premium_plans (
  id VARCHAR(50) PRIMARY KEY, name VARCHAR(100) NOT NULL, enabled TINYINT NOT NULL DEFAULT 1,
  currency CHAR(3) NOT NULL DEFAULT 'NGN', regular_price_minor BIGINT UNSIGNED NOT NULL,

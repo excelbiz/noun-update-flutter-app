@@ -32,3 +32,6 @@ jobs:
 
       - name: Test Premium, birthdays and motivation
         run: php backend/tests/companion.php
+
+      - name: Test Premium Mock and POP analytics
+        run: php backend/tests/premium-analytics.php

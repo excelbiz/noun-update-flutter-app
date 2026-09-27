@@ -37,9 +37,6 @@ try {
         }
         try { nu_auth_login($identifier, $password, true); }
         catch (RuntimeException $e) { failure(401, 'LOGIN_FAILED', 'Unable to sign in. Check your details, or wait a few minutes before trying again.'); }
-        // Reuse the website's password validation, rate limits and session issuance.
-        // Its helper emits an opaque token as a cookie; expose it only in this
-        // authenticated JSON response, and suppress browser cookie side effects.
         $token = '';
         foreach (headers_list() as $header) {
             if (preg_match('/^Set-Cookie:\s*'.preg_quote(NU_AUTH_COOKIE, '/').'=([a-f0-9]{64})(?:;|$)/i', $header, $m)) $token = $m[1];
@@ -76,8 +73,20 @@ try {
             $companion->saveQuote($accountId,$body['quote_id'],$body['saved']);
             response(['data'=>['saved'=>$body['saved']]]);
         }
+        if($method==='GET' && ($route==='/premium/analytics/mock' || $route==='/premium/analytics/pop')) {
+            $entitlement=$companion->entitlement($accountId);
+            $feature=$route==='/premium/analytics/mock'?'mock_analytics':'pop_analytics';
+            if(empty($entitlement['active']) || empty($entitlement['features'][$feature])) {
+                failure(403,'PREMIUM_FEATURE_REQUIRED','Active NOUN Update Premium is required for this analytics view. Your exam practice remains available without this analytics layer.');
+            }
+            $email=trim((string)($account['email']??''));
+            if(!filter_var($email,FILTER_VALIDATE_EMAIL))failure(409,'ACCOUNT_EMAIL_REQUIRED','Add a valid email to your central account before loading analytics.');
+            require_once $root.'/nu-mobile/companion/analytics.php';
+            $analytics=new NuPremiumAnalytics($pdo,NuPremiumAnalytics::mockPdoFromEnvironment());
+            response(['data'=>$feature==='mock_analytics'?$analytics->mock($email):$analytics->pop($email)]);
+        }
     }
-    // Use only an established account-wallet link; never infer ownership by email.
+    // Use only an established account-wallet link; never infer wallet ownership by email.
     $stmt=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
     $stmt->execute([$accountId]);
     $walletId=(int)$stmt->fetchColumn();
@@ -104,7 +113,7 @@ try {
     if ($method==='GET' && $route==='/wallet') response(['data'=>$result]);
     if ($method==='GET' && $route==='/app/bootstrap') response(['data'=>[
         'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
-        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true]
+        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true]
     ]]);
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
 } catch (NuCompanionException $e) {
