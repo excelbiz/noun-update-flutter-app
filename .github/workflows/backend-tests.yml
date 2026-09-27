@@ -29,3 +29,6 @@ jobs:
         run: find backend -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Test transactions, authentication and feed visibility
         run: php backend/tests/integration.php
+
+      - name: Test Premium, birthdays and motivation
+        run: php backend/tests/companion.php

@@ -69,7 +69,7 @@ class ApiClient {
     try { return await _refreshing!; } finally { _refreshing = null; }
   }
 
-  bool _central(String path) => path.startsWith('/auth/') || path.startsWith('/wallet') || path == '/app/bootstrap' || path.startsWith('/profile') || path.startsWith('/course-summary') || path.startsWith('/orders') || path.contains('/state') || (path.startsWith('/exam-summaries/') && !path.endsWith('/pdf'));
+  bool _central(String path) => path.startsWith('/premium/') || path.startsWith('/motivation/') || path.startsWith('/auth/') || path.startsWith('/wallet') || path == '/app/bootstrap' || path.startsWith('/profile') || path.startsWith('/course-summary') || path.startsWith('/orders') || path.contains('/state') || (path.startsWith('/exam-summaries/') && !path.endsWith('/pdf'));
 
   Uri _uri(String path) {
     if (!_central(path)) return Uri.parse('${AppConfig.apiBaseUrl}$path');
@@ -134,7 +134,7 @@ class ApiClient {
       'Content-Type': 'application/json',
       'User-Agent': 'NOUNUpdateMobile/central-v1',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.4.0',
+      'X-App-Version': '0.6.0',
       if (_central(path) && token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }

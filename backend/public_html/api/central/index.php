@@ -48,6 +48,12 @@ try {
         if ($token === '') throw new RuntimeException('Central session was not issued.');
         response(['data'=>['access_token'=>$token,'refresh_token'=>'','identity'=>'central']]);
     }
+    if (str_starts_with($route,'/premium') || str_starts_with($route,'/motivation') || $route==='/profile/preferences') {
+        require_once $root.'/nu-mobile/companion/service.php';
+        $companion=new NuCompanion($pdo);
+        if($method==='GET' && $route==='/premium/config') response(['data'=>$companion->configuration()]);
+        if($method==='GET' && $route==='/motivation/today') response(['data'=>['quote'=>$companion->dailyQuote()]]);
+    }
     $header = (string)($_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
     if (!preg_match('/^Bearer ([a-f0-9]{64})$/D', $header, $match)) failure(401,'LOGIN_REQUIRED','Sign in to your NOUN Update account.');
     $_COOKIE[NU_AUTH_COOKIE] = $match[1];
@@ -58,6 +64,18 @@ try {
         $stmt=$pdo->prepare('UPDATE nu_auth_sessions SET revoked_at=NOW() WHERE token_hash=? AND account_id=?');
         $stmt->execute([hash('sha256',$match[1]),$account['id']]);
         response(['data'=>['signed_out'=>true]]);
+    }
+    if(isset($companion)) {
+        $accountId=(int)$account['id'];
+        if($method==='GET' && $route==='/premium/status') response(['data'=>$companion->entitlement($accountId)]);
+        if($method==='GET' && $route==='/profile/preferences') response(['data'=>$companion->preferences($accountId)]);
+        if($method==='POST' && $route==='/profile/preferences') response(['data'=>$companion->savePreferences($accountId,$body)]);
+        if($method==='GET' && $route==='/motivation/saved') response(['data'=>['items'=>$companion->savedQuotes($accountId)]]);
+        if($method==='POST' && $route==='/motivation/saved') {
+            if(!is_int($body['quote_id']??null)||!is_bool($body['saved']??null))throw new InvalidArgumentException('Send a valid quote selection.');
+            $companion->saveQuote($accountId,$body['quote_id'],$body['saved']);
+            response(['data'=>['saved'=>$body['saved']]]);
+        }
     }
     // Use only an established account-wallet link; never infer ownership by email.
     $stmt=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
@@ -81,6 +99,8 @@ try {
         'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false]
     ]]);
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
+} catch (InvalidArgumentException $e) {
+    failure(422,'INVALID_PREFERENCE',$e->getMessage());
 } catch (Throwable $e) {
     error_log('[CENTRAL MOBILE API] '.$e->getMessage());
     failure(503,'UNAVAILABLE','The account service is temporarily unavailable. Please try again shortly.');

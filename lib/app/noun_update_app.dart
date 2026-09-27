@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
+import '../core/skin_theme.dart';
+import '../core/premium_service.dart';
 import '../core/appearance.dart';
 import '../screens/live_portal.dart';
 
@@ -56,14 +57,14 @@ class _NounUpdateAppState extends State<NounUpdateApp> with WidgetsBindingObserv
   }
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Appearance.instance,
+    listenable: Listenable.merge([Appearance.instance,PremiumService.instance]),
     builder: (context, _) {
       final a = Appearance.instance;
       _lastMode = _mode;
       return MaterialApp(
         title: 'NOUN Update', debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(fontFamily: a.family, accent: a.colour),
-        darkTheme: buildAppTheme(brightness: Brightness.dark, fontFamily: a.family, accent: a.colour),
+        theme: buildSkinTheme(PremiumService.instance.effectiveSkin,fontFamily: a.family, accent: a.colour),
+        darkTheme: buildSkinTheme(PremiumService.instance.effectiveSkin,brightness: Brightness.dark, fontFamily: a.family, accent: a.colour),
         themeMode: _mode,
         themeAnimationDuration: WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations
             ? Duration.zero : const Duration(milliseconds: 200),

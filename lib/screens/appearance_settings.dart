@@ -25,7 +25,7 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
   }
   @override Widget build(BuildContext context)=>ListenableBuilder(listenable:Appearance.instance,builder:(context,_){final a=Appearance.instance;return NuPage(title:'Settings',child:ListView(padding:const EdgeInsets.all(18),children:[
     const ServiceHero(title:'Make it yours',subtitle:'Choose a comfortable reading style and appearance.',icon:Icons.tune_rounded),
-    ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('Appearance & Personalisation'),subtitle:const Text('Default skin + 10 Premium skin previews'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,const SkinGallery())),
+    ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('Appearance & Personalisation'),subtitle:const Text('Default skin + 10 Premium skin previews'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,SkinGallery(api:widget.api))),
     const NuTitle('Appearance',subtitle:'Your preferences are saved on this device.'),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Display mode',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:4,children:[ChoiceChip(key:const ValueKey('mode-auto'),label:const Text('Auto'),selected:a.automatic,onSelected:saving?null:(_)=>save(automatic:true)),for(final m in [ThemeMode.light,ThemeMode.dark,ThemeMode.system])ChoiceChip(key:ValueKey('mode-${m.name}'),label:Text(switch(m){ThemeMode.system=>'System',ThemeMode.light=>'Light',ThemeMode.dark=>'Dark'}),selected:!a.automatic&&a.mode==m,onSelected:saving?null:(_)=>save(mode:m))])])),
     const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('Auto uses light mode from 06:00 to 18:59 and dark mode from 19:00 to 05:59, using your device’s local time.')),
@@ -35,6 +35,6 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Reading preview',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),const SizedBox(height:8),const Text('Prepare with purpose. Read your course materials, organise your notes and make steady progress.'),const SizedBox(height:12),FilledButton(onPressed:(){},child:const Text('Sample button'))])),
     TextButton(onPressed:saving?null:()=>save(automatic:true,textSize:'Default',mode:ThemeMode.system,font:'Modern sans',accent:'Emerald'),child:const Text('Restore default appearance')),
     const NuTitle('Connection'),NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Website updates, course resources and account details are securely loaded from NOUN Update.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:checking?null:check,icon:const Icon(Icons.sync_rounded),label:Text(checking?'Checking…':'Check connection')),if(connection!=null)Padding(padding:const EdgeInsets.only(top:10),child:Text(connection!,semanticsLabel:connection))])),
-    const Text('NOUN Update · Version 0.5.0',textAlign:TextAlign.center),
+    const Text('NOUN Update · Version 0.6.0',textAlign:TextAlign.center),
   ]));});
 }

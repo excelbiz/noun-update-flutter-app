@@ -1,24 +1,37 @@
-# Premium extension — implementation checkpoint
+# Premium companion extension — v0.6 preview
 
-## Reference mapping
-The ten supplied 27 September 2026 images map, by filename suffix 1–10, to Smart Campus, Premium Dark, Glassmorphism, Student Friendly, Minimal Academic, Elegant Editorial, Productivity Dashboard, Friendly Modern, Future Tech and Bold Premium.
+## Implemented
+- One unchanged default theme and ten named Premium skin palettes, each with light/dark variants. Shared components, no duplicated app screens.
+- Free skin previews; applying a Premium skin requires the authenticated preference endpoint to validate a current server entitlement.
+- Account-specific preferred skin, restored after server verification; expiry falls back to default while preserving preference. Offline verification failure falls back to free access. No locally stored Premium boolean grants access.
+- Server plans with integer minor-unit prices, UTC promotion windows, original price and promotional display. No mobile price constants.
+- Premium page shows only server-enabled benefits; purchases remain disabled in this build.
+- Birthday month/day, opt-out and removal, free birthday greeting and share card.
+- Daily Nigerian-date motivation selection, same-day offline cache, free server-saved favourites, PNG cards shared through the native social sharing menu.
+- Website administrator page for plan price, promotion timing, quote editing/scheduling, complimentary access and expiry, with audit records. Access requires the central login plus an explicit server-side account ID allowlist.
 
-The existing default design remains free. Navigation and educational access remain unchanged. Reference screenshots contain illustrative data, varied navigation and marketing artwork; real data and the existing five tabs take precedence.
+## Integration files
+- `backend/sql/companion.sql`: additive migration in the central account database.
+- `backend/public_html/nu-mobile/companion/service.php`: preference, entitlement, plan and quote service.
+- `backend/public_html/api/central/index.php`: routes using existing central authentication, before wallet-link checks for non-wallet features.
+- `backend/public_html/admin/mobile/index.php`: protected website management UI.
+- Set server environment `NU_MOBILE_ADMIN_ACCOUNT_IDS` to verified central account IDs, comma-separated. It grants no access when unset. This is separate from legacy administrator IDs.
 
-## Implemented in this checkpoint
-- Stable eleven-skin catalogue.
-- Shared SkinTokens and theme factory with light/dark palettes, radii and editorial headings.
-- Settings entry and free, isolated skin preview pages using shared native panels.
-- No client-side purchase activation or entitlement bypass.
-- Tests for catalogue, default preservation and light/dark variants.
+Requires existing `includes/central-auth.php`, `central-wallet-bootstrap.php`, `central-wallet-auth.php` and their existing database configuration. No passwords or provider keys belong in the APK.
 
-## Not complete / not deploy-ready Premium
-These previews are an initial theme foundation, not an exact implementation of all ten reference images. Distinct artwork, glass treatments, full screen coverage and accessibility visual verification remain outstanding.
+## Deployment
+Back up the central database. Apply the additive SQL, upload the files to corresponding paths and configure the administrator allowlist. Sign in using the existing website account, then visit `/admin/mobile/`. Add quotes or adapt the quote service to the existing website quote table after its actual schema is confirmed. No fixture quotes are installed.
 
-No Premium purchase is enabled. Backend-authoritative entitlements, dynamic plans/pricing, promotions, audited admin management, wallet purchase/recovery, profile sync, ad suppression, analytics/report exports, alternate launcher icons, profile frames and milestone celebrations remain to be implemented and tested.
+The initial three plans are NGN 1000/month, NGN 3500/semester and NGN 6000/year; semester initially means six calendar months in this migration and can be edited by the admin. The launch offer is disabled until the admin sets price and start/end dates. New paid subscriptions and renewals remain disabled until verified checkout activation is implemented. Do not enable them directly in SQL as a workaround.
 
-Birthday month/day celebration, server-controlled daily quotes, free saved motivation and social share cards also remain outstanding. Neither birthday nor quote content may be gated by Premium. No full quote collection or prices should be hardcoded in the mobile client.
+## Not complete
+- This code has NOT been deployed to nounupdate.com. Live hosting access remains unavailable.
+- Current skins are a theme foundation, not yet exact reproductions of all reference artwork, layouts and glass effects.
+- Existing website motivational quote schema has not been provided/mapped; the new admin collection is separate until connected.
+- Payment recovery currently refreshes entitlement only. Provider reconciliation and Premium wallet purchasing are not implemented. Existing wallet code is unchanged.
+- Advanced Mock/POP analytics, report downloads, alternate launcher icons, profile cosmetics, seasonal assets and milestone celebrations remain pending and are disabled in the seeded feature configuration.
+- No ad SDK currently exists in this app. PremiumService exposes suppression for future ad inventory integration; this release does not introduce ads.
+- Appearance mode/font remain local; selected skin and birthday are server preferences. Full cross-device student profile/course sync remains pending.
 
-Initial backend pricing requested: monthly NGN 1000, semester NGN 3500, annual NGN 6000. Semester promotion NGN 2500 requires administrator-selected dates and enablement. No lifetime plan; future exam pass disabled initially. Store all money in integer minor units and preserve historical purchase prices.
-
-Existing hosting access remains unavailable; this checkpoint does not deploy any API or change the live database.
+## Validation
+Backend CI covers promotion expiry, account isolation, birthday validation/removal, free-vs-Premium skin authorisation, subscription expiry and daily quote stability. Flutter checks include palette/default preservation, entitlement fallback and skin/share-card screenshot previews. A successful build is not evidence of live deployment or payment verification.
