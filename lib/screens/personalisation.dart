@@ -146,6 +146,7 @@ class _BrandedShareCardState extends State<BrandedShareCard>{
   Future<void> share()async{
     setState(()=>busy=true);
     try{
+      await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),context);
       await WidgetsBinding.instance.endOfFrame;
       final boundary=captureKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image=await boundary.toImage(pixelRatio:2);

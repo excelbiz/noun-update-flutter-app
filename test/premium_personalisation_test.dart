@@ -50,7 +50,8 @@ void main(){
  testWidgets('Branded share card contains only explicitly selected public text',(tester)async{
   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
-  final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:const BrandedShareCard(title:'Today’s motivation',message:'Every small step counts.',author:'NOUN Update'))));await tester.pumpAndSettle();
+  final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildSkinTheme(AppSkin.defaultNoun),home:const BrandedShareCard(title:'Today’s motivation',message:'Every small step counts.',author:'NOUN Update'))));await tester.pumpAndSettle();
+  await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(BrandedShareCard))));await tester.pumpAndSettle();
   expect(find.textContaining('Every small step'),findsOneWidget);expect(find.textContaining('email'),findsNothing);
   await capture(tester,key,'quote-share-card');await tester.pumpWidget(const SizedBox.shrink());
  });

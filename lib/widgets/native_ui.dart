@@ -87,7 +87,7 @@ class NuPanel extends StatelessWidget {
    color:glass?fill.withValues(alpha:.82):fill,
    gradient:skinned&&(tech||luxury)?LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill,Color.lerp(fill,tokens.primary,.07)!]):null,
    borderRadius:BorderRadius.circular(radius),
-   border:Border.all(color:skinned&&(tech||luxury||glass)?tokens.primary.withValues(alpha:tech?.45:.22):theme.colorScheme.outlineVariant),
+   border:Border.all(color:skinned&&(tech||luxury||glass)?tokens.primary.withValues(alpha:tech ? .45 : .22):theme.colorScheme.outlineVariant),
   ),child:Material(color:Colors.transparent,child:child));
   return Container(margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(borderRadius:BorderRadius.circular(radius),boxShadow:[
    if(tech)BoxShadow(color:tokens.primary.withValues(alpha:.10),blurRadius:14,spreadRadius:1)
