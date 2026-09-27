@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -70,8 +71,11 @@ class BirthdayBanner extends StatefulWidget {
   const BirthdayBanner({super.key,required this.name});final String name;
   @override State<BirthdayBanner> createState()=>_BirthdayBannerState();
 }
-class _BirthdayBannerState extends State<BirthdayBanner>{
-  String? dismissed;
+class _BirthdayBannerState extends State<BirthdayBanner> with WidgetsBindingObserver {
+  String? dismissed;Timer? clock;
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);clock=Timer.periodic(const Duration(minutes:1),(_){if(mounted)setState((){});});}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&mounted)setState((){});}
+  @override void dispose(){clock?.cancel();WidgetsBinding.instance.removeObserver(this);super.dispose();}
   @override Widget build(BuildContext context)=>ListenableBuilder(listenable:PremiumService.instance,builder:(context,_){
     final today=DateTime.now();final key='${PremiumService.instance.accountId}-${today.year}-${today.month}-${today.day}';
     if(!PremiumService.instance.isBirthday(today)||dismissed==key)return const SizedBox.shrink();
@@ -88,11 +92,16 @@ class MotivationCard extends StatefulWidget {
   const MotivationCard({super.key,required this.api});final ApiClient api;
   @override State<MotivationCard> createState()=>_MotivationCardState();
 }
-class _MotivationCardState extends State<MotivationCard>{
+class _MotivationCardState extends State<MotivationCard> with WidgetsBindingObserver {
+  Timer? clock;String? loadedDay;
   Map<String,dynamic>? quote;bool offline=false,saving=false;
   String get today=>DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10);
-  @override void initState(){super.initState();load();}
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();clock=Timer.periodic(const Duration(minutes:1),(_){if(loadedDay!=today)load();});}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&loadedDay!=today)load();}
+  @override void dispose(){clock?.cancel();WidgetsBinding.instance.removeObserver(this);super.dispose();}
   Future<void> load()async{
+    loadedDay=today;
+    if(mounted)setState((){if(quote?['date']!=today)quote=null;offline=false;});
     final prefs=await SharedPreferences.getInstance();
     try{
       final r=unpack(await widget.api.getJson('/motivation/today'));

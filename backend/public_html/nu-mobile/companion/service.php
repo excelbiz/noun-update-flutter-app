@@ -3,7 +3,7 @@ declare(strict_types=1);
 /** Additive read/configuration service. Never credits a wallet or trusts client payment claims. */
 final class NuCompanion {
     public const SKINS = ['defaultNoun','smartCampus','premiumDark','glassmorphism','studentFriendly','minimalAcademic','elegantEditorial','productivityDashboard','friendlyModern','futureTech','boldPremium'];
-    public function __construct(private PDO $pdo) {}
+    public function __construct(private PDO $pdo, private ?string $websiteQuoteFile=null) {}
     private function rows(string $sql,array $args=[]): array {
         $s=$this->pdo->prepare($sql);$s->execute($args);return $s->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -58,12 +58,25 @@ final class NuCompanion {
         }
         return $this->preferences($account);
     }
+    private function websiteQuote(): ?int {
+        $path=$this->websiteQuoteFile??dirname(__DIR__,2).'/power-space/quote.json';
+        if(!is_file($path)||!is_readable($path)||filesize($path)>16384)return null;
+        $data=json_decode(file_get_contents($path)?:'',true);
+        if(!is_array($data)||!is_string($data['text']??null)||!is_string($data['author']??null))return null;
+        $text=trim($data['text']);$author=trim($data['author'])?:'NOUN Update';
+        if($text===''||mb_strlen($text)>2000||mb_strlen($author)>150)return null;
+        $hash=hash('sha256',$text.'|'.$author);
+        $this->pdo->prepare('INSERT IGNORE INTO nu_mobile_motivation(source_hash,quote,author) VALUES(?,?,?)')->execute([$hash,$text,$author]);
+        $row=$this->rows('SELECT id FROM nu_mobile_motivation WHERE source_hash=? AND active=1',[$hash])[0]??null;
+        return $row?(int)$row['id']:null;
+    }
     public function dailyQuote(): ?array {
         $date=(new DateTimeImmutable('now',new DateTimeZone('Africa/Lagos')))->format('Y-m-d');
         $eligible="active=1 AND (schedule_date IS NULL OR schedule_date=?) AND (starts_at IS NULL OR starts_at<=UTC_TIMESTAMP()) AND (ends_at IS NULL OR ends_at>UTC_TIMESTAMP())";
         $id=$this->rows('SELECT quote_id FROM nu_mobile_daily_motivation WHERE quote_date=?',[$date])[0]['quote_id']??null;
         if($id){$q=$this->rows("SELECT id,quote,author,category FROM nu_mobile_motivation WHERE id=? AND $eligible",[$id,$date])[0]??null;if($q)return $q+['date'=>$date];}
-        $q=$this->rows("SELECT id,quote,author,category FROM nu_mobile_motivation WHERE $eligible ORDER BY (schedule_date IS NOT NULL) DESC,featured DESC,SHA2(CONCAT(id,?),256) LIMIT 1",[$date,$date])[0]??null;
+        $websiteId=$this->websiteQuote();
+        $q=$this->rows("SELECT id,quote,author,category FROM nu_mobile_motivation WHERE $eligible ORDER BY (schedule_date IS NOT NULL) DESC,featured DESC,(id=?) DESC,SHA2(CONCAT(id,?),256) LIMIT 1",[$date,$websiteId??0,$date])[0]??null;
         if(!$q)return null;
         $this->pdo->prepare('INSERT INTO nu_mobile_daily_motivation(quote_date,quote_id) VALUES(?,?) ON DUPLICATE KEY UPDATE quote_id=VALUES(quote_id)')->execute([$date,$q['id']]);
         return $q+['date'=>$date];

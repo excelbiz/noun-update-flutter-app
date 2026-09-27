@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../core/skin_theme.dart';
 
@@ -70,9 +71,30 @@ class StudentHero extends StatelessWidget {
  ]));
 }
 class NuTitle extends StatelessWidget {const NuTitle(this.title,{super.key,this.subtitle,this.trailing});final String title;final String? subtitle;final Widget? trailing;
- @override Widget build(BuildContext context)=>Padding(padding:EdgeInsets.only(top:16,bottom:10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:19,fontWeight:FontWeight.w800,color:nuInk(context))),if(subtitle!=null)Padding(padding:EdgeInsets.only(top:5),child:Text(subtitle!,style:TextStyle(fontSize:13,color:nuMuted(context))))])),if(trailing!=null)trailing!]));}
-class NuPanel extends StatelessWidget {const NuPanel({required this.child,super.key,this.color=Colors.white,this.padding=16});final Widget child;final Color color;final double padding;
- @override Widget build(BuildContext context)=>Container(margin:EdgeInsets.only(bottom:12),padding:EdgeInsets.all(padding),decoration:BoxDecoration(color:Theme.of(context).extension<SkinTokens>()!=null&&color==Colors.white?SkinTokens.of(context).surface:nuIsDark(context)?(color==Colors.white?Theme.of(context).colorScheme.surfaceContainerLow:Color.lerp(Theme.of(context).colorScheme.surface,color,.10)):color,borderRadius:BorderRadius.circular(Theme.of(context).extension<SkinTokens>()?.radius??18),border:Border.all(color:Theme.of(context).colorScheme.outlineVariant),boxShadow:[BoxShadow(color:Color(0x06003422),blurRadius:12,offset:Offset(0,4))]),child:Material(color:Colors.transparent,child:child));}
+ @override Widget build(BuildContext context)=>Padding(padding:EdgeInsets.only(top:16,bottom:10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:Theme.of(context).textTheme.titleLarge?.copyWith(fontSize:19,fontWeight:FontWeight.w800,color:nuInk(context))),if(subtitle!=null)Padding(padding:EdgeInsets.only(top:5),child:Text(subtitle!,style:TextStyle(fontSize:13,color:nuMuted(context))))])),if(trailing!=null)trailing!]));}
+class NuPanel extends StatelessWidget {
+ const NuPanel({required this.child,super.key,this.color=Colors.white,this.padding=16});
+ final Widget child;final Color color;final double padding;
+ @override Widget build(BuildContext context){
+  final theme=Theme.of(context),tokens=Theme.of(context).extension<SkinTokens>();
+  final skinned=tokens!=null&&color==Colors.white;
+  final glass=skinned&&tokens.skin==AppSkin.glassmorphism;
+  final tech=skinned&&tokens.skin==AppSkin.futureTech;
+  final luxury=skinned&&tokens.skin==AppSkin.premiumDark;
+  final radius=tokens?.radius??18;
+  final fill=skinned?tokens.surface:nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
+  final panel=Container(padding:EdgeInsets.all(padding),decoration:BoxDecoration(
+   color:glass?fill.withValues(alpha:.82):fill,
+   gradient:skinned&&(tech||luxury)?LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill,Color.lerp(fill,tokens.primary,.07)!]):null,
+   borderRadius:BorderRadius.circular(radius),
+   border:Border.all(color:skinned&&(tech||luxury||glass)?tokens.primary.withValues(alpha:tech?.45:.22):theme.colorScheme.outlineVariant),
+  ),child:Material(color:Colors.transparent,child:child));
+  return Container(margin:const EdgeInsets.only(bottom:12),decoration:BoxDecoration(borderRadius:BorderRadius.circular(radius),boxShadow:[
+   if(tech)BoxShadow(color:tokens.primary.withValues(alpha:.10),blurRadius:14,spreadRadius:1)
+   else if(!skinned||tokens.skin!=AppSkin.minimalAcademic)const BoxShadow(color:Color(0x09003422),blurRadius:12,offset:Offset(0,4)),
+  ]),child:glass?ClipRRect(borderRadius:BorderRadius.circular(radius),child:BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:5,sigmaY:5),child:panel)):panel);
+ }
+}
 class NuPage extends StatelessWidget {const NuPage({super.key,required this.title,required this.child,this.actions});final String title;final Widget child;final List<Widget>? actions;
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:30),SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(24)),child:Material(color:Theme.of(context).scaffoldBackgroundColor,child:SafeArea(top:false,child:child))));}
 class NativeUnavailable extends StatelessWidget {const NativeUnavailable(this.title,{super.key});final String title;

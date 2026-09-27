@@ -20,14 +20,14 @@
 Requires existing `includes/central-auth.php`, `central-wallet-bootstrap.php`, `central-wallet-auth.php` and their existing database configuration. No passwords or provider keys belong in the APK.
 
 ## Deployment
-Back up the central database. Apply the additive SQL, upload the files to corresponding paths and configure the administrator allowlist. Sign in using the existing website account, then visit `/admin/mobile/`. Add quotes or adapt the quote service to the existing website quote table after its actual schema is confirmed. No fixture quotes are installed.
+Back up the central database. Apply the additive SQL, upload the files to corresponding paths and configure the administrator allowlist. Sign in using the existing website account, then visit `/admin/mobile/`. The service imports the current website quote from `public_html/power-space/quote.json` (the source confirmed in your uploaded website files). Scheduled/featured admin quotes take priority for the next daily selection. No fixture quotes are installed.
 
 The initial three plans are NGN 1000/month, NGN 3500/semester and NGN 6000/year; semester initially means six calendar months in this migration and can be edited by the admin. The launch offer is disabled until the admin sets price and start/end dates. New paid subscriptions and renewals remain disabled until verified checkout activation is implemented. Do not enable them directly in SQL as a workaround.
 
 ## Not complete
 - This code has NOT been deployed to nounupdate.com. Live hosting access remains unavailable.
 - Current skins are a theme foundation, not yet exact reproductions of all reference artwork, layouts and glass effects.
-- Existing website motivational quote schema has not been provided/mapped; the new admin collection is separate until connected.
+- The existing file-backed website quote source is mapped; its live hosting path still needs a deployment check.
 - Payment recovery currently refreshes entitlement only. Provider reconciliation and Premium wallet purchasing are not implemented. Existing wallet code is unchanged.
 - Advanced Mock/POP analytics, report downloads, alternate launcher icons, profile cosmetics, seasonal assets and milestone celebrations remain pending and are disabled in the seeded feature configuration.
 - No ad SDK currently exists in this app. PremiumService exposes suppression for future ad inventory integration; this release does not introduce ads.

@@ -28,3 +28,7 @@ $q=$s->dailyQuote();ok($q===$s->dailyQuote(),'daily quote stable');$s->saveQuote
 ok(count($s->savedQuotes(800))===1,'save idempotent');ok(count($s->savedQuotes(801))===0,'saved quote account isolation');
 $s->saveQuote(800,(int)$q['id'],false);ok(count($s->savedQuotes(800))===0,'remove saved quote');
 $s->savePreferences(800,['birthday'=>['month'=>null,'day'=>null,'celebration_enabled'=>false]]);ok($s->preferences(800)['birthday']['month']===null,'birthday removal');
+$pdo->exec('DELETE FROM nu_mobile_daily_motivation');$pdo->exec('DELETE FROM nu_mobile_motivation');
+$source=tempnam(sys_get_temp_dir(),'nu-quote');file_put_contents($source,json_encode(['text'=>'Website fixture quote','author'=>'Website fixture author']));
+$websiteService=new NuCompanion($pdo,$source);$web=$websiteService->dailyQuote();ok($web['quote']==='Website fixture quote','existing website JSON quote imported');
+file_put_contents($source,json_encode(['text'=>'Later website fixture','author'=>'Website fixture author']));ok($websiteService->dailyQuote()['id']===$web['id'],'website edit does not shuffle same-day selection');unlink($source);
