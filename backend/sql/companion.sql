@@ -50,6 +50,16 @@ CREATE TABLE IF NOT EXISTS nu_mobile_profile_cosmetics (
  profile_frame VARCHAR(40) NOT NULL DEFAULT 'classic',
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Signed-in student workspace. Local app storage remains available offline; this
+-- table lets programme details, registered courses and pinned tools follow the account.
+CREATE TABLE IF NOT EXISTS nu_mobile_student_workspaces (
+ account_id BIGINT UNSIGNED PRIMARY KEY,
+ details_json JSON NOT NULL,
+ courses_json JSON NOT NULL,
+ pins_json JSON NOT NULL,
+ revision BIGINT UNSIGNED NOT NULL DEFAULT 0,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS nu_mobile_motivation (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, source_hash CHAR(64) NULL UNIQUE, quote TEXT NOT NULL,
  author VARCHAR(150) NOT NULL DEFAULT 'NOUN Update', category VARCHAR(50) NOT NULL DEFAULT 'general',
