@@ -60,7 +60,12 @@ void main(){
    await p.refresh(api,'1');
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
-   await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));await tester.pumpAndSettle();
+   await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));
+   // Do not use pumpAndSettle here: the server-verified Premium entitlement has
+   // a deliberate expiry timer, and a perpetual scheduled frame in the test
+   // binding can otherwise hold this single widget test open for ten minutes.
+   await tester.pump();
+   await tester.pump(const Duration(milliseconds:250));
    for(final label in ['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink'])expect(find.text(label),findsOneWidget);
    expect(find.byType(PremiumProfileAvatar),findsWidgets);
    final apply=find.widgetWithText(FilledButton,'Apply').first;
