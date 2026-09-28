@@ -76,7 +76,7 @@ class ApiClient {
     try { return await _refreshing!; } finally { _refreshing = null; }
   }
 
-  bool _central(String path) => path.startsWith('/premium/') || path.startsWith('/motivation/') || path.startsWith('/auth/') || path.startsWith('/wallet') || path == '/app/bootstrap' || path == '/workspace' || path.startsWith('/profile') || path.startsWith('/course-summary') || path.startsWith('/orders') || path.contains('/state') || (path.startsWith('/exam-summaries/') && !path.endsWith('/pdf'));
+  bool _central(String path) => path.startsWith('/premium/') || path.startsWith('/motivation/') || path.startsWith('/auth/') || path.startsWith('/wallet') || path == '/app/bootstrap' || path == '/workspace' || path == '/saved-resources' || path.startsWith('/profile') || path.startsWith('/course-summary') || path.startsWith('/orders') || path.contains('/state') || (path.startsWith('/exam-summaries/') && !path.endsWith('/pdf'));
 
   Uri _uri(String path) {
     if (!_central(path)) return Uri.parse('${AppConfig.apiBaseUrl}$path');
