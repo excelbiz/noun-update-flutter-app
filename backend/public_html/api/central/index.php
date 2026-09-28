@@ -76,6 +76,13 @@ try {
         }
         failure(405,'METHOD_NOT_ALLOWED','This workspace request is not supported.');
     }
+    if (preg_match('#^/study/([A-Z]{2,5}[0-9]{3})/state$#D',$route,$studyMatch)) {
+        require_once $root.'/nu-mobile/study-state/service.php';
+        $studyState=new NuStudyState($pdo);
+        if($method==='GET')response(['data'=>$studyState->get($accountId,$studyMatch[1])]);
+        if($method==='POST')response(['data'=>$studyState->save($accountId,$studyMatch[1],$body)]);
+        failure(405,'METHOD_NOT_ALLOWED','This study progress request is not supported.');
+    }
     if(isset($companion)) {
         if($method==='GET' && $route==='/premium/status') response(['data'=>$companion->entitlement($accountId)]);
         if($method==='GET' && $route==='/profile/preferences') response(['data'=>$companion->preferences($accountId)]);
@@ -131,7 +138,7 @@ try {
             'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
             'wallet'=>$result,
             'workspace'=>$bootstrapWorkspace,
-            'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true]
+            'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true,'study_progress_sync'=>true]
         ]]);
     }
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
