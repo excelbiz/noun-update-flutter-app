@@ -44,3 +44,6 @@ jobs:
 
       - name: Test personalised timetable API
         run: php backend/tests/timetable.php
+
+      - name: Test enabled mobile service directory
+        run: php backend/tests/services.php
