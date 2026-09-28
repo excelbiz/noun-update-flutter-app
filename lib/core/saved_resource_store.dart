@@ -13,14 +13,22 @@ class SavedResourceStore {
   bool get signedIn=>userId!=null&&userId!.trim().isNotEmpty;
   String get slot=>'nu-saved-resources-${userId??'guest'}';
 
+  Map<String,dynamic> _data(Map<String,dynamic> response)=>
+      Map<String,dynamic>.from(response['data'] as Map? ?? const {});
+
+  List<Map<String,dynamic>> _records(dynamic value)=>[
+    for(final item in value is List?value:const [])
+      if(item is Map)Map<String,dynamic>.from(item),
+  ];
+
   Future<void> load()async{
     await _loadLocal();
     if(!signedIn)return;
     try{
-      final data=unpack(await api.getJson('/saved-resources'));
+      final data=_data(await api.getJson('/saved-resources'));
       items
         ..clear()
-        ..addEntries(records(data['items']).map((item)=>MapEntry('${item['resource_key']}',Map<String,dynamic>.from(item))));
+        ..addEntries(_records(data['items']).map((item)=>MapEntry('${item['resource_key']}',item)));
       _applyPending();
       await _syncPending();
       await _persist();
@@ -55,7 +63,7 @@ class SavedResourceStore {
   Future<void> _syncOne(String key)async{
     final body=pending[key];if(body==null)return;
     try{
-      final data=unpack(await api.postJson('/saved-resources',body));
+      final data=_data(await api.postJson('/saved-resources',body));
       if(data['saved']==true){items[key]=Map<String,dynamic>.from(data);}else{items.remove(key);}
       pending.remove(key);
       await _persist();
@@ -65,7 +73,12 @@ class SavedResourceStore {
   void _applyPending(){
     for(final entry in pending.entries){
       final body=entry.value;
-      if(body['saved']==true){items[entry.key]={...items[entry.key]??{},...body};}else{items.remove(entry.key);}
+      if(body['saved']==true){
+        final existing=items[entry.key]??const <String,dynamic>{};
+        items[entry.key]={...existing,...body};
+      }else{
+        items.remove(entry.key);
+      }
     }
   }
 
@@ -73,12 +86,8 @@ class SavedResourceStore {
     try{
       final raw=(await SharedPreferences.getInstance()).getString(slot);if(raw==null)return;
       final data=jsonDecode(raw) as Map;
-      for(final value in (data['items'] as List? ?? const [])){
-        if(value is Map){final item=Map<String,dynamic>.from(value);items['${item['resource_key']}']=item;}
-      }
-      for(final value in (data['pending'] as List? ?? const [])){
-        if(value is Map){final item=Map<String,dynamic>.from(value);pending['${item['resource_key']}']=item;}
-      }
+      for(final item in _records(data['items'])){items['${item['resource_key']}']=item;}
+      for(final item in _records(data['pending'])){pending['${item['resource_key']}']=item;}
     }catch(_){items.clear();pending.clear();}
   }
 
