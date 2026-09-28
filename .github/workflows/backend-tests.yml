@@ -42,6 +42,9 @@ jobs:
       - name: Test central study progress sync
         run: php backend/tests/study-state.php
 
+      - name: Test account appearance settings sync
+        run: php backend/tests/account-settings.php
+
       - name: Test personalised timetable API
         run: php backend/tests/timetable.php
 
