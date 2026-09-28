@@ -12,6 +12,23 @@ function response(array $data, int $status = 200): never {
 function failure(int $status, string $code, string $message): never {
     response(['error'=>['code'=>$code,'message'=>$message]], $status);
 }
+function optionalWalletSnapshot(PDO $pdo,int $accountId): array {
+    $link=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
+    $link->execute([$accountId]);
+    $walletId=(int)$link->fetchColumn();
+    if($walletId<1)return ['wallet_id'=>0,'wallet'=>null];
+    $stmt=$pdo->prepare("SELECT a.balance_minor,a.currency,a.status FROM nu_cwallet_accounts a JOIN nu_cwallet_users u ON u.id=a.wallet_user_id WHERE a.wallet_user_id=? AND a.currency='NGN' AND u.status='active'");
+    $stmt->execute([$walletId]);
+    $wallet=$stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$wallet)return ['wallet_id'=>$walletId,'wallet'=>null];
+    $history=$pdo->prepare('SELECT ledger_reference,entry_type,amount_minor,currency,description,service_code,created_at FROM nu_cwallet_ledger WHERE wallet_user_id=? ORDER BY id DESC LIMIT 50');
+    $history->execute([$walletId]);
+    $transactions=[];
+    foreach($history->fetchAll(PDO::FETCH_ASSOC) as $row){
+        $transactions[]=['reference'=>$row['ledger_reference'],'type'=>$row['entry_type'],'amount_kobo'=>(int)$row['amount_minor'],'currency'=>$row['currency'],'title'=>$row['description'] ?: $row['entry_type'],'service'=>$row['service_code'],'created_at'=>$row['created_at'],'status'=>'posted'];
+    }
+    return ['wallet_id'=>$walletId,'wallet'=>['balance_kobo'=>(int)$wallet['balance_minor'],'currency'=>$wallet['currency'],'status'=>$wallet['status'],'transactions'=>$transactions]];
+}
 try {
     $root = dirname(__DIR__, 2);
     require_once $root.'/includes/central-auth.php';
@@ -79,8 +96,12 @@ try {
     if (preg_match('#^/study/([A-Z]{2,5}[0-9]{3})/state$#D',$route,$studyMatch)) {
         require_once $root.'/nu-mobile/study-state/service.php';
         $studyState=new NuStudyState($pdo);
-        if($method==='GET')response(['data'=>$studyState->get($accountId,$studyMatch[1])]);
-        if($method==='POST')response(['data'=>$studyState->save($accountId,$studyMatch[1],$body)]);
+        try {
+            if($method==='GET')response(['data'=>$studyState->get($accountId,$studyMatch[1])]);
+            if($method==='POST')response(['data'=>$studyState->save($accountId,$studyMatch[1],$body)]);
+        } catch(InvalidArgumentException $e) {
+            failure(422,'INVALID_STUDY_STATE',$e->getMessage());
+        }
         failure(405,'METHOD_NOT_ALLOWED','This study progress request is not supported.');
     }
     if(isset($companion)) {
@@ -106,15 +127,33 @@ try {
             response(['data'=>$feature==='mock_analytics'?$analytics->mock($email):$analytics->pop($email)]);
         }
     }
-    // Use only an established account-wallet link; never infer wallet ownership by email.
-    $stmt=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
-    $stmt->execute([$accountId]);
-    $walletId=(int)$stmt->fetchColumn();
+    if ($method==='GET' && $route==='/app/bootstrap') {
+        require_once $root.'/nu-mobile/workspace/service.php';
+        $bootstrapWorkspace=(new NuStudentWorkspace($pdo))->get($accountId);
+        $walletSnapshot=optionalWalletSnapshot($pdo,$accountId);
+        response(['data'=>[
+            'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
+            'wallet'=>$walletSnapshot['wallet'],
+            'workspace'=>$bootstrapWorkspace,
+            'feature_flags'=>[
+                'central_account'=>true,
+                'wallet_linked'=>$walletSnapshot['wallet_id']>0,
+                'wallet_available'=>$walletSnapshot['wallet']!==null,
+                'wallet_funding'=>false,
+                'wallet_purchases'=>false,
+                'premium_wallet_purchase'=>true,
+                'premium_analytics'=>true,
+                'workspace_sync'=>true,
+                'study_progress_sync'=>true,
+            ]
+        ]]);
+    }
+    // Wallet and purchase operations below this point require an established link.
+    $walletSnapshot=optionalWalletSnapshot($pdo,$accountId);
+    $walletId=(int)$walletSnapshot['wallet_id'];
     if ($walletId < 1) failure(409,'WALLET_LINK_REQUIRED','Your account needs a wallet link. Please contact support.');
-    $stmt=$pdo->prepare("SELECT a.balance_minor,a.currency,a.status FROM nu_cwallet_accounts a JOIN nu_cwallet_users u ON u.id=a.wallet_user_id WHERE a.wallet_user_id=? AND a.currency='NGN' AND u.status='active'");
-    $stmt->execute([$walletId]);
-    $wallet=$stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$wallet) failure(409,'WALLET_UNAVAILABLE','Your wallet is not available. Please contact support.');
+    $result=$walletSnapshot['wallet'];
+    if (!is_array($result)) failure(409,'WALLET_UNAVAILABLE','Your wallet is not available. Please contact support.');
     if(isset($companion) && $method==='POST' && $route==='/premium/purchase') {
         $plan=$body['plan_id']??null;$price=$body['expected_price_minor']??null;$currency=$body['expected_currency']??null;
         $requestKey=(string)($_SERVER['HTTP_IDEMPOTENCY_KEY']??'');
@@ -123,24 +162,7 @@ try {
         $purchase['entitlement']=$companion->entitlement($accountId);
         response(['data'=>$purchase]);
     }
-    $stmt=$pdo->prepare('SELECT ledger_reference,entry_type,amount_minor,currency,description,service_code,created_at FROM nu_cwallet_ledger WHERE wallet_user_id=? ORDER BY id DESC LIMIT 50');
-    $stmt->execute([$walletId]);
-    $transactions=[];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $transactions[]=['reference'=>$row['ledger_reference'],'type'=>$row['entry_type'],'amount_kobo'=>(int)$row['amount_minor'],'currency'=>$row['currency'],'title'=>$row['description'] ?: $row['entry_type'],'service'=>$row['service_code'],'created_at'=>$row['created_at'],'status'=>'posted'];
-    }
-    $result=['balance_kobo'=>(int)$wallet['balance_minor'],'currency'=>$wallet['currency'],'status'=>$wallet['status'],'transactions'=>$transactions];
     if ($method==='GET' && $route==='/wallet') response(['data'=>$result]);
-    if ($method==='GET' && $route==='/app/bootstrap') {
-        require_once $root.'/nu-mobile/workspace/service.php';
-        $bootstrapWorkspace=(new NuStudentWorkspace($pdo))->get($accountId);
-        response(['data'=>[
-            'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
-            'wallet'=>$result,
-            'workspace'=>$bootstrapWorkspace,
-            'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true,'study_progress_sync'=>true]
-        ]]);
-    }
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
 } catch (NuCompanionException $e) {
     failure($e->status,$e->reason,$e->getMessage());
