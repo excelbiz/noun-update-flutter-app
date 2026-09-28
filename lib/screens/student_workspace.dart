@@ -46,11 +46,11 @@ class StudentWorkspace extends ChangeNotifier {
     await _persist();
   }
 
-  Future<void> _syncLoaded() async {
+  Future<void> _syncLoaded({Map<String,dynamic>? bootstrapRemote}) async {
     if(!canSync||syncing)return;
     syncing=true;
     try{
-      final remote=await _remote();
+      final remote=bootstrapRemote??await _remote();
       final exists=remote['exists']==true;
       final remoteRevision=(remote['revision'] as num?)?.toInt()??0;
       if(dirty || (!exists && (details.isNotEmpty||courses.isNotEmpty||pins.isNotEmpty))){
@@ -73,7 +73,7 @@ class StudentWorkspace extends ChangeNotifier {
     }
   }
 
-  Future<void> load() async {
+  Future<void> load({Map<String,dynamic>? bootstrapRemote}) async {
     try {
       final raw=(await SharedPreferences.getInstance()).getString(key);
       if(raw!=null){
@@ -86,7 +86,7 @@ class StudentWorkspace extends ChangeNotifier {
       }
     } catch (_) { details={};courses=[];pins={};revision=0;dirty=false; }
     notifyListeners();
-    await _syncLoaded();
+    await _syncLoaded(bootstrapRemote:bootstrapRemote);
   }
 
   Future<void> save() async {
