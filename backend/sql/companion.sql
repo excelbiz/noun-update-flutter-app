@@ -60,6 +60,17 @@ CREATE TABLE IF NOT EXISTS nu_mobile_student_workspaces (
  revision BIGINT UNSIGNED NOT NULL DEFAULT 0,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Cross-device Study progress. This is separate from Premium and the wallet.
+-- One row per account/course keeps completed-unit indexes and the student's notes.
+CREATE TABLE IF NOT EXISTS nu_mobile_study_state (
+ account_id BIGINT UNSIGNED NOT NULL,
+ course_code VARCHAR(20) NOT NULL,
+ state_json JSON NOT NULL,
+ revision BIGINT UNSIGNED NOT NULL DEFAULT 0,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(account_id,course_code),
+ KEY course_updated(course_code,updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS nu_mobile_motivation (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, source_hash CHAR(64) NULL UNIQUE, quote TEXT NOT NULL,
  author VARCHAR(150) NOT NULL DEFAULT 'NOUN Update', category VARCHAR(50) NOT NULL DEFAULT 'general',
