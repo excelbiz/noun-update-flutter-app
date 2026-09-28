@@ -6,6 +6,7 @@ final class NuCompanionException extends RuntimeException {
 }
 final class NuCompanion {
     public const SKINS = ['defaultNoun','smartCampus','premiumDark','glassmorphism','studentFriendly','minimalAcademic','elegantEditorial','productivityDashboard','friendlyModern','futureTech','boldPremium'];
+    public const PROFILE_FRAMES = ['classic','academicGold','campusGreen','futureGlow','editorialInk'];
     public function __construct(private PDO $pdo, private ?string $websiteQuoteFile=null) {}
     private function rows(string $sql,array $args=[]): array {
         $s=$this->pdo->prepare($sql);$s->execute($args);return $s->fetchAll(PDO::FETCH_ASSOC);
@@ -43,7 +44,6 @@ final class NuCompanion {
         $idempotency='premium:'.$account.':'.$requestKey;
         try {
             $this->pdo->beginTransaction();
-            // Successful retries must remain recoverable even if pricing or sale switches change later.
             $existingStmt=$this->pdo->prepare("SELECT * FROM nu_cwallet_orders WHERE idempotency_key=? LIMIT 1 FOR UPDATE");
             $existingStmt->execute([$idempotency]);$existing=$existingStmt->fetch(PDO::FETCH_ASSOC)?:null;
             if($existing){
@@ -103,19 +103,25 @@ final class NuCompanion {
     }
     public function preferences(int $account): array {
         $p=$this->rows('SELECT * FROM nu_mobile_preferences WHERE account_id=?',[$account])[0]??[];
-        return ['preferred_skin'=>$p['preferred_skin']??'defaultNoun','birthday'=>[
+        $cosmetics=$this->rows('SELECT profile_frame FROM nu_mobile_profile_cosmetics WHERE account_id=?',[$account])[0]??[];
+        return ['preferred_skin'=>$p['preferred_skin']??'defaultNoun','profile_frame'=>$cosmetics['profile_frame']??'classic','birthday'=>[
             'month'=>isset($p['birthday_month'])?(int)$p['birthday_month']:null,'day'=>isset($p['birthday_day'])?(int)$p['birthday_day']:null,
             'celebration_enabled'=>(bool)($p['birthday_celebration_enabled']??true)]];
     }
     public function savePreferences(int $account,array $body): array {
-        // Validate the entire patch before any write. Account ID comes only from auth.
-        $updates=[];$values=[];
+        $updates=[];$values=[];$profileFrame=null;
         if(array_key_exists('preferred_skin',$body)){
             $skin=$body['preferred_skin'];
             if(!is_string($skin)||!in_array($skin,self::SKINS,true))throw new InvalidArgumentException('Choose a valid skin.');
             $e=$this->entitlement($account);
             if($skin!=='defaultNoun' && (!$e['active'] || empty($e['features']['premium_skins'])))throw new InvalidArgumentException('Active Premium access is required to apply this skin.');
             $updates[]='preferred_skin=?';$values[]=$skin;
+        }
+        if(array_key_exists('profile_frame',$body)){
+            $profileFrame=$body['profile_frame'];
+            if(!is_string($profileFrame)||!in_array($profileFrame,self::PROFILE_FRAMES,true))throw new InvalidArgumentException('Choose a valid profile frame.');
+            $e=$this->entitlement($account);
+            if($profileFrame!=='classic' && (!$e['active'] || empty($e['features']['profile_frames'])))throw new InvalidArgumentException('Active Premium access is required to apply this profile frame.');
         }
         if(array_key_exists('birthday',$body)){
             $b=$body['birthday'];
@@ -127,6 +133,9 @@ final class NuCompanion {
         if($updates){
             $this->pdo->prepare('INSERT IGNORE INTO nu_mobile_preferences(account_id) VALUES(?)')->execute([$account]);
             $this->pdo->prepare('UPDATE nu_mobile_preferences SET '.implode(',',$updates).' WHERE account_id=?')->execute([...$values,$account]);
+        }
+        if($profileFrame!==null){
+            $this->pdo->prepare('INSERT INTO nu_mobile_profile_cosmetics(account_id,profile_frame) VALUES(?,?) ON DUPLICATE KEY UPDATE profile_frame=VALUES(profile_frame)')->execute([$account,$profileFrame]);
         }
         return $this->preferences($account);
     }
