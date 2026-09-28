@@ -9,7 +9,7 @@ class SkinBackdrop extends StatelessWidget {
     final t=SkinTokens.of(context);
     if(!t.skin.isPremium)return Material(color:Theme.of(context).scaffoldBackgroundColor,child:child);
     final dark=Theme.of(context).brightness==Brightness.dark;
-    final imageOpacity=switch(t.skin){AppSkin.minimalAcademic=>dark?.14:.10,AppSkin.elegantEditorial=>dark?.20:.16,AppSkin.productivityDashboard=>dark?.22:.14,_=>dark?.42:.26};
+    final imageOpacity=switch(t.skin){AppSkin.minimalAcademic=>dark ? .14 : .10,AppSkin.elegantEditorial=>dark ? .20 : .16,AppSkin.productivityDashboard=>dark ? .22 : .14,_=>dark ? .42 : .26};
     final alignment=switch(t.skin){AppSkin.studentFriendly||AppSkin.friendlyModern=>Alignment.topRight,AppSkin.futureTech=>Alignment.centerRight,_=>Alignment.topCenter};
     final overlay=switch(t.skin){
       AppSkin.smartCampus=>dark?[t.background.withValues(alpha:.72),t.background.withValues(alpha:.97)]:[t.background.withValues(alpha:.78),t.background.withValues(alpha:.98)],
@@ -78,8 +78,8 @@ class SkinHero extends StatelessWidget {
         Padding(padding:EdgeInsets.all(minimal?24:20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(login?'YOUR ACADEMIC JOURNEY':label,style:TextStyle(color:t.skin==AppSkin.futureTech?t.primary:const Color(0xffffdb8b),fontSize:10,letterSpacing:1.7,fontWeight:FontWeight.w800)),
           SizedBox(height:login?74:12),
-          FractionallySizedBox(widthFactor:login?.94:t.skin==AppSkin.elegantEditorial?.70:.63,child:Text(title,style:TextStyle(fontFamily:editorial?'NUReading':null,fontSize:login?28:24,height:1.15,fontWeight:FontWeight.w800,color:Colors.white))),
-          const SizedBox(height:12),FractionallySizedBox(widthFactor:t.skin==AppSkin.friendlyModern?.78:.72,child:Text(subtitle,style:const TextStyle(fontSize:12,height:1.5,color:Color(0xffe5f2e9)))),
+          FractionallySizedBox(widthFactor:login ? .94 : (t.skin==AppSkin.elegantEditorial ? .70 : .63),child:Text(title,style:TextStyle(fontFamily:editorial?'NUReading':null,fontSize:login?28:24,height:1.15,fontWeight:FontWeight.w800,color:Colors.white))),
+          const SizedBox(height:12),FractionallySizedBox(widthFactor:t.skin==AppSkin.friendlyModern ? .78 : .72,child:Text(subtitle,style:const TextStyle(fontSize:12,height:1.5,color:Color(0xffe5f2e9)))),
           if(action!=null)Padding(padding:const EdgeInsets.only(top:16),child:action),
           if(login)const SizedBox(height:24),
         ])),
@@ -107,9 +107,9 @@ class SkinResourceCard extends StatelessWidget {
       const SizedBox(height:6),Text(subtitle,style:TextStyle(color:ink.withValues(alpha:.85),fontSize:11,height:1.35)),
     ]);
     return Container(margin:EdgeInsets.only(bottom:grid?0:10),decoration:BoxDecoration(borderRadius:radius,
-      gradient:LinearGradient(begin:dashboard?Alignment.centerLeft:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill.withValues(alpha:glass ? .72:1),Color.lerp(fill,t.gold,glass ? .16:bold?.10:.04)!.withValues(alpha:glass ? .66:1)]),
+      gradient:LinearGradient(begin:dashboard?Alignment.centerLeft:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill.withValues(alpha:glass ? .72:1),Color.lerp(fill,t.gold,glass ? .16 : (bold ? .10 : .04))!.withValues(alpha:glass ? .66:1)]),
       border:Border.all(color:glass?Colors.white.withValues(alpha:.40):t.skin==AppSkin.futureTech?t.primary.withValues(alpha:.48):friendly?t.primary.withValues(alpha:.16):tone.withValues(alpha:.13)),
-      boxShadow:[if(!dark&&t.skin!=AppSkin.minimalAcademic)BoxShadow(color:t.primary.withValues(alpha:friendly?.10:.06),blurRadius:friendly?14:9,offset:const Offset(0,3))]),
+      boxShadow:[if(!dark&&t.skin!=AppSkin.minimalAcademic)BoxShadow(color:t.primary.withValues(alpha:friendly ? .10 : .06),blurRadius:friendly?14:9,offset:const Offset(0,3))]),
       child:Material(color:Colors.transparent,child:InkWell(borderRadius:radius,onTap:onTap,child:Padding(padding:EdgeInsets.all(grid?16:14),child:grid?content:Row(children:[
         _SkinGlyph(icon:icon,tone:tone,flat:t.skin==AppSkin.minimalAcademic,size:44),
         const SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(color:ink,fontSize:14,fontWeight:FontWeight.w800)),const SizedBox(height:4),Text(subtitle,style:TextStyle(color:ink.withValues(alpha:.8),fontSize:11,height:1.35))])),
@@ -130,12 +130,12 @@ class _LightPaths extends CustomPainter {
 }
 class _DashboardGrid extends CustomPainter {
   const _DashboardGrid({this.hero=false});final bool hero;
-  @override void paint(Canvas c,Size s){final p=Paint()..style=PaintingStyle.stroke..strokeWidth=.55..color=Colors.white.withValues(alpha:hero?.08:.055);final step=hero?28.0:38.0;for(double x=0;x<s.width;x+=step)c.drawLine(Offset(x,0),Offset(x,s.height),p);for(double y=0;y<s.height;y+=step)c.drawLine(Offset(0,y),Offset(s.width,y),p);}
+  @override void paint(Canvas c,Size s){final p=Paint()..style=PaintingStyle.stroke..strokeWidth=.55..color=Colors.white.withValues(alpha:hero ? .08 : .055);final step=hero?28.0:38.0;for(double x=0;x<s.width;x+=step)c.drawLine(Offset(x,0),Offset(x,s.height),p);for(double y=0;y<s.height;y+=step)c.drawLine(Offset(0,y),Offset(s.width,y),p);}
   @override bool shouldRepaint(covariant _DashboardGrid oldDelegate)=>hero!=oldDelegate.hero;
 }
 class _GlassOrbs extends CustomPainter {
   const _GlassOrbs({this.hero=false});final bool hero;
-  @override void paint(Canvas c,Size s){final a=Paint()..color=const Color(0xffbdf5df).withValues(alpha:hero?.10:.12);final b=Paint()..color=const Color(0xffffd77c).withValues(alpha:hero?.08:.07);c.drawCircle(Offset(s.width*.88,s.height*.16),hero?75:120,a);c.drawCircle(Offset(s.width*.10,s.height*.72),hero?60:95,b);}
+  @override void paint(Canvas c,Size s){final a=Paint()..color=const Color(0xffbdf5df).withValues(alpha:hero ? .10 : .12);final b=Paint()..color=const Color(0xffffd77c).withValues(alpha:hero ? .08 : .07);c.drawCircle(Offset(s.width*.88,s.height*.16),hero?75:120,a);c.drawCircle(Offset(s.width*.10,s.height*.72),hero?60:95,b);}
   @override bool shouldRepaint(covariant _GlassOrbs oldDelegate)=>hero!=oldDelegate.hero;
 }
 class _EditorialRule extends CustomPainter {
@@ -164,7 +164,7 @@ Color skinServiceColour(String id)=>switch(id){
 class SkinHeaderArt extends StatelessWidget {
  const SkinHeaderArt({super.key});
  @override Widget build(BuildContext context){final t=SkinTokens.of(context);return ExcludeSemantics(child:Stack(fit:StackFit.expand,children:[
-  Opacity(opacity:t.skin==AppSkin.minimalAcademic?.20:.42,child:Image.asset(t.backdropAsset,cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.topCenter)),
+  Opacity(opacity:t.skin==AppSkin.minimalAcademic ? .20 : .42,child:Image.asset(t.backdropAsset,cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.topCenter)),
   DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color.lerp(const Color(0xff003425),t.primary,.20)!.withValues(alpha:.92),Color.lerp(const Color(0xff003728),t.gold,.12)!.withValues(alpha:.78)]))),
  ]));}
 }
