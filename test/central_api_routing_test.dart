@@ -16,6 +16,7 @@ void main() {
     }));
     await api.getJson('/app/bootstrap');
     await api.getJson('/workspace');
+    await api.getJson('/saved-resources');
     await api.postJson('/wallet/fund',{'amount_kobo':10000},idempotencyKey:'example');
     await api.getJson('/study/CIT411/state');
     await api.getJson('/posts/news');
@@ -25,12 +26,15 @@ void main() {
     expect(requests[1].url.path,'/api/central/index.php');
     expect(requests[1].url.queryParameters['route'],'/workspace');
     expect(requests[1].headers['Authorization'],'Bearer central-token');
-    expect(requests[2].url.queryParameters['route'],'/wallet/fund');
-    expect(requests[2].headers['Idempotency-Key'],'example');
-    expect(requests[3].url.path,'/api/central/index.php');
-    expect(requests[3].url.queryParameters['route'],'/study/CIT411/state');
-    expect(requests[3].headers['Authorization'],'Bearer central-token');
-    expect(requests[4].url.path,'/api/v1/posts/news');
-    expect(requests[4].headers.containsKey('Authorization'),isFalse);
+    expect(requests[2].url.path,'/api/central/index.php');
+    expect(requests[2].url.queryParameters['route'],'/saved-resources');
+    expect(requests[2].headers['Authorization'],'Bearer central-token');
+    expect(requests[3].url.queryParameters['route'],'/wallet/fund');
+    expect(requests[3].headers['Idempotency-Key'],'example');
+    expect(requests[4].url.path,'/api/central/index.php');
+    expect(requests[4].url.queryParameters['route'],'/study/CIT411/state');
+    expect(requests[4].headers['Authorization'],'Bearer central-token');
+    expect(requests[5].url.path,'/api/v1/posts/news');
+    expect(requests[5].headers.containsKey('Authorization'),isFalse);
   });
 }
