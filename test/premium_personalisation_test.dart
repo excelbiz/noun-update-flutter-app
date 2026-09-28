@@ -8,15 +8,16 @@ import 'package:noun_update_student_app/core/premium_service.dart';
 import 'package:noun_update_student_app/core/skin_theme.dart';
 import 'package:noun_update_student_app/screens/skin_gallery.dart';
 import 'package:noun_update_student_app/screens/personalisation.dart';
+import 'package:noun_update_student_app/screens/profile_cosmetics.dart';
 import 'package:noun_update_student_app/screens/live_portal.dart';
 import 'live_portal_test.dart' show capture;
 
 class PersonalisationApi extends ApiClient {
   bool active=true,fail=false;
-  Map<String,dynamic> prefs={'preferred_skin':'futureTech','birthday':{'month':9,'day':27,'celebration_enabled':true}};
+  Map<String,dynamic> prefs={'preferred_skin':'futureTech','profile_frame':'futureGlow','birthday':{'month':9,'day':27,'celebration_enabled':true}};
   @override Future<Map<String,dynamic>> getJson(String path)async{
     if(fail)throw const ApiException('Offline');
-    if(path=='/premium/status')return {'data':{'active':active,'features':{'premium_skins':true},'server_time':'2026-09-27T12:00:00Z','expires_at':'2026-09-27T13:00:00Z'}};
+    if(path=='/premium/status')return {'data':{'active':active,'features':{'premium_skins':true,'profile_frames':true},'server_time':'2026-09-27T12:00:00Z','expires_at':'2026-09-27T13:00:00Z'}};
     return {'data':prefs};
   }
   @override Future<Map<String,dynamic>> postJson(String path,Map<String,dynamic> body,{String? idempotencyKey})async{prefs={...prefs,...body};return {'data':prefs};}
@@ -29,13 +30,25 @@ void main(){
   final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
   await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
  });
- test('Server entitlement controls skin; expiry preserves preference; logout clears identity',()async{
+ test('Server entitlement controls skin and profile frame; expiry preserves preferences',()async{
   final p=PremiumService(),api=PersonalisationApi();
-  await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.futureTech);expect(p.suppressAds,isTrue);
+  await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.futureTech);expect(p.suppressAds,isTrue);expect(p.effectiveProfileFrame,'futureGlow');
   expect(p.isBirthday(DateTime(2026,9,27)),isTrue);expect(p.isBirthday(DateTime(2026,9,28)),isFalse);
-  api.active=false;await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.defaultNoun);expect(p.preferredSkin,AppSkin.futureTech);
-  api.active=true;api.fail=true;await p.refresh(api,'1');expect(p.isPremium,isFalse);
+  api.active=false;await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.defaultNoun);expect(p.preferredSkin,AppSkin.futureTech);expect(p.effectiveProfileFrame,'classic');expect(p.preferredProfileFrame,'futureGlow');
+  api.active=true;api.fail=true;await p.refresh(api,'1');expect(p.isPremium,isFalse);expect(p.effectiveProfileFrame,'classic');
   p.clear();expect(p.accountId,isNull);expect(p.isBirthday(DateTime(2026,9,27)),isFalse);p.dispose();
+ });
+ testWidgets('Profile style selector shows all frames and applies selected frame',(tester)async{
+   SharedPreferences.setMockInitialValues({});
+   final api=PersonalisationApi();final p=PremiumService.instance;p.clear();await p.refresh(api,'1');
+   tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+   await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));await tester.pumpAndSettle();
+   for(final label in ['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink'])expect(find.text(label),findsOneWidget);
+   expect(find.byType(PremiumProfileAvatar),findsWidgets);
+   await tester.tap(find.widgetWithText(FilledButton,'Apply').first);await tester.pumpAndSettle();
+   expect(p.preferredProfileFrame,isNot('futureGlow'));
+   await tester.pumpWidget(const SizedBox.shrink());p.clear();
  });
  for(final skin in AppSkin.values.where((s)=>s.isPremium)){
   testWidgets('${skin.label} supports both appearances without applying entitlement',(tester)async{
@@ -67,8 +80,6 @@ void main(){
    await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(1.5)),child:child!),home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
    await tester.tap(find.text('Study').last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await tester.drag(find.byKey(const PageStorageKey('study')),const Offset(0,-430));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
-
-
    await tester.pumpWidget(const SizedBox.shrink());
   });
  }
