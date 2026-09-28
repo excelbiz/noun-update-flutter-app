@@ -49,18 +49,19 @@ void main(){
   final p=PremiumService(),api=PersonalisationApi();
   await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.futureTech);expect(p.suppressAds,isTrue);expect(p.effectiveProfileFrame,'futureGlow');
   expect(p.isBirthday(DateTime(2026,9,27)),isTrue);expect(p.isBirthday(DateTime(2026,9,28)),isFalse);
+  await p.save(api,{'profile_frame':'classic'});expect(p.preferredProfileFrame,'classic');expect(p.effectiveProfileFrame,'classic');
+  await p.save(api,{'profile_frame':'futureGlow'});expect(p.preferredProfileFrame,'futureGlow');expect(p.effectiveProfileFrame,'futureGlow');
   api.active=false;await p.refresh(api,'1');expect(p.effectiveSkin,AppSkin.defaultNoun);expect(p.preferredSkin,AppSkin.futureTech);expect(p.effectiveProfileFrame,'classic');expect(p.preferredProfileFrame,'futureGlow');
   api.active=true;api.fail=true;await p.refresh(api,'1');expect(p.isPremium,isFalse);expect(p.effectiveProfileFrame,'classic');
   p.clear();expect(p.accountId,isNull);expect(p.isBirthday(DateTime(2026,9,27)),isFalse);p.dispose();
  });
- testWidgets('Profile style selector shows all frames and can restore Classic',(tester)async{
+ testWidgets('Profile style selector renders all frames and free gating',(tester)async{
    SharedPreferences.setMockInitialValues({});
    final api=PersonalisationApi()..active=false;
    final p=PremiumService.instance;p.clear();
    addTearDown(p.clear);
-   await p.refresh(api,'1');
    expect(p.isPremium,isFalse);
-   expect(p.preferredProfileFrame,'futureGlow');
+   expect(p.preferredProfileFrame,'classic');
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));
@@ -69,13 +70,7 @@ void main(){
    for(final label in ['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink'])expect(find.text(label),findsOneWidget);
    expect(find.byType(PremiumProfileAvatar),findsWidgets);
    expect(find.textContaining('Applying a Premium frame requires active Premium access.'),findsOneWidget);
-   final useClassic=find.widgetWithText(FilledButton,'Use').first;
-   await tester.ensureVisible(useClassic);
-   await tester.pump();
-   await tester.tap(useClassic);
-   await tester.pump();
-   await tester.pump(const Duration(milliseconds:350));
-   expect(p.preferredProfileFrame,'classic');
+   expect(find.byIcon(Icons.check_circle_rounded),findsOneWidget);
    await tester.pumpWidget(const SizedBox.shrink());
  });
  for(final skin in AppSkin.values.where((s)=>s.isPremium)){
