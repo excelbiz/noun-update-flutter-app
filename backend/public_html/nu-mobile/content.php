@@ -3,8 +3,16 @@ declare(strict_types=1);
 
 function nu_services(array $config): array {
     $items=json_decode((string)file_get_contents(__DIR__.'/services.json'),true,512,JSON_THROW_ON_ERROR);
-    foreach($items as &$item)$item['url']=$config['site_url'].$item['path'];
-    return $items;
+    $enabled=[];$seen=[];
+    foreach($items as $item){
+        if(($item['enabled']??true)!==true)continue;
+        $id=(string)($item['id']??'');
+        if($id===''||isset($seen[$id]))continue;
+        $seen[$id]=true;
+        $item['url']=$config['site_url'].$item['path'];
+        $enabled[]=$item;
+    }
+    return $enabled;
 }
 function nu_content_map(): array {
     return [
