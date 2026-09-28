@@ -12,9 +12,10 @@ class AppearanceSettings extends StatefulWidget {
 class _AppearanceSettingsState extends State<AppearanceSettings> {
   bool saving=false,checking=false;
   String? connection;
-  Future<void> save({ThemeMode? mode,String? font,String? accent,bool? automatic,String? textSize}) async {
+  Future<void> save({ThemeMode? mode,String? font,String? accent,bool? automatic,String? textSize,bool? dataSaver}) async {
     if(saving)return;setState(()=>saving=true);
-    try{await Appearance.instance.change(mode:mode,font:font,accent:accent,automatic:automatic,textSize:textSize);}catch(_){if(mounted)nuMessage(context,'Your preference could not be saved. Please try again.');}
+    try{await Appearance.instance.change(mode:mode,font:font,accent:accent,automatic:automatic,textSize:textSize,dataSaver:dataSaver,api:widget.api);if(mounted&&Appearance.instance.accountSyncPending)nuMessage(context,'Saved on this device. Your account preference will sync when you reconnect.');}
+    catch(_){if(mounted)nuMessage(context,Appearance.instance.accountSyncPending?'Saved on this device. Your account preference will sync when you reconnect.':'Your preference could not be saved. Please try again.');}
     finally{if(mounted)setState(()=>saving=false);}
   }
   Future<void> check() async {
@@ -26,15 +27,16 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
   @override Widget build(BuildContext context)=>ListenableBuilder(listenable:Appearance.instance,builder:(context,_){final a=Appearance.instance;return NuPage(title:'Settings',child:ListView(padding:const EdgeInsets.all(18),children:[
     const ServiceHero(title:'Make it yours',subtitle:'Choose a comfortable reading style and appearance.',icon:Icons.tune_rounded),
     ListTile(leading:const Icon(Icons.palette_outlined),title:const Text('Appearance & Personalisation'),subtitle:const Text('Default skin + 10 Premium skin previews'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,SkinGallery(api:widget.api))),
-    const NuTitle('Appearance',subtitle:'Your preferences are saved on this device.'),
+    NuTitle('Appearance',subtitle:a.accountSyncPending?'Saved locally · account sync pending':'Saved on this device and restored from your account when signed in.'),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Display mode',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:4,children:[ChoiceChip(key:const ValueKey('mode-auto'),label:const Text('Auto'),selected:a.automatic,onSelected:saving?null:(_)=>save(automatic:true)),for(final m in [ThemeMode.light,ThemeMode.dark,ThemeMode.system])ChoiceChip(key:ValueKey('mode-${m.name}'),label:Text(switch(m){ThemeMode.system=>'System',ThemeMode.light=>'Light',ThemeMode.dark=>'Dark'}),selected:!a.automatic&&a.mode==m,onSelected:saving?null:(_)=>save(mode:m))])])),
     const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('Auto uses light mode from 06:00 to 18:59 and dark mode from 19:00 to 05:59, using your device’s local time.')),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Text size',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,children:[for(final size in Appearance.textSizes.keys)ChoiceChip(label:Text(size),selected:a.textSize==size,onSelected:saving?null:(_)=>save(textSize:size))])])),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Reading font',style:TextStyle(fontWeight:FontWeight.w700)),for(final entry in Appearance.fonts.entries)ListTile(contentPadding:EdgeInsets.zero,title:Text(entry.key,style:TextStyle(fontFamily:entry.value.isEmpty?null:entry.value)),subtitle:Text('Clear ideas. Confident learning.',style:TextStyle(fontFamily:entry.value.isEmpty?null:entry.value,fontSize:12)),trailing:Icon(a.font==entry.key?Icons.radio_button_checked:Icons.radio_button_off,color:Theme.of(context).colorScheme.primary),onTap:saving?null:()=>save(font:entry.key))])),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Accent colour',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:6,children:[for(final entry in Appearance.accents.entries)ChoiceChip(avatar:CircleAvatar(backgroundColor:entry.value,radius:9),label:Text(entry.key),selected:a.accent==entry.key,onSelected:saving?null:(_)=>save(accent:entry.key))]),const SizedBox(height:8),const Text('Applies to buttons, selections and highlights. NOUN Update branding stays consistent.',style:TextStyle(fontSize:12))])),
+    NuPanel(child:SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Data saver',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:const Text('Remember that you prefer lighter network usage on mobile data. Resource screens can use this preference as native/offline support expands.'),value:a.dataSaver,onChanged:saving?null:(v)=>save(dataSaver:v))),
     NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Reading preview',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),const SizedBox(height:8),const Text('Prepare with purpose. Read your course materials, organise your notes and make steady progress.'),const SizedBox(height:12),FilledButton(onPressed:(){},child:const Text('Sample button'))])),
-    TextButton(onPressed:saving?null:()=>save(automatic:true,textSize:'Default',mode:ThemeMode.system,font:'Modern sans',accent:'Emerald'),child:const Text('Restore default appearance')),
+    TextButton(onPressed:saving?null:()=>save(automatic:true,textSize:'Default',mode:ThemeMode.system,font:'Modern sans',accent:'Emerald',dataSaver:false),child:const Text('Restore default appearance')),
     const NuTitle('Connection'),NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Website updates, course resources and account details are securely loaded from NOUN Update.'),const SizedBox(height:12),OutlinedButton.icon(onPressed:checking?null:check,icon:const Icon(Icons.sync_rounded),label:Text(checking?'Checking…':'Check connection')),if(connection!=null)Padding(padding:const EdgeInsets.only(top:10),child:Text(connection!,semanticsLabel:connection))])),
-    const Text('NOUN Update · Version 0.6.0',textAlign:TextAlign.center),
+    const Text('NOUN Update · Version 0.8.0',textAlign:TextAlign.center),
   ]));});
 }
