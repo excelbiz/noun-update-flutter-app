@@ -101,6 +101,9 @@ try {
             if($method==='POST')response(['data'=>$studyState->save($accountId,$studyMatch[1],$body)]);
         } catch(InvalidArgumentException $e) {
             failure(422,'INVALID_STUDY_STATE',$e->getMessage());
+        } catch(RuntimeException $e) {
+            if($e->getMessage()==='STUDY_STATE_CONFLICT')failure(409,'STUDY_STATE_CONFLICT','Your study progress changed on another device. Review the latest notes before saving again.');
+            throw $e;
         }
         failure(405,'METHOD_NOT_ALLOWED','This study progress request is not supported.');
     }
