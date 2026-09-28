@@ -38,3 +38,6 @@ jobs:
 
       - name: Test student workspace sync
         run: php backend/tests/workspace.php
+
+      - name: Test personalised timetable API
+        run: php backend/tests/timetable.php
