@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:noun_update_student_app/core/academic_period.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/screens/student_workspace.dart';
 
@@ -28,6 +29,11 @@ ApiClient _api(http.Client client) => ApiClient(
       sessionStore: const _TestSessionStore(),
     );
 
+Map<String,String> _details(String programme) {
+  final period=AcademicPeriod.forDate(DateTime.now());
+  return {'Programme':programme,'Session':period.sessionKey,'Semester':period.semesterLabel};
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -40,7 +46,7 @@ void main() {
       expect(request.headers['Authorization'],'Bearer ${'a' * 64}');
       return http.Response(jsonEncode({'data':{
         'exists':true,
-        'details':{'Programme':'B.Sc Chemistry','Level':'300 Level'},
+        'details':{..._details('B.Sc Chemistry'),'Level':'300 Level'},
         'courses':['CHM301','CHM303'],
         'pins':['fees'],
         'revision':4,
@@ -61,7 +67,7 @@ void main() {
   test('local signed-in edit is posted with current revision', () async {
     SharedPreferences.setMockInitialValues({
       'nu-workspace-v1-77':jsonEncode({
-        'details':{'Programme':'B.Sc Biology'},
+        'details':_details('B.Sc Biology'),
         'courses':['BIO301'],
         'pins':<String>[],
         'revision':2,
@@ -75,7 +81,7 @@ void main() {
       if(request.method=='GET'){
         getCount++;
         return http.Response(jsonEncode({'data':{
-          'exists':true,'details':{'Programme':'B.Sc Biology'},'courses':['BIO301'],'pins':[],'revision':2,'updated_at':'2026-09-28T10:00:00Z'
+          'exists':true,'details':_details('B.Sc Biology'),'courses':['BIO301'],'pins':[],'revision':2,'updated_at':'2026-09-28T10:00:00Z'
         }}),200,headers:{'content-type':'application/json'});
       }
       expect(request.method,'POST');
