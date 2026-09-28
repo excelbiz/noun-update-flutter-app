@@ -77,6 +77,19 @@ CREATE TABLE IF NOT EXISTS nu_mobile_study_state (
  PRIMARY KEY(account_id,course_code),
  KEY course_updated(course_code,updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Saved academic/resource bookmarks follow the signed-in account but remain
+-- independent of Premium, wallet purchases and device download storage.
+CREATE TABLE IF NOT EXISTS nu_mobile_saved_resources (
+ account_id BIGINT UNSIGNED NOT NULL,
+ resource_key VARCHAR(191) NOT NULL,
+ resource_type VARCHAR(40) NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ course_code VARCHAR(20) NULL,
+ route VARCHAR(255) NULL,
+ saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(account_id,resource_key),
+ KEY account_saved_at(account_id,saved_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS nu_mobile_motivation (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, source_hash CHAR(64) NULL UNIQUE, quote TEXT NOT NULL,
  author VARCHAR(150) NOT NULL DEFAULT 'NOUN Update', category VARCHAR(50) NOT NULL DEFAULT 'general',
