@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/academic_period.dart';
 import '../core/api_client.dart';
+import '../core/saved_resource_store.dart';
 import '../widgets/native_ui.dart';
 
 class StudentWorkspace extends ChangeNotifier {
@@ -165,11 +166,31 @@ class MyCoursesPage extends StatefulWidget {
   @override State<MyCoursesPage> createState()=>_MyCoursesPageState();
 }
 class _MyCoursesPageState extends State<MyCoursesPage>{
- final code=TextEditingController();String? error;bool saving=false;
+ final code=TextEditingController();String? error;bool saving=false,bookmarksReady=false;
+ late final SavedResourceStore saved;
+ @override void initState(){super.initState();saved=SavedResourceStore(api:widget.workspace.api,userId:widget.workspace.canSync?widget.workspace.scope:null);_loadBookmarks();}
  @override void dispose(){code.dispose();super.dispose();}
+ String bookmarkKey(String course)=>'course:$course';
+ Future<void> _loadBookmarks()async{await saved.load();if(mounted)setState(()=>bookmarksReady=true);}
+ Future<void> toggleBookmark(String course)async{
+  if(!bookmarksReady)return;
+  final key=bookmarkKey(course),wasSaved=saved.contains(key);
+  await saved.setSaved({
+    'resource_key':key,
+    'resource_type':'course_hub',
+    'title':'$course Course Hub',
+    'course_code':course,
+    'route':'/courses',
+  },!wasSaved);
+  if(mounted){
+    setState((){});
+    final pending=saved.pending.containsKey(key);
+    nuMessage(context,!wasSaved?(pending?'Course saved on this device. Account sync is pending.':'Course saved to your resources.'):'Course removed from saved resources.');
+  }
+ }
  Future<void> update(List<String> next) async {if(saving)return;setState(()=>saving=true);final old=List<String>.from(widget.workspace.courses);widget.workspace.courses=next;try{await widget.workspace.save();code.clear();if(mounted)setState(()=>error=null);}catch(_){widget.workspace.courses=old;if(mounted)setState(()=>error='Could not save your courses. Try again.');}finally{if(mounted)setState(()=>saving=false);}}
  void hub(String course)=>pushNu(context,NuPage(title:course,child:ListView(padding:const EdgeInsets.all(20),children:[
-  NuTitle('$course Course Hub',subtitle:'Your resources, together.'),
+  NuTitle('$course Course Hub',subtitle:'Your resources, together.',trailing:IconButton(tooltip:saved.contains(bookmarkKey(course))?'Remove saved course':'Save course hub',onPressed:bookmarksReady?()=>toggleBookmark(course):null,icon:Icon(saved.contains(bookmarkKey(course))?Icons.bookmark_rounded:Icons.bookmark_border_rounded))),
   const NuPanel(child:Text('Exam date and assessment classification have not been verified. A non-examinable course is not automatically a PAS course.')),
   for(final item in [('courses','Course Material'),('course-summary','Course Summary'),('exam-summary','Exam Summary'),('past-questions','Past Questions'),('mock','Mock Examination'),('study-hub','Study Hub')])NuPanel(padding:0,child:ListTile(title:Text(item.$2),subtitle:Text('Open the library and search $course'),leading:const Icon(Icons.menu_book_outlined),trailing:const Icon(Icons.chevron_right),onTap:()=>widget.openResource(item.$1,item.$2))),
  ])));
@@ -179,6 +200,6 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
   TextField(controller:code,textCapitalization:TextCapitalization.characters,decoration:InputDecoration(labelText:'Course code',hintText:'For example, CIT411',errorText:error)),const SizedBox(height:10),
   FilledButton.icon(onPressed:saving?null:(){final c=code.text.replaceAll(' ','').toUpperCase();if(!RegExp(r'^[A-Z]{2,5}[0-9]{3}$').hasMatch(c)){setState(()=>error='Enter a course code such as CIT411.');return;}if(widget.workspace.courses.contains(c)){setState(()=>error='This course is already saved.');return;}update([...widget.workspace.courses,c]);},icon:const Icon(Icons.add),label:const Text('Add course')),
   const SizedBox(height:20),if(widget.workspace.courses.isEmpty)const NuPanel(child:Text('No courses added yet. Add your first registered course above.')),
-  for(final c in widget.workspace.courses)NuPanel(padding:0,child:ListTile(title:Text(c),subtitle:const Text('Open Course Hub'),onTap:()=>hub(c),leading:const Icon(Icons.school_outlined),trailing:IconButton(tooltip:'Remove $c',onPressed:saving?null:() async {final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:Text('Remove $c?'),content:const Text('This removes it from your saved course list on synchronised devices too.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));if(yes==true)await update(widget.workspace.courses.where((v)=>v!=c).toList());},icon:const Icon(Icons.close)))),
+  for(final c in widget.workspace.courses)NuPanel(padding:0,child:ListTile(title:Text(c),subtitle:Text(saved.contains(bookmarkKey(c))?'Saved course hub':'Open Course Hub'),onTap:()=>hub(c),leading:const Icon(Icons.school_outlined),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:saved.contains(bookmarkKey(c))?'Remove saved course':'Save course hub',onPressed:bookmarksReady?()=>toggleBookmark(c):null,icon:Icon(saved.contains(bookmarkKey(c))?Icons.bookmark_rounded:Icons.bookmark_border_rounded)),IconButton(tooltip:'Remove $c',onPressed:saving?null:() async {final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:Text('Remove $c?'),content:const Text('This removes it from your saved course list on synchronised devices too.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));if(yes==true)await update(widget.workspace.courses.where((v)=>v!=c).toList());},icon:const Icon(Icons.close))]))),
  ])));
 }
