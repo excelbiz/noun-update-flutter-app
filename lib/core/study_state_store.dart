@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
-import '../widgets/native_ui.dart';
 
 /// Offline-first Study progress for one account/course pair.
 ///
@@ -32,6 +31,9 @@ class StudyStateStore {
   bool get hasConflict => conflictNotes != null;
   bool get syncPending => signedIn && dirty;
   String get slot => 'nu-study-${userId ?? 'guest'}-${courseCode.replaceAll(' ', '').toUpperCase()}';
+
+  Map<String, dynamic> _data(Map<String, dynamic> response) =>
+      Map<String, dynamic>.from(response['data'] as Map);
 
   Future<void> load() async {
     await _loadLocal();
@@ -146,11 +148,14 @@ class StudyStateStore {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchRemote() async =>
-      unpack(await api.getJson('/study/${courseCode.replaceAll(' ', '').toUpperCase()}/state'));
+  Future<Map<String, dynamic>> _fetchRemote() async => _data(
+        await api.getJson(
+          '/study/${courseCode.replaceAll(' ', '').toUpperCase()}/state',
+        ),
+      );
 
   Future<void> _push() async {
-    final result = unpack(await api.postJson(
+    final result = _data(await api.postJson(
       '/study/${courseCode.replaceAll(' ', '').toUpperCase()}/state',
       {
         'done': (done.toList()..sort()),
@@ -174,7 +179,7 @@ class StudyStateStore {
     final remoteNotes = remote['notes'] is String ? remote['notes'] as String : '';
     final remoteRevision = (remote['revision'] as num?)?.toInt() ?? 0;
     final mergedDone = <int>{...done, ...remoteDone};
-    final doneChanged = mergedDone.length != remoteDone.length || !remoteDone.containsAll(mergedDone);
+    final doneChanged = mergedDone.length != remoteDone.length;
 
     if (revision == remoteRevision) {
       done = mergedDone;
