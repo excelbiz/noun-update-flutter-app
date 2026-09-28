@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'appearance.dart';
 import 'skin_theme.dart';
 
 /// Entitlement is never restored from a local boolean. Each session verifies with the server.
@@ -37,6 +38,9 @@ class PremiumService extends ChangeNotifier {
       lastVerifiedAt=DateTime.now();error=null;_expiry?.cancel();
       if(isPremium)_expiry=Timer(remaining,(){_entitlement={..._entitlement,'active':false};notifyListeners();});
       notifyListeners();
+      // Appearance is a free account preference. Failure to sync it must never
+      // invalidate Premium or the rest of the signed-in account refresh.
+      try{await Appearance.instance.sync(api);}catch(_){/* Keep the local copy and retry later. */}
     } catch (_) {
       if(generation!=_generation)return;
       _expiry?.cancel();_entitlement={};error='Account personalisation could not be verified. Please reconnect and refresh.';notifyListeners();
