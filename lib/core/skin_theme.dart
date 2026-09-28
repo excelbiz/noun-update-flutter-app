@@ -215,3 +215,12 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
     textButtonTheme:TextButtonThemeData(style:base.textButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
   );
 }
+
+/// Positional metric records are used throughout the Premium layout builders.
+/// These getters keep the call sites expressive without allocating model objects.
+extension PremiumMetricRecord on (String, String, IconData, Color) {
+  String get label => $1;
+  String get value => $2;
+  IconData get icon => $3;
+  Color get colour => $4;
+}
