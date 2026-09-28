@@ -93,6 +93,17 @@ try {
         }
         failure(405,'METHOD_NOT_ALLOWED','This workspace request is not supported.');
     }
+    if ($route==='/saved-resources') {
+        require_once $root.'/nu-mobile/saved-resources/service.php';
+        $savedResources=new NuSavedResources($pdo);
+        try {
+            if($method==='GET')response(['data'=>$savedResources->all($accountId)]);
+            if($method==='POST')response(['data'=>$savedResources->save($accountId,$body)]);
+        } catch(InvalidArgumentException $e) {
+            failure(422,'INVALID_SAVED_RESOURCE',$e->getMessage());
+        }
+        failure(405,'METHOD_NOT_ALLOWED','This saved-resource request is not supported.');
+    }
     if ($route==='/profile/settings') {
         require_once $root.'/nu-mobile/account-settings/service.php';
         $settings=new NuAccountSettings($pdo);
@@ -162,6 +173,7 @@ try {
                 'premium_analytics'=>true,
                 'workspace_sync'=>true,
                 'study_progress_sync'=>true,
+                'saved_resource_sync'=>true,
                 'account_settings_sync'=>true,
             ]
         ]]);
