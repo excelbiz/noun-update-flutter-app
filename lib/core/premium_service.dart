@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'appearance.dart';
-import 'notification_preferences.dart';
 import 'notification_service.dart';
 import 'skin_theme.dart';
 
@@ -40,14 +39,10 @@ class PremiumService extends ChangeNotifier {
       lastVerifiedAt=DateTime.now();error=null;_expiry?.cancel();
       if(isPremium)_expiry=Timer(remaining,(){_entitlement={..._entitlement,'active':false};notifyListeners();});
       notifyListeners();
-      // These are free account preferences. Their sync must never invalidate
-      // Premium or the rest of the signed-in account refresh.
-      try{await Appearance.instance.sync(api);}catch(_){/* Keep the local copy and retry later. */}
-      try{
-        final notificationPreferences=NotificationPreferences(api:api,userId:id);
-        await notificationPreferences.load();
-        notificationPreferences.dispose();
-      }catch(_){/* Keep local notification choices and retry later. */}
+      // Account identity and free display/notification preferences must not
+      // invalidate Premium if their optional sync has a problem.
+      try{await NotificationService.loginStudent(id);}catch(_){/* Push is optional. */}
+      try{await Appearance.instance.sync(api);}catch(_){/* Keep local settings and retry later. */}
     } catch (_) {
       if(generation!=_generation)return;
       _expiry?.cancel();_entitlement={};error='Account personalisation could not be verified. Please reconnect and refresh.';notifyListeners();
