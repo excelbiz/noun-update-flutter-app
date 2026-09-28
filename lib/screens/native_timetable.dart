@@ -123,7 +123,8 @@ class _NativeTimetableState extends State<NativeTimetable>{
 
   Widget _examCard(TimetableEntry exam,{bool featured=false}){
     final tone=_tone(exam.examType);
-    return Padding(padding:const EdgeInsets.only(bottom:10),child:NuPanel(color:featured?Color.lerp(Theme.of(context).colorScheme.surface,tone,.10):null,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    final fill=featured?Color.lerp(Theme.of(context).colorScheme.surface,tone,.10)!:Theme.of(context).colorScheme.surface;
+    return Padding(padding:const EdgeInsets.only(bottom:10),child:NuPanel(color:fill,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[GlossIcon(Icons.event_note_rounded,color:tone,size:featured?48:42),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(exam.courseCode,style:TextStyle(fontSize:featured?20:17,fontWeight:FontWeight.w900)),Text(exam.courseTitle,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12))])),Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),decoration:BoxDecoration(color:tone.withValues(alpha:.12),borderRadius:BorderRadius.circular(999)),child:Text(exam.examType,style:TextStyle(color:tone,fontSize:10,fontWeight:FontWeight.w900)))]),
       const SizedBox(height:12),Wrap(spacing:14,runSpacing:8,children:[_detail(Icons.calendar_today_outlined,exam.date),_detail(Icons.schedule_outlined,exam.time),if(exam.day.isNotEmpty)_detail(Icons.today_outlined,exam.day)]),
       if(exam.isPast)const Padding(padding:EdgeInsets.only(top:8),child:Text('Completed / past date',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
