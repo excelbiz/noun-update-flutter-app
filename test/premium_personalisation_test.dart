@@ -55,15 +55,22 @@ void main(){
  });
  testWidgets('Profile style selector shows all frames and applies selected frame',(tester)async{
    SharedPreferences.setMockInitialValues({});
-   final api=PersonalisationApi();final p=PremiumService.instance;p.clear();await p.refresh(api,'1');
+   final api=PersonalisationApi();final p=PremiumService.instance;p.clear();
+   addTearDown(p.clear);
+   await p.refresh(api,'1');
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));await tester.pumpAndSettle();
    for(final label in ['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink'])expect(find.text(label),findsOneWidget);
    expect(find.byType(PremiumProfileAvatar),findsWidgets);
-   await tester.tap(find.widgetWithText(FilledButton,'Apply').first);await tester.pumpAndSettle();
+   final apply=find.widgetWithText(FilledButton,'Apply').first;
+   await tester.ensureVisible(apply);
+   await tester.pump();
+   await tester.tap(apply);
+   await tester.pump();
+   await tester.pump(const Duration(milliseconds:350));
    expect(p.preferredProfileFrame,isNot('futureGlow'));
-   await tester.pumpWidget(const SizedBox.shrink());p.clear();
+   await tester.pumpWidget(const SizedBox.shrink());
  });
  for(final skin in AppSkin.values.where((s)=>s.isPremium)){
   testWidgets('${skin.label} supports both appearances without applying entitlement',(tester)async{
