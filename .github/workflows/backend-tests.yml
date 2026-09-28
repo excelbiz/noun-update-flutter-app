@@ -35,3 +35,6 @@ jobs:
 
       - name: Test Premium Mock and POP analytics
         run: php backend/tests/premium-analytics.php
+
+      - name: Test student workspace sync
+        run: php backend/tests/workspace.php
