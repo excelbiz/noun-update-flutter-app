@@ -31,7 +31,7 @@ class LivePortal extends StatefulWidget {
 class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  late final ApiClient api;
  StudentWorkspace workspace=StudentWorkspace('guest');
- Future<void> _workspace(String scope)async{final next=StudentWorkspace(scope);await next.load();if(mounted)setState(()=>workspace=next);}
+ Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted)setState(()=>workspace=next);}
  void _courses()=>pushNu(context,MyCoursesPage(workspace:workspace,openResource:(id,label)=>_service({'id':id,'label':label}))).then((_) {if(mounted)setState((){});});
  void _setup()=>pushNu(context,StudentSetup(workspace:workspace)).then((_) {if(mounted)setState((){});});
  void _unavailable(String title)=>pushNu(context,NuPage(title:title,child:ListView(padding:const EdgeInsets.all(20),children:[NuTitle(title),const NuPanel(child:Text('This feature is not connected yet. It will become available after its account API is enabled.'))])));
@@ -43,7 +43,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  String? accountError,pendingReference;
  late Future<Map<String,dynamic>> feed;
  final amount=TextEditingController(text:'1000');
- @override void initState(){super.initState();api=widget.apiClient??ApiClient();WidgetsBinding.instance.addObserver(this);feed=_feed();_loadServices();if(widget.preview){workspace=StudentWorkspace('skin-preview');}else{_workspace('guest');_loadAccount();}}
+ @override void initState(){super.initState();api=widget.apiClient??ApiClient();WidgetsBinding.instance.addObserver(this);feed=_feed();_loadServices();if(widget.preview){workspace=StudentWorkspace('skin-preview',api:api);}else{_workspace('guest');_loadAccount();}}
  @override void dispose(){WidgetsBinding.instance.removeObserver(this);amount.dispose();super.dispose();}
  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&profile!=null)_loadAccount();}
  Future<Map<String,dynamic>> _feed()=>api.getJson('/posts/$category').then(unpack);
@@ -53,11 +53,16 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   try{final d=unpack(await api.getJson('/services'));if(mounted)setState(()=>services=records(d['items']).where((s)=>s['id']!='quizly').toList());}catch(_){/* Retain bundled directory. */}
  }
  Future<void> _loadAccount()async{if(widget.preview)return;try{
-  if(await SessionStore().readAccessToken()==null)return;
+  if(!await api.hasSession())return;
   final b=unpack(await api.getJson('/app/bootstrap'));final p=b['profile']==null?null:Map<String,dynamic>.from(b['profile'] as Map);
+  final rawWorkspace=b['workspace'];
+  final bootstrapWorkspace=rawWorkspace is Map?Map<String,dynamic>.from(rawWorkspace):null;
   final prefs=await SharedPreferences.getInstance();
-  if(p!=null)await PremiumService.instance.refresh(api,'${p['id']}');
-  if(p!=null&&workspace.scope!='${p['id']}')await _workspace('${p['id']}');
+  if(p!=null){
+   final scope='${p['id']}';
+   await PremiumService.instance.refresh(api,scope);
+   if(workspace.scope!=scope){await _workspace(scope,bootstrapRemote:bootstrapWorkspace);}else{await workspace.load(bootstrapRemote:bootstrapWorkspace);}
+  }
   if(mounted)setState((){profile=p;wallet=b['wallet']==null?null:Map<String,dynamic>.from(b['wallet'] as Map);pendingReference=p==null?null:prefs.getString('nu_pending_${p['id']}');accountError=null;});
  }catch(e){if(mounted)setState((){accountError='$e';if(e is ApiException&&e.statusCode==401){PremiumService.instance.clear();profile=null;wallet=null;}});}}
  Future<void> _run(Future<void> Function() action)async{if(busy)return;setState(()=>busy=true);try{await action();}catch(e){if(mounted)nuMessage(context,e);}finally{if(mounted)setState(()=>busy=false);}}
@@ -130,7 +135,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    NuPanel(padding:0,child:_row('Next examination','No verified personal timetable is available yet.',Icons.event_outlined,()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),
    NuTitle('Continue Studying'),NuPanel(padding:0,child:_row('Choose your next chapter','Open your course library to begin a study session.',Icons.auto_stories_outlined,()=>setState(()=>tab=1))),
    NuTitle('Your wallet'),NuPanel(padding:0,child:_row(wallet==null?'Sign in to view your balance':naira(wallet!['balance_kobo']),'One account across NOUN Update',Icons.account_balance_wallet_outlined,()=>setState(()=>tab=4))),
-   NuTitle('My Courses',subtitle:'${workspace.courses.length} registered courses saved on this device'),if(workspace.courses.isNotEmpty)Wrap(spacing:8,children:[for(final c in workspace.courses.take(6))ActionChip(label:Text(c),onPressed:_courses)]),
+   NuTitle('My Courses',subtitle:'${workspace.courses.length} registered courses ${workspace.canSync?'synced with your account':'saved on this device'}'),if(workspace.courses.isNotEmpty)Wrap(spacing:8,children:[for(final c in workspace.courses.take(6))ActionChip(label:Text(c),onPressed:_courses)]),
    NuTitle('Quick access'),_grid(_quickServices,compact:true),NuTitle('Latest updates'),_news(compact:true),
   ]));
  }
@@ -178,7 +183,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    NuTitle('My tools & purchases'),NuPanel(padding:0,child:Column(children:[for(final t in [('course-summary','Course Summary','Understand your course, unit by unit'),('exam-summary','Exam Summary','Focused resources for revision'),('study-hub','Study Hub','Your materials, notes and progress')])ListTile(leading:GlossIcon(serviceIcon(t.$1),color:serviceColour(t.$1),size:38),title:Text(t.$2,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800)),subtitle:Text(t.$3,style:const TextStyle(fontSize:10)),trailing:const Icon(Icons.chevron_right,size:18),onTap:()=>_service({'id':t.$1,'label':t.$2}))])),
    if(pendingReference!=null)NuPanel(child:Column(children:[const Text('A payment is awaiting confirmation.'),SelectableText(pendingReference!,style:const TextStyle(fontSize:11)),TextButton(onPressed:busy?null:()=>_run(_recheck),child:const Text('Recheck payment'))])),
    NuTitle('My account'),NuPanel(padding:0,child:Column(children:[ListTile(leading:Icon(Icons.description_outlined,color:Theme.of(context).colorScheme.primary),title:const Text('My Exam Summaries'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,OrdersPage(api:api))),ListTile(leading:Icon(Icons.person_outline,color:Theme.of(context).colorScheme.primary),title:const Text('Profile details'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,NativeProfile(api:api,name:'${profile!['name']}')).then((_)=>_loadAccount())),if(PremiumService.instance.isPremium)ListTile(leading:Icon(Icons.auto_awesome_outlined,color:Theme.of(context).colorScheme.primary),title:const Text('Profile style'),subtitle:const Text('Premium frame and profile appearance'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,ProfileCosmeticsPage(api:api,name:'${profile!['name']}')).then((_)=>setState((){})))])),
-   OutlinedButton(onPressed:busy?null:()=>_run(()async{await api.postJson('/auth/logout',{});await SessionStore().clear();await _workspace('guest');if(mounted)setState((){PremiumService.instance.clear();profile=null;wallet=null;pendingReference=null;});}),child:const Text('Sign out')),
+   OutlinedButton(onPressed:busy?null:()=>_run(()async{await api.postJson('/auth/logout',{});await api.clearSession();await _workspace('guest');if(mounted)setState((){PremiumService.instance.clear();profile=null;wallet=null;pendingReference=null;});}),child:const Text('Sign out')),
   ],const NuTitle('Library & membership'),NuPanel(padding:0,child:Column(children:[_row('Saved items','Your reading list',Icons.bookmark_border,()=>_unavailable('Saved items')),_row('Downloads','Manage offline resources',Icons.download_outlined,()=>_unavailable('Downloads')),_row('Premium','Membership and benefits',Icons.workspace_premium_outlined,()=>pushNu(context,PremiumPage(api:api)))])),if(profile!=null)NuPanel(padding:0,child:_row('Birthday','Let NOUN Update celebrate with you',Icons.cake_outlined,()=>pushNu(context,BirthdaySettings(api:api)).then((_){if(mounted)setState((){});}))),NuPanel(padding:0,child:_row('Saved Motivation','Your favourite quotes',Icons.favorite_border,()=>pushNu(context,SavedMotivation(api:api)))),const NuTitle('Preferences'),NuPanel(padding:0,child:ListTile(leading:const Icon(Icons.tune_rounded),title:const Text('Appearance & settings'),subtitle:const Text('Fonts, colours, display mode and connection'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,AppearanceSettings(api:api)))),NuPanel(padding:0,child:Column(children:[_row('Notifications','Updates and notification preferences',Icons.notifications_outlined,()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))),_row('Security','Account and session information',Icons.lock_outline,()=>pushNu(context,const NuPage(title:'Security',child:Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Your login token is stored in secure device storage. Website passwords and payment keys are never stored in the app. Sign out from Profile to end your session.'))))))])),const NuTitle('Help & support'),const NuPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869\n\nIndependent student support. Not an official arm of the National Open University of Nigeria.')),
  ]);
  Future<void> _fundDialog()async{await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:const Text('Add funds'),content:TextField(controller:amount,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:const InputDecoration(labelText:'Amount (₦)')),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Cancel')),FilledButton(onPressed:(){Navigator.pop(c);_run(_fund);},child:const Text('Continue'))]));}
