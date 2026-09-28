@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'appearance.dart';
+import 'notification_preferences.dart';
+import 'notification_service.dart';
 import 'skin_theme.dart';
 
 /// Entitlement is never restored from a local boolean. Each session verifies with the server.
@@ -22,7 +24,7 @@ class PremiumService extends ChangeNotifier {
   String get preferredProfileFrame=>'${preferences['profile_frame']??'classic'}';
   String get effectiveProfileFrame=>allows('profile_frames')?preferredProfileFrame:'classic';
   Map<String,dynamic> get birthday=>Map<String,dynamic>.from(preferences['birthday'] as Map? ?? {});
-  void clear(){_generation++;_expiry?.cancel();accountId=null;_entitlement={};preferences={};lastVerifiedAt=null;error=null;notifyListeners();}
+  void clear(){_generation++;_expiry?.cancel();if(accountId!=null)unawaited(NotificationService.logoutStudent());accountId=null;_entitlement={};preferences={};lastVerifiedAt=null;error=null;notifyListeners();}
   Future<void> refresh(ApiClient api,String id) async {
     if(accountId!=id){clear();accountId=id;}
     final generation=++_generation;
@@ -38,9 +40,14 @@ class PremiumService extends ChangeNotifier {
       lastVerifiedAt=DateTime.now();error=null;_expiry?.cancel();
       if(isPremium)_expiry=Timer(remaining,(){_entitlement={..._entitlement,'active':false};notifyListeners();});
       notifyListeners();
-      // Appearance is a free account preference. Failure to sync it must never
-      // invalidate Premium or the rest of the signed-in account refresh.
+      // These are free account preferences. Their sync must never invalidate
+      // Premium or the rest of the signed-in account refresh.
       try{await Appearance.instance.sync(api);}catch(_){/* Keep the local copy and retry later. */}
+      try{
+        final notificationPreferences=NotificationPreferences(api:api,userId:id);
+        await notificationPreferences.load();
+        notificationPreferences.dispose();
+      }catch(_){/* Keep local notification choices and retry later. */}
     } catch (_) {
       if(generation!=_generation)return;
       _expiry?.cancel();_entitlement={};error='Account personalisation could not be verified. Please reconnect and refresh.';notifyListeners();
