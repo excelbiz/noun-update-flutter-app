@@ -31,7 +31,9 @@ final class NuStudyState {
         if($accountId<1)throw new InvalidArgumentException('Choose a valid account.');
         $code=$this->course($courseCode);
         $done=$body['done']??[];$notes=$body['notes']??'';
+        $baseRevision=$body['base_revision']??null;
         if(!is_array($done)||!is_string($notes))throw new InvalidArgumentException('Send valid study progress.');
+        if($baseRevision!==null&&(!is_int($baseRevision)||$baseRevision<0))throw new InvalidArgumentException('Send a valid study-state revision.');
         if(mb_strlen($notes)>20000)throw new InvalidArgumentException('Study notes are too long. Keep them below 20,000 characters.');
         if(count($done)>500)throw new InvalidArgumentException('Study progress contains too many completed units.');
         $clean=[];
@@ -48,12 +50,13 @@ final class NuStudyState {
             $stmt=$this->pdo->prepare('SELECT revision FROM nu_mobile_study_state WHERE account_id=? AND course_code=? LIMIT 1 FOR UPDATE');
             $stmt->execute([$accountId,$code]);
             $current=$stmt->fetchColumn();
+            $currentRevision=$current===false?0:(int)$current;
+            if($baseRevision!==null&&$baseRevision!==$currentRevision)throw new RuntimeException('STUDY_STATE_CONFLICT');
+            $revision=$currentRevision+1;
             if($current===false){
-                $revision=1;
                 $insert=$this->pdo->prepare('INSERT INTO nu_mobile_study_state(account_id,course_code,state_json,revision,updated_at) VALUES(?,?,?,?,UTC_TIMESTAMP())');
                 $insert->execute([$accountId,$code,$state,$revision]);
             }else{
-                $revision=(int)$current+1;
                 $update=$this->pdo->prepare('UPDATE nu_mobile_study_state SET state_json=?,revision=?,updated_at=UTC_TIMESTAMP() WHERE account_id=? AND course_code=?');
                 $update->execute([$state,$revision,$accountId,$code]);
             }
