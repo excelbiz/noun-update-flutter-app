@@ -62,15 +62,19 @@ void main(){
    addTearDown(p.clear);
    expect(p.isPremium,isFalse);
    expect(p.preferredProfileFrame,'classic');
+   expect(premiumProfileFrames.map((frame)=>frame.label).toList(),['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink']);
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.defaultNoun),home:ProfileCosmeticsPage(api:api,name:'NOUN Student')));
    await tester.pump();
    await tester.pump(const Duration(milliseconds:250));
-   for(final label in ['Classic','Academic Gold','Campus Green','Future Glow','Editorial Ink'])expect(find.text(label),findsOneWidget);
+   for(final label in ['Classic','Academic Gold','Campus Green','Future Glow'])expect(find.text(label),findsOneWidget);
    expect(find.byType(PremiumProfileAvatar),findsWidgets);
    expect(find.textContaining('Applying a Premium frame requires active Premium access.'),findsOneWidget);
    expect(find.byIcon(Icons.check_circle_rounded),findsOneWidget);
+   await tester.scrollUntilVisible(find.text('Editorial Ink'),250,scrollable:find.byType(Scrollable).first);
+   await tester.pump();
+   expect(find.text('Editorial Ink'),findsOneWidget);
    await tester.pumpWidget(const SizedBox.shrink());
  });
  for(final skin in AppSkin.values.where((s)=>s.isPremium)){
