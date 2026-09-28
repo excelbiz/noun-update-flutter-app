@@ -12,6 +12,7 @@ import '../widgets/skin_art.dart';
 import '../widgets/premium_layouts.dart';
 import '../core/skin_theme.dart';
 import 'native_tools.dart';
+import 'native_timetable.dart';
 import 'native_account.dart';
 import 'native_notifications.dart';
 import 'appearance_settings.dart';
@@ -31,8 +32,11 @@ class LivePortal extends StatefulWidget {
 class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  late final ApiClient api;
  StudentWorkspace workspace=StudentWorkspace('guest');
- Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted)setState(()=>workspace=next);}
- void _courses()=>pushNu(context,MyCoursesPage(workspace:workspace,openResource:(id,label)=>_service({'id':id,'label':label}))).then((_) {if(mounted)setState((){});});
+ TimetableSnapshot? timetable;
+ Object? timetableError;
+ bool timetableLoading=false;
+ Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted){setState(()=>workspace=next);await _refreshTimetable();}}
+ void _courses()=>pushNu(context,MyCoursesPage(workspace:workspace,openResource:(id,label)=>_service({'id':id,'label':label}))).then((_) async {if(mounted){setState((){});await _refreshTimetable();}});
  void _setup()=>pushNu(context,StudentSetup(workspace:workspace)).then((_) {if(mounted)setState((){});});
  void _unavailable(String title)=>pushNu(context,NuPage(title:title,child:ListView(padding:const EdgeInsets.all(20),children:[NuTitle(title),const NuPanel(child:Text('This feature is not connected yet. It will become available after its account API is enabled.'))])));
  Widget _row(String title,String subtitle,IconData icon,VoidCallback tap)=>ListTile(leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:tap);
@@ -47,6 +51,21 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  @override void dispose(){WidgetsBinding.instance.removeObserver(this);amount.dispose();super.dispose();}
  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&profile!=null)_loadAccount();}
  Future<Map<String,dynamic>> _feed()=>api.getJson('/posts/$category').then(unpack);
+ Future<void> _refreshTimetable()async{
+  if(widget.preview)return;
+  if(workspace.courses.isEmpty){if(mounted)setState((){timetable=null;timetableError=null;timetableLoading=false;});return;}
+  if(mounted)setState(()=>timetableLoading=true);
+  try{final value=await TimetableSnapshot.fetch(api,workspace.courses);if(mounted)setState((){timetable=value;timetableError=null;});}
+  catch(e){if(mounted)setState(()=>timetableError=e);}
+  finally{if(mounted)setState(()=>timetableLoading=false);}
+ }
+ String get _nextExamSubtitle{
+  if(workspace.courses.isEmpty)return 'Add your registered courses to generate your personalised exam timetable.';
+  if(timetableLoading&&timetable==null)return 'Checking the imported timetable for your registered courses…';
+  if(timetableError!=null&&timetable==null)return 'Timetable data is temporarily unavailable. Tap to retry.';
+  if(timetable?.periodMismatch==true)return 'Imported timetable period differs from the current semester. Tap to verify before relying on it.';
+  return timetable?.nextExamSummary??'Open your personalised timetable to verify your next examination.';
+ }
  Future<void> _loadServices()async{
   final rows=records(jsonDecode(await (widget.serviceBundle??rootBundle).loadString('assets/data/services.json')));
   if(mounted)setState(()=>services=rows.where((s)=>s['id']!='quizly').toList());
@@ -61,7 +80,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   if(p!=null){
    final scope='${p['id']}';
    await PremiumService.instance.refresh(api,scope);
-   if(workspace.scope!=scope){await _workspace(scope,bootstrapRemote:bootstrapWorkspace);}else{await workspace.load(bootstrapRemote:bootstrapWorkspace);}
+   if(workspace.scope!=scope){await _workspace(scope,bootstrapRemote:bootstrapWorkspace);}else{await workspace.load(bootstrapRemote:bootstrapWorkspace);await _refreshTimetable();}
   }
   if(mounted)setState((){profile=p;wallet=b['wallet']==null?null:Map<String,dynamic>.from(b['wallet'] as Map);pendingReference=p==null?null:prefs.getString('nu_pending_${p['id']}');accountError=null;});
  }catch(e){if(mounted)setState((){accountError='$e';if(e is ApiException&&e.statusCode==401){PremiumService.instance.clear();profile=null;wallet=null;}});}}
@@ -102,10 +121,11 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    'courses'||'course-materials'||'study-hub'=>MaterialLibrary(api:api,userId:profile?['id']?.toString()),
    'course-summary'=>MaterialLibrary(api:api,userId:profile?['id']?.toString(),summaries:true),
    'exam-summary'=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);setState(()=>tab=4);}),
+   'personalized-timetable'=>NativeTimetable(api:api,courses:List<String>.from(workspace.courses),onManageCourses:(){Navigator.of(context).pop();_courses();}),
    'calendar'=>NativeCalendar(api),'fees'||'fee-check'=>NativeFees(api),'cgpa-calculator'=>NativeCgpa(),
    _=>NativeUnavailable(title),
   };
-  pushNu(context,page).then((_)=>_loadAccount());
+  pushNu(context,page).then((_)async{await _loadAccount();await _refreshTimetable();});
  }
  Widget _grid(List<Map<String,dynamic>> entries,{bool compact=false})=>LayoutBuilder(builder:(context,box){
   final scale=MediaQuery.textScalerOf(context).scale(14)/14;
@@ -121,18 +141,18 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
 
  Widget _home(){
   if(SkinTokens.of(context).skin.isPremium){
-    return RefreshIndicator(onRefresh:()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());},child:PremiumHomeLayout(
+    return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:PremiumHomeLayout(
       greeting:_greeting,meta:_meta,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
       birthday:BirthdayBanner(name:'${profile?['name']??'Student'}'),motivation:MotivationCard(api:api,preview:widget.preview),latestUpdates:_news(compact:true),
       onSetup:_setup,onCourses:_courses,onExam:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}),onStudy:()=>setState(()=>tab=1),onWallet:()=>setState(()=>tab=4),onOpen:_service,
     ));
   }
-  return RefreshIndicator(onRefresh:()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());},child:ListView(key:const PageStorageKey('home'),padding:const EdgeInsets.fromLTRB(20,20,20,28),children:[
+  return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:ListView(key:const PageStorageKey('home'),padding:const EdgeInsets.fromLTRB(20,20,20,28),children:[
    Text('YOUR STUDENT DASHBOARD',style:TextStyle(fontSize:11,letterSpacing:1.5,fontWeight:FontWeight.w700,color:Theme.of(context).colorScheme.primary)),
    NuTitle(_greeting,subtitle:_meta),BirthdayBanner(name:'${profile?['name']??'Student'}'),MotivationCard(api:api,preview:widget.preview),
    if(workspace.details.isEmpty)NuPanel(padding:0,child:_row('Make it your semester','Set up your student details',Icons.person_outline,_setup)),
    NuPanel(color:nuDeep,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('YOUR NEXT STEP',style:TextStyle(color:nuGold,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.4)),const SizedBox(height:14),Text(workspace.courses.isEmpty?'Bring your courses together.':'Build a little progress today.',style:const TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w800)),const SizedBox(height:10),Text(workspace.courses.isEmpty?'Add your registered courses to organise your study resources.':'${workspace.courses.length} courses saved. Choose a course and open its study resources.',style:const TextStyle(color:Colors.white70,height:1.5)),const SizedBox(height:18),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:_courses,icon:const Icon(Icons.arrow_forward),label:Text(workspace.courses.isEmpty?'Add My Courses':'Open My Courses'))])),
-   NuPanel(padding:0,child:_row('Next examination','No verified personal timetable is available yet.',Icons.event_outlined,()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),
+   NuPanel(padding:0,child:_row('Next examination',_nextExamSubtitle,Icons.event_outlined,()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),
    NuTitle('Continue Studying'),NuPanel(padding:0,child:_row('Choose your next chapter','Open your course library to begin a study session.',Icons.auto_stories_outlined,()=>setState(()=>tab=1))),
    NuTitle('Your wallet'),NuPanel(padding:0,child:_row(wallet==null?'Sign in to view your balance':naira(wallet!['balance_kobo']),'One account across NOUN Update',Icons.account_balance_wallet_outlined,()=>setState(()=>tab=4))),
    NuTitle('My Courses',subtitle:'${workspace.courses.length} registered courses ${workspace.canSync?'synced with your account':'saved on this device'}'),if(workspace.courses.isNotEmpty)Wrap(spacing:8,children:[for(final c in workspace.courses.take(6))ActionChip(label:Text(c),onPressed:_courses)]),
@@ -189,7 +209,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Future<void> _fundDialog()async{await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:const Text('Add funds'),content:TextField(controller:amount,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:const InputDecoration(labelText:'Amount (₦)')),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Cancel')),FilledButton(onPressed:(){Navigator.pop(c);_run(_fund);},child:const Text('Continue'))]));}
  @override Widget build(BuildContext context){
   final premium=SkinTokens.of(context).skin.isPremium;
-  final appBar=premium?PremiumTopBar(onTools:()=>setState(()=>tab=2),onRefresh:()=>_run(()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());}),onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))):AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:38),const SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:const Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]);
+  final appBar=premium?PremiumTopBar(onTools:()=>setState(()=>tab=2),onRefresh:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))):AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:38),const SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:const Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]);
   return Scaffold(backgroundColor:premium?SkinTokens.of(context).background:nuDeep,appBar:appBar,
    body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(premium?SkinTokens.of(context).radius:25)),child:SkinBackdrop(child:Column(children:[if(busy)const LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),_=>_profile()}))]))),
    bottomNavigationBar:premium?PremiumBottomNavigation(index:tab,onChanged:(v)=>setState(()=>tab=v)):NavigationBar(height:64,selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:[NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home_rounded,color:Theme.of(context).colorScheme.primary),label:'Home'),const NavigationDestination(icon:Icon(Icons.menu_book_outlined),label:'Study'),const NavigationDestination(icon:Icon(Icons.grid_view_rounded),label:'Tools'),const NavigationDestination(icon:Icon(Icons.newspaper_outlined),label:'Updates'),const NavigationDestination(icon:Icon(Icons.person_outline_rounded),label:'Profile')]),
