@@ -20,9 +20,22 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   final AppSkin skin;
   final Color background, surface, primary, gold, ink;
   final double radius;
-  String get backdropAsset => 'assets/images/skins/${skin==AppSkin.minimalAcademic||skin==AppSkin.futureTech?'study':'campus'}.webp';
-  String get heroAsset => 'assets/images/skins/${switch(skin){AppSkin.friendlyModern=>'students',AppSkin.studentFriendly||AppSkin.minimalAcademic||AppSkin.futureTech||AppSkin.premiumDark||AppSkin.glassmorphism=>'study',_=>'campus'}}.webp';
-  String get loginAsset => skin==AppSkin.friendlyModern?'assets/images/skins/students.webp':backdropAsset;
+  String get backdropAsset => 'assets/images/skins/${switch(skin){
+    AppSkin.smartCampus||AppSkin.productivityDashboard||AppSkin.boldPremium=>'campus',
+    AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
+    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    _=>'campus',
+  }}.webp';
+  String get heroAsset => 'assets/images/skins/${switch(skin){
+    AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
+    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    _=>'campus',
+  }}.webp';
+  String get loginAsset => 'assets/images/skins/${switch(skin){
+    AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
+    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    _=>'campus',
+  }}.webp';
   bool get resourceList => [AppSkin.smartCampus,AppSkin.premiumDark,AppSkin.minimalAcademic,AppSkin.futureTech].contains(skin);
 
   static SkinTokens of(BuildContext context) => Theme.of(context).extension<SkinTokens>() ??
