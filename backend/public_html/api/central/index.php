@@ -63,6 +63,19 @@ try {
         $stmt->execute([hash('sha256',$match[1]),$accountId]);
         response(['data'=>['signed_out'=>true]]);
     }
+    if ($route==='/workspace') {
+        require_once $root.'/nu-mobile/workspace/service.php';
+        $workspace=new NuStudentWorkspace($pdo);
+        if ($method==='GET') response(['data'=>$workspace->get($accountId)]);
+        if ($method==='POST') {
+            try { response(['data'=>$workspace->save($accountId,$body)]); }
+            catch (RuntimeException $e) {
+                if ($e->getMessage()==='WORKSPACE_CONFLICT') failure(409,'WORKSPACE_CONFLICT','Your student workspace changed on another device. Refresh and save again.');
+                throw $e;
+            }
+        }
+        failure(405,'METHOD_NOT_ALLOWED','This workspace request is not supported.');
+    }
     if(isset($companion)) {
         if($method==='GET' && $route==='/premium/status') response(['data'=>$companion->entitlement($accountId)]);
         if($method==='GET' && $route==='/profile/preferences') response(['data'=>$companion->preferences($accountId)]);
@@ -113,7 +126,7 @@ try {
     if ($method==='GET' && $route==='/wallet') response(['data'=>$result]);
     if ($method==='GET' && $route==='/app/bootstrap') response(['data'=>[
         'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
-        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true]
+        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true]
     ]]);
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
 } catch (NuCompanionException $e) {
