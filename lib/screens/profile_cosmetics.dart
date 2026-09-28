@@ -28,7 +28,8 @@ class PremiumProfileAvatar extends StatelessWidget {
   @override Widget build(BuildContext context){
     final premium=PremiumService.instance;
     final frame=profileFrameById(frameId??premium.effectiveProfileFrame);
-    final initials=name.trim().isEmpty?'NU':name.trim().split(RegExp(r'\s+')).take(2).map((e)=>e.characters.first.toUpperCase()).join();
+    final parts=name.trim().split(RegExp(r'\s+')).where((e)=>e.isNotEmpty).take(2);
+    final initials=name.trim().isEmpty?'NU':parts.map((e)=>e.substring(0,1).toUpperCase()).join();
     final classic=frame.id=='classic';
     return Semantics(label:'$name profile',child:Container(
       width:size,height:size,
