@@ -13,6 +13,15 @@ import 'package:noun_update_student_app/screens/live_portal.dart';
 class _BootstrapApi extends ApiClient {
   int workspaceGets=0;
 
+  static const settings=<String,dynamic>{
+    'automatic':true,
+    'mode':'system',
+    'text_size':'Default',
+    'font':'Modern sans',
+    'accent':'Emerald',
+    'data_saver':false,
+  };
+
   @override
   Future<bool> hasSession() async => true;
 
@@ -43,9 +52,16 @@ class _BootstrapApi extends ApiClient {
     if(path=='/profile/preferences')return {'data':{
       'preferred_skin':'defaultNoun','profile_frame':'classic','birthday':{'month':null,'day':null,'celebration_enabled':true},
     }};
+    if(path=='/profile/settings')return {'data':{'exists':true,'settings':settings}};
     if(path=='/posts/news')return {'data':{'items':[]}};
     if(path=='/services')return {'data':{'items':[]}};
     return {'data':{'items':[]}};
+  }
+
+  @override
+  Future<Map<String,dynamic>> postJson(String path,Map<String,dynamic> body,{String? idempotencyKey}) async {
+    if(path=='/profile/settings')return {'data':{'exists':true,'settings':Map<String,dynamic>.from(body['settings'] as Map? ?? settings)}};
+    return {'data':{}};
   }
 }
 
