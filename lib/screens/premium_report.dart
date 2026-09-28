@@ -85,18 +85,18 @@ class PremiumAnalyticsReport {
     return [
       pw.Text(title, style: pw.TextStyle(fontSize: 17, fontWeight: pw.FontWeight.bold)),
       pw.SizedBox(height: 8),
-      pw.Table.fromTextArray(headers: const ['Metric', 'Value'], data: metrics, headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 9), cellPadding: const pw.EdgeInsets.all(5)),
+      pw.TableHelper.fromTextArray(headers: const ['Metric', 'Value'], data: metrics, headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 9), cellPadding: const pw.EdgeInsets.all(5)),
       if (difficulty.isNotEmpty) ...[
         pw.SizedBox(height: 12),
         pw.Text('Performance by difficulty', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 5),
-        pw.Table.fromTextArray(headers: const ['Difficulty', 'Attempts', 'Average', 'Best'], data: [for (final d in difficulty) ['${d['difficulty']}'.toUpperCase(), '${d['attempts'] ?? 0}', _pct(d['average_percentage']), _pct(d['best_percentage'])]], headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellPadding: const pw.EdgeInsets.all(4)),
+        pw.TableHelper.fromTextArray(headers: const ['Difficulty', 'Attempts', 'Average', 'Best'], data: [for (final d in difficulty) ['${d['difficulty']}'.toUpperCase(), '${d['attempts'] ?? 0}', _pct(d['average_percentage']), _pct(d['best_percentage'])]], headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellPadding: const pw.EdgeInsets.all(4)),
       ],
       if (courses.isNotEmpty) ...[
         pw.SizedBox(height: 12),
         pw.Text('Course performance', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 5),
-        pw.Table.fromTextArray(
+        pw.TableHelper.fromTextArray(
           headers: mock ? const ['Course', 'Attempts', 'Average', 'Best', 'Avg. time'] : const ['Course', 'Attempts', 'Average', 'Best'],
           data: [for (final c in courses.take(20)) mock ? ['${c['course_code']}', '${c['attempts'] ?? 0}', _pct(c['average_percentage']), _pct(c['best_percentage']), _time(c['average_time_seconds'])] : ['${c['course_code']}', '${c['attempts'] ?? 0}', _pct(c['average_percentage']), _pct(c['best_percentage'])]],
           headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
