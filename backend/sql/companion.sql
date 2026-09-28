@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS nu_mobile_preferences (
  birthday_celebration_enabled TINYINT NOT NULL DEFAULT 1,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Profile cosmetics are isolated from the base preference table so this migration
+-- remains repeatable on existing installations without ALTER TABLE hazards.
+CREATE TABLE IF NOT EXISTS nu_mobile_profile_cosmetics (
+ account_id BIGINT UNSIGNED PRIMARY KEY,
+ profile_frame VARCHAR(40) NOT NULL DEFAULT 'classic',
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS nu_mobile_motivation (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, source_hash CHAR(64) NULL UNIQUE, quote TEXT NOT NULL,
  author VARCHAR(150) NOT NULL DEFAULT 'NOUN Update', category VARCHAR(50) NOT NULL DEFAULT 'general',
