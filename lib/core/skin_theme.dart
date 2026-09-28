@@ -202,7 +202,7 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
     titleSmall:body.titleSmall?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.titleWeight,height:1),
     labelLarge:body.labelLarge?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,fontWeight:FontWeight.w700,letterSpacing:t.labelTracking*.25,height:1),
     labelMedium:body.labelMedium?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,fontWeight:FontWeight.w700,letterSpacing:t.labelTracking*.18,height:1),
-    labelSmall:body.labelSmall?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,letterSpacing:t.labelTracking*.18,height:1),
+    labelSmall:body.labelSmall?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,letterSpacing:t.labelTracking*.18,height:t.skin==AppSkin.futureTech?.90:1),
   );
   return base.copyWith(
     colorScheme:scheme,scaffoldBackgroundColor:t.background,extensions:[t],textTheme:text,
