@@ -49,6 +49,7 @@ try {
         nu_send(nu_posts($content,$nuConfig,$m[1],(int)($_GET['page']??1),isset($m[2])?(int)$m[2]:null));
     }
     if($method==='GET'&&$path==='/exam-summaries')nu_send(nu_exam_catalogue($content,(string)($_GET['q']??''),(int)($_GET['page']??1)));
+    if($method==='GET'&&$path==='/timetable')nu_send(nu_timetable($content,(string)($_GET['courses']??'')));
     if($method==='GET'&&$path==='/calendar'){
         $file=$nuConfig['root'].'/academic-calendar-core/calendar.php';
         if(!is_file($file))throw new NuFailure(503,'UNAVAILABLE','The calendar is temporarily unavailable.');
