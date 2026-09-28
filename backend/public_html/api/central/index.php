@@ -93,6 +93,17 @@ try {
         }
         failure(405,'METHOD_NOT_ALLOWED','This workspace request is not supported.');
     }
+    if ($route==='/profile/settings') {
+        require_once $root.'/nu-mobile/account-settings/service.php';
+        $settings=new NuAccountSettings($pdo);
+        try {
+            if($method==='GET')response(['data'=>$settings->get($accountId)]);
+            if($method==='POST')response(['data'=>$settings->save($accountId,$body)]);
+        } catch(InvalidArgumentException $e) {
+            failure(422,'INVALID_ACCOUNT_SETTINGS',$e->getMessage());
+        }
+        failure(405,'METHOD_NOT_ALLOWED','This settings request is not supported.');
+    }
     if (preg_match('#^/study/([A-Z]{2,5}[0-9]{3})/state$#D',$route,$studyMatch)) {
         require_once $root.'/nu-mobile/study-state/service.php';
         $studyState=new NuStudyState($pdo);
@@ -132,12 +143,15 @@ try {
     }
     if ($method==='GET' && $route==='/app/bootstrap') {
         require_once $root.'/nu-mobile/workspace/service.php';
+        require_once $root.'/nu-mobile/account-settings/service.php';
         $bootstrapWorkspace=(new NuStudentWorkspace($pdo))->get($accountId);
+        $bootstrapSettings=(new NuAccountSettings($pdo))->get($accountId);
         $walletSnapshot=optionalWalletSnapshot($pdo,$accountId);
         response(['data'=>[
             'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
             'wallet'=>$walletSnapshot['wallet'],
             'workspace'=>$bootstrapWorkspace,
+            'settings'=>$bootstrapSettings,
             'feature_flags'=>[
                 'central_account'=>true,
                 'wallet_linked'=>$walletSnapshot['wallet_id']>0,
@@ -148,6 +162,7 @@ try {
                 'premium_analytics'=>true,
                 'workspace_sync'=>true,
                 'study_progress_sync'=>true,
+                'account_settings_sync'=>true,
             ]
         ]]);
     }
