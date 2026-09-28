@@ -13,6 +13,7 @@ import '../widgets/premium_layouts.dart';
 import '../core/skin_theme.dart';
 import 'native_tools.dart';
 import 'native_timetable.dart';
+import 'native_site_service.dart';
 import 'native_account.dart';
 import 'native_notifications.dart';
 import 'appearance_settings.dart';
@@ -115,6 +116,8 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  }
  void _service(Map<String,dynamic> s){
   final id='${s['id']}',title='${s['id']=='courses'?'Course Materials':s['label']}';
+  final destination='${s['url']??s['path']??''}';
+  final websiteBacked=s['mode']=='web'&&destination.trim().isNotEmpty&&safeNounUpdateDestination(destination)!=null;
   if(id=='wallet'){setState(()=>tab=4);return;}
   if(['news','guides','scholarships','career','blog'].contains(id)){setState((){tab=3;category=id;feed=_feed();});return;}
   final Widget page=switch(id){
@@ -123,7 +126,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    'exam-summary'=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);setState(()=>tab=4);}),
    'personalized-timetable'=>NativeTimetable(api:api,courses:List<String>.from(workspace.courses),onManageCourses:(){Navigator.of(context).pop();_courses();}),
    'calendar'=>NativeCalendar(api),'fees'||'fee-check'=>NativeFees(api),'cgpa-calculator'=>NativeCgpa(),
-   _=>NativeUnavailable(title),
+   _=>websiteBacked?NativeSiteService(title:title,destination:destination):NativeUnavailable(title),
   };
   pushNu(context,page).then((_)async{await _loadAccount();await _refreshTimetable();});
  }
