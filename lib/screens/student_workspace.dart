@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/academic_period.dart';
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
 
@@ -16,6 +17,8 @@ class StudentWorkspace extends ChangeNotifier {
   bool syncing=false;
   bool get canSync=>RegExp(r'^\d+$').hasMatch(scope);
   bool get syncPending=>canSync&&dirty;
+  bool get hasStudentDetails=>details.entries.any((entry)=>entry.key!='Session'&&entry.key!='Semester'&&entry.value.trim().isNotEmpty);
+  AcademicPeriod get period=>AcademicPeriod.forDate(DateTime.now());
   String get key=>'nu-workspace-v1-$scope';
 
   Future<void> _persist() async {
@@ -23,6 +26,16 @@ class StudentWorkspace extends ChangeNotifier {
       'details':details,'courses':courses,'pins':pins.toList(),'revision':revision,'dirty':dirty,
     }));
     if(!ok)throw StateError('Could not save your changes.');
+  }
+
+  bool _ensureCurrentPeriod(){
+    if(!hasStudentDetails)return false;
+    final current=period;
+    final changed=details['Session']!=current.sessionKey||details['Semester']!=current.semesterLabel;
+    if(changed){
+      details={...details,'Session':current.sessionKey,'Semester':current.semesterLabel};
+    }
+    return changed;
   }
 
   void _applyRemote(Map<String,dynamic> remote){
@@ -36,6 +49,7 @@ class StudentWorkspace extends ChangeNotifier {
   Future<Map<String,dynamic>> _remote()async=>unpack(await api.getJson('/workspace'));
 
   Future<void> _push({int? baseRevision})async{
+    _ensureCurrentPeriod();
     final response=unpack(await api.postJson('/workspace',{
       'details':details,
       'courses':courses,
@@ -63,7 +77,13 @@ class StudentWorkspace extends ChangeNotifier {
         }
       }else if(exists){
         _applyRemote(remote);
-        await _persist();
+        if(_ensureCurrentPeriod()){
+          dirty=true;
+          await _persist();
+          await _push(baseRevision:remoteRevision);
+        }else{
+          await _persist();
+        }
       }
     }catch(_){
       // Offline or temporarily unavailable: keep the local copy and retry later.
@@ -85,11 +105,13 @@ class StudentWorkspace extends ChangeNotifier {
         dirty=d['dirty']==true;
       }
     } catch (_) { details={};courses=[];pins={};revision=0;dirty=false; }
+    if(!canSync&&_ensureCurrentPeriod())await _persist();
     notifyListeners();
     await _syncLoaded(bootstrapRemote:bootstrapRemote);
   }
 
   Future<void> save() async {
+    _ensureCurrentPeriod();
     dirty=canSync;
     await _persist();
     notifyListeners();
@@ -116,14 +138,24 @@ class StudentSetup extends StatefulWidget {
 }
 class _StudentSetupState extends State<StudentSetup> {
   final fields=<String,TextEditingController>{};bool saving=false;
-  @override void initState(){super.initState();for(final k in ['Name','Programme','Faculty','Level','Study centre','Session','Semester']){fields[k]=TextEditingController(text:widget.workspace.details[k]??'');}}
+  @override void initState(){super.initState();for(final k in ['Name','Programme','Faculty','Level','Study centre']){fields[k]=TextEditingController(text:widget.workspace.details[k]??'');}}
   @override void dispose(){for(final c in fields.values){c.dispose();}super.dispose();}
-  @override Widget build(BuildContext context)=>NuPage(title:'Student details',child:ListView(padding:const EdgeInsets.all(20),children:[
-    const NuTitle('Make this your dashboard',subtitle:'Add what you know. You can complete optional details later.'),
-    Text(widget.workspace.canSync?'Saved offline on this device and synchronised to your NOUN Update account when connected.':'Saved on this device. Sign in to synchronise these details across devices.'),const SizedBox(height:16),
-    for(final f in fields.entries)Padding(padding:const EdgeInsets.only(bottom:14),child:TextField(controller:f.value,maxLength:120,decoration:InputDecoration(labelText:f.key,counterText:''))),
-    FilledButton(onPressed:saving?null:() async {setState(()=>saving=true);final old=Map<String,String>.from(widget.workspace.details);widget.workspace.details={for(final f in fields.entries)f.key:f.value.text.trim()};try{await widget.workspace.save();if(context.mounted)Navigator.pop(context);}catch(_){widget.workspace.details=old;if(context.mounted)nuMessage(context,'Could not save your details. Please try again.');}finally{if(mounted)setState(()=>saving=false);}},child:Text(saving?'Saving…':'Save details')),
-  ]));
+  @override Widget build(BuildContext context){
+    final period=widget.workspace.period;
+    return NuPage(title:'Student details',child:ListView(padding:const EdgeInsets.all(20),children:[
+      const NuTitle('Make this your dashboard',subtitle:'Add what you know. You can complete optional details later.'),
+      Text(widget.workspace.canSync?'Saved offline on this device and synchronised to your NOUN Update account when connected.':'Saved on this device. Sign in to synchronise these details across devices.'),const SizedBox(height:16),
+      NuPanel(child:Row(children:[const Icon(Icons.calendar_month_outlined),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Current academic period',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:3),Text(period.displayLabel)]))])),
+      const SizedBox(height:14),
+      for(final f in fields.entries)Padding(padding:const EdgeInsets.only(bottom:14),child:TextField(controller:f.value,maxLength:120,decoration:InputDecoration(labelText:f.key,counterText:''))),
+      FilledButton(onPressed:saving?null:() async {
+        setState(()=>saving=true);
+        final old=Map<String,String>.from(widget.workspace.details);
+        widget.workspace.details={for(final f in fields.entries)f.key:f.value.text.trim(),'Session':period.sessionKey,'Semester':period.semesterLabel};
+        try{await widget.workspace.save();if(context.mounted)Navigator.pop(context);}catch(_){widget.workspace.details=old;if(context.mounted)nuMessage(context,'Could not save your details. Please try again.');}finally{if(mounted)setState(()=>saving=false);}
+      },child:Text(saving?'Saving…':'Save details')),
+    ]));
+  }
 }
 
 class MyCoursesPage extends StatefulWidget {
