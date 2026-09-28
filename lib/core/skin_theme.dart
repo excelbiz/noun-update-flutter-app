@@ -20,6 +20,126 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   final AppSkin skin;
   final Color background, surface, primary, gold, ink;
   final double radius;
+
+  /// Typography is part of the layout family. The app bundles NUSans and
+  /// NUReading; platform generic families are used deliberately for condensed,
+  /// monospaced and light technical treatments, with NUSans as the safe fallback.
+  String get bodyFont => switch(skin){
+    AppSkin.premiumDark=>'NUSans',
+    AppSkin.glassmorphism=>'sans-serif-light',
+    AppSkin.studentFriendly=>'sans-serif',
+    AppSkin.minimalAcademic=>'NUSans',
+    AppSkin.elegantEditorial=>'NUReading',
+    AppSkin.productivityDashboard=>'sans-serif-condensed',
+    AppSkin.friendlyModern=>'NUSans',
+    AppSkin.futureTech=>'monospace',
+    AppSkin.boldPremium=>'sans-serif',
+    _=>'NUSans',
+  };
+  String get displayFont => switch(skin){
+    AppSkin.smartCampus=>'NUSans',
+    AppSkin.premiumDark=>'NUReading',
+    AppSkin.glassmorphism=>'sans-serif-light',
+    AppSkin.studentFriendly=>'NUSans',
+    AppSkin.minimalAcademic=>'NUReading',
+    AppSkin.elegantEditorial=>'NUReading',
+    AppSkin.productivityDashboard=>'sans-serif-condensed',
+    AppSkin.friendlyModern=>'NUSans',
+    AppSkin.futureTech=>'sans-serif-condensed',
+    AppSkin.boldPremium=>'NUSans',
+    _=>'NUSans',
+  };
+  String get numberFont => switch(skin){
+    AppSkin.productivityDashboard||AppSkin.futureTech=>'monospace',
+    AppSkin.premiumDark||AppSkin.elegantEditorial=>'NUReading',
+    _=>bodyFont,
+  };
+  List<String> get fontFallback => const ['NUSans','Roboto','Arial'];
+  FontWeight get headingWeight => switch(skin){
+    AppSkin.glassmorphism=>FontWeight.w500,
+    AppSkin.minimalAcademic=>FontWeight.w600,
+    AppSkin.elegantEditorial=>FontWeight.w600,
+    AppSkin.productivityDashboard=>FontWeight.w800,
+    AppSkin.futureTech=>FontWeight.w700,
+    AppSkin.boldPremium=>FontWeight.w900,
+    _=>FontWeight.w800,
+  };
+  FontWeight get titleWeight => switch(skin){
+    AppSkin.glassmorphism=>FontWeight.w600,
+    AppSkin.minimalAcademic||AppSkin.elegantEditorial=>FontWeight.w600,
+    AppSkin.boldPremium=>FontWeight.w900,
+    _=>FontWeight.w800,
+  };
+  double get headingTracking => switch(skin){
+    AppSkin.premiumDark=>-.25,
+    AppSkin.glassmorphism=>.15,
+    AppSkin.studentFriendly=>-.15,
+    AppSkin.minimalAcademic=>-.30,
+    AppSkin.elegantEditorial=>-.45,
+    AppSkin.productivityDashboard=>-.20,
+    AppSkin.friendlyModern=>-.20,
+    AppSkin.futureTech=>.55,
+    AppSkin.boldPremium=>-.55,
+    _=>-.15,
+  };
+  double get labelTracking => switch(skin){
+    AppSkin.premiumDark=>1.15,
+    AppSkin.glassmorphism=>1.55,
+    AppSkin.studentFriendly=>.20,
+    AppSkin.minimalAcademic=>1.05,
+    AppSkin.elegantEditorial=>.75,
+    AppSkin.productivityDashboard=>.65,
+    AppSkin.friendlyModern=>.10,
+    AppSkin.futureTech=>1.70,
+    AppSkin.boldPremium=>1.10,
+    _=>.35,
+  };
+  double get headingHeight => switch(skin){
+    AppSkin.elegantEditorial=>1.05,
+    AppSkin.boldPremium=>.98,
+    AppSkin.futureTech=>1.02,
+    _=>1.12,
+  };
+  String get shellTagline => switch(skin){
+    AppSkin.smartCampus=>'Smarter tools · brighter results',
+    AppSkin.premiumDark=>'Discipline · consistency · results',
+    AppSkin.glassmorphism=>'Your academic companion',
+    AppSkin.studentFriendly=>'Same students · bigger possibilities',
+    AppSkin.minimalAcademic=>'Learn · track · prepare · succeed',
+    AppSkin.elegantEditorial=>'A brighter you, always',
+    AppSkin.productivityDashboard=>'Study smarter · stay organised',
+    AppSkin.friendlyModern=>'Support · learn · prepare · succeed',
+    AppSkin.futureTech=>'STUDY · TRACK · PLAN · SUCCEED',
+    AppSkin.boldPremium=>'STUDENTS · SUPPORT · SUCCESS',
+    _=>'Your academic companion',
+  };
+  String get studyHeadline => switch(skin){
+    AppSkin.smartCampus=>'Learn. Practise. Excel.',
+    AppSkin.premiumDark=>'Prepare smart. Perform better.',
+    AppSkin.glassmorphism=>'Study smart. Pass confidently.',
+    AppSkin.studentFriendly=>'Everything you need to excel.',
+    AppSkin.minimalAcademic=>'Organise. Study. Excel.',
+    AppSkin.elegantEditorial=>'Prepare smarter. Do better.',
+    AppSkin.productivityDashboard=>'Learn today. A brighter tomorrow.',
+    AppSkin.friendlyModern=>'Knowledge today, a brighter tomorrow.',
+    AppSkin.futureTech=>'EVERYTHING YOU NEED TO EXCEL',
+    AppSkin.boldPremium=>'ALL YOUR ACADEMIC RESOURCES IN ONE PLACE',
+    _=>'Learn smart. Study confidently.',
+  };
+  String get toolsSubtitle => switch(skin){
+    AppSkin.smartCampus=>'Smart tools for a smoother academic journey.',
+    AppSkin.premiumDark=>'Powerful tools for a smoother NOUN journey.',
+    AppSkin.glassmorphism=>'Useful shortcuts for every stage of your semester.',
+    AppSkin.studentFriendly=>'Essential tools for every NOUN student.',
+    AppSkin.minimalAcademic=>'Essential tools for your NOUN journey.',
+    AppSkin.elegantEditorial=>'A considered collection of academic utilities.',
+    AppSkin.productivityDashboard=>'Plan, check, calculate and keep moving.',
+    AppSkin.friendlyModern=>'Smart tools for a smoother NOUN journey.',
+    AppSkin.futureTech=>'HELPFUL UTILITIES FOR NOUN STUDENTS',
+    AppSkin.boldPremium=>'ESSENTIAL TOOLS · REAL SUPPORT · GREATER POSSIBILITIES',
+    _=>'Useful shortcuts for every stage of your semester.',
+  };
+
   String get backdropAsset => 'assets/images/skins/${switch(skin){
     AppSkin.smartCampus||AppSkin.productivityDashboard||AppSkin.boldPremium=>'campus',
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
@@ -42,8 +162,6 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
       forSkin(AppSkin.defaultNoun, Theme.of(context).brightness);
   static SkinTokens forSkin(AppSkin skin, Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    // Each tuple is background, surface, primary and secondary. Dark palettes
-    // are authored independently rather than inverted from the light palette.
     final palette=switch(skin){
       AppSkin.smartCampus => dark ? [0xff0b2018,0xff16382a,0xff9bddb9,0xffffd778] : [0xfff0f6f2,0xffffffff,0xff005638,0xff805d00],
       AppSkin.premiumDark => dark ? [0xff030e0b,0xff10221d,0xffffd677,0xff7be0b0] : [0xfff3eedf,0xfffffcf3,0xff064331,0xff765500],
@@ -67,16 +185,33 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
 }
 
 ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, String? fontFamily='NUSans', Color accent=AppColours.green700}) {
-  final base=buildAppTheme(brightness:brightness,fontFamily:fontFamily,accent:accent);
-  if(skin==AppSkin.defaultNoun) return base;
+  if(skin==AppSkin.defaultNoun)return buildAppTheme(brightness:brightness,fontFamily:fontFamily,accent:accent);
   final t=SkinTokens.forSkin(skin,brightness);
+  final base=buildAppTheme(brightness:brightness,fontFamily:t.bodyFont,accent:accent);
   final scheme=ColorScheme.fromSeed(seedColor:t.primary,brightness:brightness).copyWith(
     primary:t.primary,secondary:t.gold,surface:t.surface,onSurface:t.ink,surfaceContainerLow:t.surface);
-  final editorial=skin==AppSkin.elegantEditorial;
-  return base.copyWith(colorScheme:scheme,scaffoldBackgroundColor:t.background,extensions:[t],
-    textTheme:base.textTheme.apply(bodyColor:t.ink,displayColor:t.ink).copyWith(
-      headlineLarge:base.textTheme.headlineLarge?.copyWith(fontFamily:editorial?'NUReading':fontFamily),
-      titleLarge:base.textTheme.titleLarge?.copyWith(fontFamily:editorial?'NUReading':fontFamily)),
+  final body=base.textTheme.apply(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,bodyColor:t.ink,displayColor:t.ink);
+  final text=body.copyWith(
+    displayLarge:body.displayLarge?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
+    displayMedium:body.displayMedium?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
+    headlineLarge:body.headlineLarge?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
+    headlineMedium:body.headlineMedium?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
+    headlineSmall:body.headlineSmall?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
+    titleLarge:body.titleLarge?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.titleWeight,letterSpacing:t.headingTracking),
+    titleMedium:body.titleMedium?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.titleWeight),
+    titleSmall:body.titleSmall?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.titleWeight),
+    labelLarge:body.labelLarge?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,fontWeight:FontWeight.w700,letterSpacing:t.labelTracking*.25),
+    labelMedium:body.labelMedium?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,fontWeight:FontWeight.w700,letterSpacing:t.labelTracking*.18),
+    labelSmall:body.labelSmall?.copyWith(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,letterSpacing:t.labelTracking*.18),
+  );
+  return base.copyWith(
+    colorScheme:scheme,scaffoldBackgroundColor:t.background,extensions:[t],textTheme:text,
     cardTheme:base.cardTheme.copyWith(color:t.surface,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),
-    navigationBarTheme:base.navigationBarTheme.copyWith(backgroundColor:t.surface,indicatorColor:scheme.secondaryContainer));
+    appBarTheme:base.appBarTheme.copyWith(titleTextStyle:text.titleLarge,toolbarTextStyle:text.bodyMedium),
+    navigationBarTheme:base.navigationBarTheme.copyWith(backgroundColor:t.surface,indicatorColor:scheme.secondaryContainer,labelTextStyle:WidgetStatePropertyAll(text.labelSmall)),
+    inputDecorationTheme:base.inputDecorationTheme.copyWith(labelStyle:text.bodyMedium,hintStyle:text.bodyMedium?.copyWith(color:t.ink.withValues(alpha:.55))),
+    filledButtonTheme:FilledButtonThemeData(style:base.filledButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
+    outlinedButtonTheme:OutlinedButtonThemeData(style:base.outlinedButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
+    textButtonTheme:TextButtonThemeData(style:base.textButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
+  );
 }
