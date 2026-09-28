@@ -124,10 +124,16 @@ try {
     }
     $result=['balance_kobo'=>(int)$wallet['balance_minor'],'currency'=>$wallet['currency'],'status'=>$wallet['status'],'transactions'=>$transactions];
     if ($method==='GET' && $route==='/wallet') response(['data'=>$result]);
-    if ($method==='GET' && $route==='/app/bootstrap') response(['data'=>[
-        'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
-        'wallet'=>$result,'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true]
-    ]]);
+    if ($method==='GET' && $route==='/app/bootstrap') {
+        require_once $root.'/nu-mobile/workspace/service.php';
+        $bootstrapWorkspace=(new NuStudentWorkspace($pdo))->get($accountId);
+        response(['data'=>[
+            'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
+            'wallet'=>$result,
+            'workspace'=>$bootstrapWorkspace,
+            'feature_flags'=>['central_account'=>true,'wallet_funding'=>false,'wallet_purchases'=>false,'premium_wallet_purchase'=>true,'premium_analytics'=>true,'workspace_sync'=>true]
+        ]]);
+    }
     failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
 } catch (NuCompanionException $e) {
     failure($e->status,$e->reason,$e->getMessage());
