@@ -62,6 +62,8 @@ void main(){
     expect(find.text('GST302'),findsOneWidget);
     expect(find.text('POP'),findsWidgets);
     expect(find.text('CBT'),findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Courses not found'),300,scrollable:find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     expect(find.text('CIT999'),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
