@@ -7,6 +7,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/screens/student_workspace.dart';
 
+class _TestSessionStore extends SessionStore {
+  const _TestSessionStore();
+
+  @override
+  Future<String?> readAccessToken() async => 'a' * 64;
+
+  @override
+  Future<String?> readRefreshToken() async => null;
+
+  @override
+  Future<void> saveTokens({required String accessToken, required String refreshToken}) async {}
+
+  @override
+  Future<void> clear() async {}
+}
+
+ApiClient _api(http.Client client) => ApiClient(
+      client: client,
+      sessionStore: const _TestSessionStore(),
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -14,7 +35,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final client=MockClient((request) async {
       expect(request.method,'GET');
+      expect(request.url.path,'/api/central/index.php');
       expect(request.url.queryParameters['route'],'/workspace');
+      expect(request.headers['Authorization'],'Bearer ${'a' * 64}');
       return http.Response(jsonEncode({'data':{
         'exists':true,
         'details':{'Programme':'B.Sc Chemistry','Level':'300 Level'},
@@ -24,7 +47,7 @@ void main() {
         'updated_at':'2026-09-28T10:00:00Z',
       }}),200,headers:{'content-type':'application/json'});
     });
-    final workspace=StudentWorkspace('42',api:ApiClient(client:client));
+    final workspace=StudentWorkspace('42',api:_api(client));
     await workspace.load();
     expect(workspace.details['Programme'],'B.Sc Chemistry');
     expect(workspace.courses,['CHM301','CHM303']);
@@ -47,12 +70,15 @@ void main() {
     });
     var getCount=0;var postCount=0;
     final client=MockClient((request) async {
+      expect(request.url.path,'/api/central/index.php');
+      expect(request.url.queryParameters['route'],'/workspace');
       if(request.method=='GET'){
         getCount++;
         return http.Response(jsonEncode({'data':{
           'exists':true,'details':{'Programme':'B.Sc Biology'},'courses':['BIO301'],'pins':[],'revision':2,'updated_at':'2026-09-28T10:00:00Z'
         }}),200,headers:{'content-type':'application/json'});
       }
+      expect(request.method,'POST');
       postCount++;
       final body=jsonDecode(request.body) as Map<String,dynamic>;
       expect(body['base_revision'],2);
@@ -61,7 +87,7 @@ void main() {
         'exists':true,'details':body['details'],'courses':body['courses'],'pins':body['pins'],'revision':3,'updated_at':'2026-09-28T10:01:00Z'
       }}),200,headers:{'content-type':'application/json'});
     });
-    final workspace=StudentWorkspace('77',api:ApiClient(client:client));
+    final workspace=StudentWorkspace('77',api:_api(client));
     await workspace.load();
     workspace.courses=[...workspace.courses,'BIO303'];
     await workspace.save();
@@ -76,7 +102,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     var calls=0;
     final client=MockClient((request) async {calls++;return http.Response('{}',500);});
-    final workspace=StudentWorkspace('guest',api:ApiClient(client:client));
+    final workspace=StudentWorkspace('guest',api:_api(client));
     await workspace.load();
     workspace.courses=['GST302'];
     await workspace.save();
