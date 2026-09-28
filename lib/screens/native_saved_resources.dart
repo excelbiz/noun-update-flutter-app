@@ -45,12 +45,23 @@ class _NativeSavedResourcesPageState extends State<NativeSavedResourcesPage>{
     }
   }
 
+  void _open(Map<String,dynamic> item){
+    final callback=widget.onOpen;
+    if(callback==null)return;
+    final route='${item['route']??''}'.trim();
+    callback({
+      ...item,
+      if(route.isNotEmpty)'route':route.startsWith('/')?route.substring(1):route,
+    });
+  }
+
   IconData _icon(String type)=>switch(type){
     'course_material'=>Icons.menu_book_rounded,
     'course_summary'=>Icons.auto_stories_rounded,
     'exam_summary'=>Icons.summarize_rounded,
     'past_question'=>Icons.description_outlined,
     'guide'=>Icons.lightbulb_outline_rounded,
+    'course_hub'=>Icons.school_rounded,
     _=>Icons.bookmark_rounded,
   };
 
@@ -83,7 +94,7 @@ class _NativeSavedResourcesPageState extends State<NativeSavedResourcesPage>{
             SizedBox(height:10),
             Text('Nothing saved yet',style:TextStyle(fontWeight:FontWeight.w800)),
             SizedBox(height:5),
-            Text('Save useful materials, summaries, questions and guides as bookmark buttons are added across the native libraries.',textAlign:TextAlign.center),
+            Text('Save useful materials, summaries, questions and course hubs to build your reading list.',textAlign:TextAlign.center),
           ])),
           for(final item in store.all)NuPanel(
             padding:0,
@@ -95,7 +106,7 @@ class _NativeSavedResourcesPageState extends State<NativeSavedResourcesPage>{
                 if('${item['course_code']??''}'.isNotEmpty)'${item['course_code']}',
                 if('${item['resource_type']??''}'.isNotEmpty)'${item['resource_type']}'.replaceAll('_',' '),
               ].join(' · ')),
-              onTap:widget.onOpen==null?null:()=>widget.onOpen!(item),
+              onTap:widget.onOpen==null?null:()=>_open(item),
               trailing:IconButton(
                 tooltip:'Remove from saved resources',
                 onPressed:()=>_remove(item),
