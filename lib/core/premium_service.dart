@@ -18,6 +18,8 @@ class PremiumService extends ChangeNotifier {
   String? get currentPlan=>_entitlement['plan'] as String?;
   AppSkin get preferredSkin=>AppSkin.values.firstWhere((s)=>s.name==preferences['preferred_skin'],orElse:()=>AppSkin.defaultNoun);
   AppSkin get effectiveSkin=>allows('premium_skins')?preferredSkin:AppSkin.defaultNoun;
+  String get preferredProfileFrame=>'${preferences['profile_frame']??'classic'}';
+  String get effectiveProfileFrame=>allows('profile_frames')?preferredProfileFrame:'classic';
   Map<String,dynamic> get birthday=>Map<String,dynamic>.from(preferences['birthday'] as Map? ?? {});
   void clear(){_generation++;_expiry?.cancel();accountId=null;_entitlement={};preferences={};lastVerifiedAt=null;error=null;notifyListeners();}
   Future<void> refresh(ApiClient api,String id) async {
