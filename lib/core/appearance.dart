@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
+import 'notification_service.dart';
 
 class Appearance extends ChangeNotifier {
   static final instance = Appearance();
@@ -59,14 +60,21 @@ class Appearance extends ChangeNotifier {
     final response=await api.getJson('/profile/settings');
     final data=Map<String,dynamic>.from(response['data'] as Map);
     final exists=data['exists']==true;
+    Map<String,dynamic> serverSettings;
     if(!exists||accountSyncPending){
       final saved=await api.postJson('/profile/settings',{'settings':accountSettings});
       final savedData=Map<String,dynamic>.from(saved['data'] as Map);
-      _applyServer(Map<String,dynamic>.from(savedData['settings'] as Map));
-      accountSyncPending=false;await _persist();notifyListeners();return;
+      serverSettings=Map<String,dynamic>.from(savedData['settings'] as Map);
+    }else{
+      serverSettings=Map<String,dynamic>.from(data['settings'] as Map);
     }
-    _applyServer(Map<String,dynamic>.from(data['settings'] as Map));
-    accountSyncPending=false;await _persist();notifyListeners();
+    _applyServer(serverSettings);
+    accountSyncPending=false;
+    await _persist();
+    notifyListeners();
+    // The account-settings payload also contains notification category choices.
+    // Reuse it rather than issuing a second network request during sign-in.
+    try{await NotificationService.applyPreferences(serverSettings);}catch(_){/* Notification SDK failure must not block account settings. */}
   }
 
   void _applyServer(Map<String,dynamic> value) {
@@ -92,8 +100,10 @@ class Appearance extends ChangeNotifier {
     try{
       final saved=await api.postJson('/profile/settings',{'settings':accountSettings});
       final data=Map<String,dynamic>.from(saved['data'] as Map);
-      _applyServer(Map<String,dynamic>.from(data['settings'] as Map));
+      final serverSettings=Map<String,dynamic>.from(data['settings'] as Map);
+      _applyServer(serverSettings);
       accountSyncPending=false;await _persist();notifyListeners();
+      try{await NotificationService.applyPreferences(serverSettings);}catch(_){/* Keep appearance save successful even if push tags fail. */}
     }catch(_){
       accountSyncPending=true;await _persist();notifyListeners();rethrow;
     }
