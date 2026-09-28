@@ -27,6 +27,21 @@ void main(){
  setUpAll(()async{
   await rootBundle.loadString('assets/data/services.json');
   for(final f in [('NUSans','NUSans-Regular.ttf'),('NUReading','NUReading.ttf')]){await (FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File('assets/fonts/${f.$2}').readAsBytesSync())))).load();}
+  // Premium layout families deliberately use platform light, condensed and
+  // technical/monospaced faces. The headless Linux renderer does not provide
+  // Android's family aliases automatically, so load deterministic local test
+  // aliases. This changes screenshots/tests only; physical devices use their
+  // native system families with NUSans fallback from SkinTokens.
+  final sans=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  final mono=File('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf');
+  if(sans.existsSync()){
+    for(final family in ['sans-serif','sans-serif-light','sans-serif-condensed','Roboto']){
+      await (FontLoader(family)..addFont(Future.value(ByteData.sublistView(sans.readAsBytesSync())))).load();
+    }
+  }
+  if(mono.existsSync()){
+    await (FontLoader('monospace')..addFont(Future.value(ByteData.sublistView(mono.readAsBytesSync())))).load();
+  }
   final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
   await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
  });
