@@ -51,6 +51,13 @@ class ApiClient {
   final SessionStore _sessionStore;
   Future<bool>? _refreshing;
 
+  Future<bool> hasSession() async {
+    final token = await _sessionStore.readAccessToken();
+    return token != null && token.isNotEmpty;
+  }
+
+  Future<void> clearSession() => _sessionStore.clear();
+
   Future<bool> _refresh() async {
     final token = await _sessionStore.readRefreshToken();
     if (token == null || token.isEmpty) return false;
@@ -134,7 +141,7 @@ class ApiClient {
       'Content-Type': 'application/json',
       'User-Agent': 'NOUNUpdateMobile/central-v1',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.7.0',
+      'X-App-Version': '0.8.0',
       if (_central(path) && token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
