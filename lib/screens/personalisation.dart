@@ -10,6 +10,7 @@ import '../core/api_client.dart';
 import '../core/premium_service.dart';
 import '../widgets/native_ui.dart';
 import 'skin_gallery.dart';
+import 'profile_cosmetics.dart';
 
 class PremiumPage extends StatefulWidget {
   const PremiumPage({super.key,required this.api});
@@ -64,6 +65,7 @@ class _PremiumPageState extends State<PremiumPage>{
   @override Widget build(BuildContext context)=>NuPage(title:'NOUN Update Premium',child:ListView(padding:const EdgeInsets.all(20),children:[
     const ServiceHero(title:'Make it yours.\nUnderstand your progress.',subtitle:'Your academic essentials stay free.',icon:Icons.workspace_premium_outlined),
     const SizedBox(height:16),OutlinedButton.icon(onPressed:()=>pushNu(context,SkinGallery(api:widget.api)),icon:const Icon(Icons.palette_outlined),label:const Text('Preview all 10 Premium skins')),
+    const SizedBox(height:8),OutlinedButton.icon(onPressed:()=>pushNu(context,ProfileCosmeticsPage(api:widget.api)),icon:const Icon(Icons.account_circle_outlined),label:const Text('Preview Premium profile styles')),
     FutureBuilder<Map<String,dynamic>>(future:config,builder:(context,s){
       if(s.hasError)return AsyncError('Premium plans are not available right now. No payment has been started.',()=>setState(()=>config=widget.api.getJson('/premium/config').then(unpack)));
       if(!s.hasData)return const Center(child:CircularProgressIndicator());
