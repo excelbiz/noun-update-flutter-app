@@ -39,5 +39,8 @@ jobs:
       - name: Test student workspace sync
         run: php backend/tests/workspace.php
 
+      - name: Test central study progress sync
+        run: php backend/tests/study-state.php
+
       - name: Test personalised timetable API
         run: php backend/tests/timetable.php
