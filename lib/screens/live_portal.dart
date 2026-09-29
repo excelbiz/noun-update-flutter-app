@@ -155,14 +155,14 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Widget _home(){
   if(SkinTokens.of(context).skin.isPremium){
     return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:PremiumHomeLayout(
-      greeting:_greeting,meta:_meta,nextExamSummary:_nextExamSubtitle,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
+      greeting:_greeting,meta:_meta,workspaceStatus:WorkspaceConflictNotice(workspace:workspace),nextExamSummary:_nextExamSubtitle,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
       birthday:BirthdayBanner(name:'${profile?['name']??'Student'}'),motivation:MotivationCard(api:api,preview:widget.preview),latestUpdates:_news(compact:true),
       onSetup:_setup,onCourses:_courses,onExam:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}),onStudy:()=>setState(()=>tab=1),onWallet:()=>setState(()=>tab=4),onOpen:_service,
     ));
   }
   return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:ListView(key:const PageStorageKey('home'),padding:const EdgeInsets.fromLTRB(20,20,20,28),children:[
    Text('YOUR STUDENT DASHBOARD',style:TextStyle(fontSize:11,letterSpacing:1.5,fontWeight:FontWeight.w700,color:Theme.of(context).colorScheme.primary)),
-   NuTitle(_greeting,subtitle:_meta),BirthdayBanner(name:'${profile?['name']??'Student'}'),MotivationCard(api:api,preview:widget.preview),
+   NuTitle(_greeting,subtitle:_meta),WorkspaceConflictNotice(workspace:workspace),BirthdayBanner(name:'${profile?['name']??'Student'}'),MotivationCard(api:api,preview:widget.preview),
    if(workspace.details.isEmpty)NuPanel(padding:0,child:_row('Make it your semester','Set up your student details',Icons.person_outline,_setup)),
    NuPanel(color:nuDeep,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('YOUR NEXT STEP',style:TextStyle(color:nuGold,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.4)),const SizedBox(height:14),Text(workspace.courses.isEmpty?'Bring your courses together.':'Build a little progress today.',style:const TextStyle(color:Colors.white,fontSize:26,fontWeight:FontWeight.w800)),const SizedBox(height:10),Text(workspace.courses.isEmpty?'Add your registered courses to organise your study resources.':'${workspace.courses.length} courses saved. Choose a course and open its study resources.',style:const TextStyle(color:Colors.white70,height:1.5)),const SizedBox(height:18),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep),onPressed:_courses,icon:const Icon(Icons.arrow_forward),label:Text(workspace.courses.isEmpty?'Add My Courses':'Open My Courses'))])),
    NuPanel(padding:0,child:_row('Next examination',_nextExamSubtitle,Icons.event_outlined,()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),

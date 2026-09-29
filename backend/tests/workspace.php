@@ -18,7 +18,7 @@ $first=$service->save(9700,[
 ]);
 wok($first['exists']===true&&$first['revision']===1,'first save creates revision one');
 wok($first['courses']===['CHM301','CHM303'],'courses are normalised and deduplicated');
-wok($first['details']['Programme']==='B.Sc Chemistry','student details round trip');
+wok($first['details']->Programme==='B.Sc Chemistry','student details round trip');
 wok($service->get(9701)['exists']===false,'workspace is isolated by account');
 $second=$service->save(9700,[
  'details'=>['Name'=>'Test Student','Programme'=>'B.Sc Chemistry','Level'=>'300 Level'],
@@ -39,3 +39,8 @@ invalid(fn()=>$service->save(9701,['details'=>[],'courses'=>['not-a-course'],'pi
 invalid(fn()=>$service->save(9701,['details'=>[],'courses'=>[],'pins'=>['Bad Pin!'],'base_revision'=>0]),'invalid pin rejected');
 invalid(fn()=>$service->save(9701,['details'=>['Name'=>str_repeat('x',121)],'courses'=>[],'pins'=>[],'base_revision'=>0]),'oversized detail rejected');
 echo "All workspace tests passed.\n";
+
+wok(json_encode($empty['details'])==='{}','empty workspace details serialize as an object');
+invalid(fn()=>$service->save(9701,['account_id'=>'9700','details'=>[],'courses'=>[],'pins'=>[],'base_revision'=>0]),'switched account write rejected');
+$cleared=$service->save(9700,['account_id'=>'9700','details'=>[],'courses'=>[],'pins'=>[],'base_revision'=>2]);
+wok(json_encode($cleared['details'])==='{}','courses-only workspace is readable by mobile clients');

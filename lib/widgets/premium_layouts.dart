@@ -133,7 +133,8 @@ class _NavItem extends StatelessWidget {
 }
 
 class PremiumHomeLayout extends StatelessWidget {
-  const PremiumHomeLayout({super.key, required this.greeting, required this.meta, required this.nextExamSummary, required this.courseCount, required this.walletBalance, required this.setupNeeded, required this.quickServices, required this.birthday, required this.motivation, required this.latestUpdates, required this.onSetup, required this.onCourses, required this.onExam, required this.onStudy, required this.onWallet, required this.onOpen});
+  const PremiumHomeLayout({super.key, required this.greeting, required this.meta, required this.nextExamSummary, this.workspaceStatus=const SizedBox.shrink(), required this.courseCount, required this.walletBalance, required this.setupNeeded, required this.quickServices, required this.birthday, required this.motivation, required this.latestUpdates, required this.onSetup, required this.onCourses, required this.onExam, required this.onStudy, required this.onWallet, required this.onOpen});
+  final Widget workspaceStatus;
   final String nextExamSummary;
   final String greeting;
   final String meta;
@@ -165,7 +166,7 @@ class PremiumHomeLayout extends StatelessWidget {
         _ => _smartCampus(context),
       };
 
-  Widget _page(List<Widget> children) => ListView(key: const PageStorageKey('home'), padding: const EdgeInsets.fromLTRB(18, 18, 18, 28), children: [children.first, birthday, motivation, ...children.skip(1)]);
+  Widget _page(List<Widget> children) => ListView(key: const PageStorageKey('home'), padding: const EdgeInsets.fromLTRB(18, 18, 18, 28), children: [children.first, workspaceStatus, birthday, motivation, ...children.skip(1)]);
 
   Widget _heading(BuildContext context, String text, {String? subtitle}) {
     final t = SkinTokens.of(context);

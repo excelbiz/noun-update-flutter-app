@@ -54,10 +54,10 @@ final class NuStudentWorkspace {
         $stmt=$this->pdo->prepare('SELECT details_json,courses_json,pins_json,revision,updated_at FROM nu_mobile_student_workspaces WHERE account_id=? LIMIT 1');
         $stmt->execute([$accountId]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$row) return ['exists'=>false,'details'=>[],'courses'=>[],'pins'=>[],'revision'=>0,'updated_at'=>null];
+        if (!$row) return ['account_id'=>(string)$accountId,'exists'=>false,'details'=>(object)[],'courses'=>[],'pins'=>[],'revision'=>0,'updated_at'=>null];
         return [
-            'exists'=>true,
-            'details'=>$this->decoded($row['details_json']??null),
+            'account_id'=>(string)$accountId,'exists'=>true,
+            'details'=>(object)$this->decoded($row['details_json']??null),
             'courses'=>$this->decoded($row['courses_json']??null),
             'pins'=>$this->decoded($row['pins_json']??null),
             'revision'=>(int)$row['revision'],
@@ -66,6 +66,7 @@ final class NuStudentWorkspace {
     }
 
     public function save(int $accountId,array $body): array {
+        if(isset($body['account_id']) && $body['account_id']!==(string)$accountId)throw new InvalidArgumentException('The signed-in account changed. Reopen your workspace.');
         $details=$this->normaliseDetails($body['details']??[]);
         $courses=$this->normaliseCourses($body['courses']??[]);
         $pins=$this->normalisePins($body['pins']??[]);

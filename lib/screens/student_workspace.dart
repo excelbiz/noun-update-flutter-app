@@ -16,6 +16,24 @@ class StudentWorkspace extends ChangeNotifier {
   int revision=0;
   bool dirty=false;
   bool syncing=false;
+  Map<String,dynamic>? conflict;
+  int _edits=0,_generation=0;
+  void beginEdit(){_edits++;_generation++;}
+  void endEdit(){if(_edits>0)_edits--;}
+  void _checkOwner(Map<String,dynamic> data){
+    if(data['account_id']!=null && '${data['account_id']}'!=scope)throw const ApiException('The signed-in account changed. Reopen your workspace.');
+  }
+  Future<void> resolveConflict(bool keepLocal)async{
+    final remote=conflict;if(remote==null||syncing)return;
+    syncing=true;
+    try{
+      if(keepLocal){await _push(baseRevision:(remote['revision'] as num).toInt());}
+      else{_applyRemote(remote);await _persist();}
+      conflict=null;
+    }on ApiException catch(e){
+      if(e.code=='WORKSPACE_CONFLICT'){conflict=await _remote();}else{rethrow;}
+    }finally{syncing=false;notifyListeners();}
+  }
   bool get canSync=>RegExp(r'^\d+$').hasMatch(scope);
   bool get syncPending=>canSync&&dirty;
   bool get hasStudentDetails=>details.entries.any((entry)=>entry.key!='Session'&&entry.key!='Semester'&&entry.value.trim().isNotEmpty);
@@ -40,6 +58,8 @@ class StudentWorkspace extends ChangeNotifier {
   }
 
   void _applyRemote(Map<String,dynamic> remote){
+    _checkOwner(remote);
+    conflict=null;
     details=Map<String,String>.from(remote['details'] as Map? ?? const {});
     courses=List<String>.from(remote['courses'] as List? ?? const []);
     pins=Set<String>.from(remote['pins'] as List? ?? const []);
@@ -47,34 +67,40 @@ class StudentWorkspace extends ChangeNotifier {
     dirty=false;
   }
 
-  Future<Map<String,dynamic>> _remote()async=>unpack(await api.getJson('/workspace'));
+  Future<Map<String,dynamic>> _remote()async{final data=unpack(await api.getJson('/workspace'));_checkOwner(data);return data;}
 
   Future<void> _push({int? baseRevision})async{
     _ensureCurrentPeriod();
+    final generation=_generation;
     final response=unpack(await api.postJson('/workspace',{
+      'account_id':scope,
       'details':details,
       'courses':courses,
       'pins':pins.toList(),
       'base_revision':baseRevision??revision,
     }));
-    _applyRemote(response);
+    _checkOwner(response);
+    if(generation==_generation){_applyRemote(response);}else{revision=(response['revision'] as num).toInt();dirty=true;}
     await _persist();
   }
 
   Future<void> _syncLoaded({Map<String,dynamic>? bootstrapRemote}) async {
-    if(!canSync||syncing)return;
+    if(!canSync||syncing||_edits>0)return;
     syncing=true;
     try{
+      final generation=_generation;
       final remote=bootstrapRemote??await _remote();
+      if(generation!=_generation)return;
+      _checkOwner(remote);
       final exists=remote['exists']==true;
       final remoteRevision=(remote['revision'] as num?)?.toInt()??0;
       if(dirty || (!exists && (details.isNotEmpty||courses.isNotEmpty||pins.isNotEmpty))){
+        if(exists && remoteRevision!=revision){conflict=remote;return;}
         try{
-          await _push(baseRevision:remoteRevision);
+          await _push(baseRevision:revision);
         }on ApiException catch(e){
           if(e.code!='WORKSPACE_CONFLICT')rethrow;
-          final newest=await _remote();
-          await _push(baseRevision:(newest['revision'] as num?)?.toInt()??0);
+          conflict=await _remote();
         }
       }else if(exists){
         _applyRemote(remote);
@@ -95,6 +121,7 @@ class StudentWorkspace extends ChangeNotifier {
   }
 
   Future<void> load({Map<String,dynamic>? bootstrapRemote}) async {
+    if(_edits>0||syncing)return;
     try {
       final raw=(await SharedPreferences.getInstance()).getString(key);
       if(raw!=null){
@@ -103,7 +130,7 @@ class StudentWorkspace extends ChangeNotifier {
         courses=List<String>.from(d['courses'] as List? ?? const []);
         pins=Set<String>.from(d['pins'] as List? ?? const []);
         revision=(d['revision'] as num?)?.toInt()??0;
-        dirty=d['dirty']==true;
+        dirty=d['dirty'] is bool?d['dirty'] as bool:canSync;
       }
     } catch (_) { details={};courses=[];pins={};revision=0;dirty=false; }
     if(!canSync&&_ensureCurrentPeriod())await _persist();
@@ -112,6 +139,7 @@ class StudentWorkspace extends ChangeNotifier {
   }
 
   Future<void> save() async {
+    _generation++;
     _ensureCurrentPeriod();
     dirty=canSync;
     await _persist();
@@ -122,8 +150,7 @@ class StudentWorkspace extends ChangeNotifier {
     }on ApiException catch(e){
       if(e.code=='WORKSPACE_CONFLICT'){
         try{
-          final newest=await _remote();
-          await _push(baseRevision:(newest['revision'] as num?)?.toInt()??0);
+          conflict=await _remote();
         }catch(_){/* Keep the local edit queued for the next sync. */}
       }
       // Any other network/server error leaves the local edit queued safely.
@@ -139,12 +166,13 @@ class StudentSetup extends StatefulWidget {
 }
 class _StudentSetupState extends State<StudentSetup> {
   final fields=<String,TextEditingController>{};bool saving=false;
-  @override void initState(){super.initState();for(final k in ['Name','Programme','Faculty','Level','Study centre']){fields[k]=TextEditingController(text:widget.workspace.details[k]??'');}}
-  @override void dispose(){for(final c in fields.values){c.dispose();}super.dispose();}
+  @override void initState(){super.initState();widget.workspace.beginEdit();for(final k in ['Name','Programme','Faculty','Level','Study centre']){fields[k]=TextEditingController(text:widget.workspace.details[k]??'');}}
+  @override void dispose(){for(final c in fields.values){c.dispose();}widget.workspace.endEdit();super.dispose();}
   @override Widget build(BuildContext context){
     final period=widget.workspace.period;
     return NuPage(title:'Student details',child:ListView(padding:const EdgeInsets.all(20),children:[
       const NuTitle('Make this your dashboard',subtitle:'Add what you know. You can complete optional details later.'),
+      WorkspaceConflictNotice(workspace:widget.workspace),
       Text(widget.workspace.canSync?'Saved offline on this device and synchronised to your NOUN Update account when connected.':'Saved on this device. Sign in to synchronise these details across devices.'),const SizedBox(height:16),
       NuPanel(child:Row(children:[const Icon(Icons.calendar_month_outlined),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Current academic period',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:3),Text(period.displayLabel)]))])),
       const SizedBox(height:14),
@@ -196,10 +224,34 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
  ])));
  @override Widget build(BuildContext context)=>NuPage(title:'My Courses',child:ListenableBuilder(listenable:widget.workspace,builder:(context,_)=>ListView(padding:const EdgeInsets.all(20),children:[
   const NuTitle('Your semester starts here',subtitle:'Keep your registered courses in one place.'),
+  WorkspaceConflictNotice(workspace:widget.workspace),
   Text(widget.workspace.canSync?'Your courses work offline and synchronise with your account across devices.${widget.workspace.syncPending?' Changes are waiting to sync.':''}':'This course list is saved on this device. Sign in to synchronise it across devices.'),const SizedBox(height:16),
   TextField(controller:code,textCapitalization:TextCapitalization.characters,decoration:InputDecoration(labelText:'Course code',hintText:'For example, CIT411',errorText:error)),const SizedBox(height:10),
   FilledButton.icon(onPressed:saving?null:(){final c=code.text.replaceAll(' ','').toUpperCase();if(!RegExp(r'^[A-Z]{2,5}[0-9]{3}$').hasMatch(c)){setState(()=>error='Enter a course code such as CIT411.');return;}if(widget.workspace.courses.contains(c)){setState(()=>error='This course is already saved.');return;}update([...widget.workspace.courses,c]);},icon:const Icon(Icons.add),label:const Text('Add course')),
   const SizedBox(height:20),if(widget.workspace.courses.isEmpty)const NuPanel(child:Text('No courses added yet. Add your first registered course above.')),
   for(final c in widget.workspace.courses)NuPanel(padding:0,child:ListTile(title:Text(c),subtitle:Text(saved.contains(bookmarkKey(c))?'Saved course hub':'Open Course Hub'),onTap:()=>hub(c),leading:const Icon(Icons.school_outlined),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:saved.contains(bookmarkKey(c))?'Remove saved course':'Save course hub',onPressed:bookmarksReady?()=>toggleBookmark(c):null,icon:Icon(saved.contains(bookmarkKey(c))?Icons.bookmark_rounded:Icons.bookmark_border_rounded)),IconButton(tooltip:'Remove $c',onPressed:saving?null:() async {final yes=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(title:Text('Remove $c?'),content:const Text('This removes it from your saved course list on synchronised devices too.'),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));if(yes==true)await update(widget.workspace.courses.where((v)=>v!=c).toList());},icon:const Icon(Icons.close))]))),
  ])));
+}
+
+class WorkspaceConflictNotice extends StatelessWidget {
+ const WorkspaceConflictNotice({super.key,required this.workspace});final StudentWorkspace workspace;
+ @override Widget build(BuildContext context)=>ListenableBuilder(listenable:workspace,builder:(context,_){
+  if(workspace.conflict==null)return const SizedBox.shrink();
+  return NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   const Text('Your workspace changed on another device',style:TextStyle(fontWeight:FontWeight.w800)),
+   const Text('Your device copy is safe. Review both copies before synchronising.'),
+   TextButton(onPressed:workspace.syncing?null:()=>review(context),child:const Text('Review workspace copies')),
+  ]));
+ });
+ Future<void> review(BuildContext context)async{
+  final remote=workspace.conflict;if(remote==null)return;
+  String describe(Map details,List courses,List pins)=>[for(final e in details.entries)'${e.key}: ${e.value}','Courses: ${courses.join(', ')}','Pinned tools: ${pins.join(', ')}'].join('\n');
+  final choice=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Choose which workspace to keep'),content:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   const Text('THIS DEVICE',style:TextStyle(fontWeight:FontWeight.w800)),Text(describe(workspace.details,workspace.courses,workspace.pins.toList())),const SizedBox(height:16),
+   const Text('YOUR ACCOUNT',style:TextStyle(fontWeight:FontWeight.w800)),Text(describe(remote['details'] as Map? ?? {},remote['courses'] as List? ?? [],remote['pins'] as List? ?? [])),
+  ])),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Decide later')),TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Use account copy')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Keep device copy'))]));
+  if(choice==null)return;
+  if(!identical(remote,workspace.conflict)){if(context.mounted)nuMessage(context,'Your account copy changed. Review it again.');return;}
+  try{await workspace.resolveConflict(choice);}catch(e){if(context.mounted)nuMessage(context,e);}
+ }
 }

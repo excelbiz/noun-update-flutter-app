@@ -19,8 +19,14 @@ The Android package version advances from 0.8.0+9 to 0.9.0+10.
   Home family. Editorial no longer substitutes a hard-coded motivational quote.
 - Existing skin artwork, navigation, authentication and wallet logic are retained.
 
+- Workspace conflicts now pause for an explicit review instead of automatically
+  retrying stale data over the newer account copy. Old local lists remain pending.
+- Workspace responses serialize empty details as JSON objects so courses-only
+  accounts can load successfully.
+
 ## Deploy
-The matching backend change is public_html/nu-mobile/saved-resources/service.php.
+Deploy both public_html/nu-mobile/saved-resources/service.php and
+public_html/nu-mobile/workspace/service.php.
 It adds account_id to responses and validates it on new-client writes. Older
 clients remain compatible. No new SQL is required beyond the existing
 backend/sql/companion.sql. Upload the service before testing account bookmarks.
@@ -33,7 +39,7 @@ switches at their verified setting; no payment provider configuration was change
 ## Remaining release work
 - Complete native API adapters for tools still using the existing website fallback.
 - Verify central auth, live wallet gateways and Premium purchase/recovery on hosting.
-- Reconcile the existing workspace conflict retry behaviour before production.
+- Validate workspace conflict resolution with two physical devices before production.
 - Alternate launcher icons, seasonal assets and milestone celebrations.
 - Exact visual comparison needs the original reference images reattached; older
   chat image paths are unavailable. Current artwork is reference-inspired.
