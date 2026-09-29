@@ -141,7 +141,7 @@ class ApiClient {
       'Content-Type': 'application/json',
       'User-Agent': 'NOUNUpdateMobile/central-v1',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.8.0',
+      'X-App-Version': '0.9.0',
       if (_central(path) && token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }

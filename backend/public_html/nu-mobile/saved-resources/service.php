@@ -22,11 +22,14 @@ final class NuSavedResources {
                 'saved_at'=>str_replace(' ','T',(string)$row['saved_at']).'Z',
             ];
         }
-        return ['items'=>$items];
+        return ['account_id'=>(string)$accountId,'items'=>$items];
     }
 
     public function save(int $accountId,array $body): array {
         if ($accountId < 1) throw new InvalidArgumentException('A valid account is required.');
+        // Optional for old clients; new clients bind every queued write to its owner.
+        if(isset($body['account_id']) && $body['account_id']!==(string)$accountId)
+            throw new InvalidArgumentException('The signed-in account changed. Reopen saved resources.');
         $key=$body['resource_key']??null;
         $saved=$body['saved']??null;
         if(!is_string($key)||!preg_match('/^[A-Za-z0-9._:\/-]{1,191}$/D',$key))
@@ -35,7 +38,7 @@ final class NuSavedResources {
         if(!$saved){
             $stmt=$this->pdo->prepare('DELETE FROM nu_mobile_saved_resources WHERE account_id=? AND resource_key=?');
             $stmt->execute([$accountId,$key]);
-            return ['saved'=>false,'resource_key'=>$key];
+            return ['account_id'=>(string)$accountId,'saved'=>false,'resource_key'=>$key];
         }
 
         $type=$body['resource_type']??null;
@@ -74,7 +77,7 @@ final class NuSavedResources {
         );
         $stmt->execute([$accountId,$key,$type,$title,$course,$route]);
         return [
-            'saved'=>true,'resource_key'=>$key,'resource_type'=>$type,'title'=>$title,
+            'account_id'=>(string)$accountId,'saved'=>true,'resource_key'=>$key,'resource_type'=>$type,'title'=>$title,
             'course_code'=>$course,'route'=>$route,'saved_at'=>gmdate('c'),
         ];
     }

@@ -94,13 +94,13 @@ For workspace rollout, validate one existing account with locally saved details/
 For accounts without a wallet link, confirm `/app/bootstrap`, `/workspace`, `/study/{course}/state` and `/saved-resources` still work while `/wallet` and Premium purchase correctly return wallet-link errors. This is an intentional boundary, not a degraded account state.
 
 ## Still pending
-- Add bookmark controls to additional native resources such as individual Course Materials, Course Summaries, Past Questions and guides; the account/offline Saved Resources sync layer itself is complete.
+- Course Material and Course Summary bookmarks are implemented in APK 0.9. Past Questions and guides still need native bookmark controls.
 - Dedicated downloaded-file/offline-resource management remains device-specific.
 - Alternate launcher icons.
 - Seasonal Premium assets/skins.
 - Enhanced milestone celebrations; these should wait for dependable usage/progress data rather than fabricated milestones.
 - No ad SDK is introduced by this work; existing Premium ad-suppression logic is retained for future ad inventory.
-- Premium Home layout families still use their existing generic internal timetable captions; the timetable page itself and navigation use verified native data. A later isolated skin-layout pass can surface the verified summary inside each Premium design without touching entitlement logic.
+- APK 0.9 supplies the verified timetable summary, birthday and server daily quote to all Premium Home families.
 - Website-backed tools should continue migrating to native screens only where a native implementation materially improves the student experience or offline behaviour.
 - Live deployment to nounupdate.com is outside this repository commit and must be performed separately.
 
@@ -108,3 +108,5 @@ For accounts without a wallet link, confirm `/app/bootstrap`, `/workspace`, `/st
 - Backend CI covers Premium entitlement, wallet purchase safety, profile-frame authorisation/expiry behaviour, Mock/POP analytics retrieval, account-workspace revision/isolation checks, Study-state isolation/validation, Saved Resources account isolation/validation, personalised timetable query/classification handling and enabled service-directory filtering.
 - Flutter validation covers Premium appearance fallback, skin previews, workspace sync/bootstrap hydration, central Study-state routing and offline reconciliation, Saved Resources offline replay and route reopening, automatic academic-period boundaries, native timetable parsing/rendering, safe NOUN Update destination validation, responsive/accessibility rendering, `flutter analyze`, tests and Android release builds.
 - A successful repository build is not evidence that the corresponding backend is already live on nounupdate.com.
+
+See `release-0.9.md` for the latest APK increment and its deployment limits.

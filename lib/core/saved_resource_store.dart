@@ -8,6 +8,17 @@ class SavedResourceStore {
   SavedResourceStore({required this.api,this.userId});
   final ApiClient api;
   final String? userId;
+  // Serialise all stores for the same account, including library and reader controls.
+  static final Map<String,Future<void>> _queues={};
+  static final Map<String,DateTime> _lastAttempt={};
+  Future<void> _serial(Future<void> Function() action){
+    final next=(_queues[slot]??Future<void>.value()).then((_)=>action());
+    _queues[slot]=next.catchError((Object _){});
+    return next;
+  }
+  void _checkAccount(Map<String,dynamic> data){
+    if('${data['account_id']}'!=userId)throw const ApiException('Account changed or bookmark sync needs the latest API. Your device copy is safe.');
+  }
   final Map<String,Map<String,dynamic>> items={};
   final Map<String,Map<String,dynamic>> pending={};
   bool get signedIn=>userId!=null&&userId!.trim().isNotEmpty;
@@ -21,11 +32,15 @@ class SavedResourceStore {
       if(item is Map)Map<String,dynamic>.from(item),
   ];
 
-  Future<void> load()async{
+  Future<void> load({bool force=true})=>_serial(()async{
     await _loadLocal();
     if(!signedIn)return;
+    final now=DateTime.now();
+    if(!force && now.difference(_lastAttempt[slot]??DateTime(2000)).inSeconds<15)return;
+    _lastAttempt[slot]=now;
     try{
       final data=_data(await api.getJson('/saved-resources'));
+      _checkAccount(data);
       items
         ..clear()
         ..addEntries(_records(data['items']).map((item)=>MapEntry('${item['resource_key']}',item)));
@@ -33,16 +48,18 @@ class SavedResourceStore {
       await _syncPending();
       await _persist();
     }catch(_){/* Offline: retain local state and pending operations. */}
-  }
+  });
 
   bool contains(String key)=>items.containsKey(key);
   List<Map<String,dynamic>> get all=>items.values.toList()
     ..sort((a,b)=>'${b['saved_at']??''}'.compareTo('${a['saved_at']??''}'));
 
-  Future<void> setSaved(Map<String,dynamic> resource,bool saved)async{
+  Future<void> setSaved(Map<String,dynamic> resource,bool saved)=>_serial(()async{
+    await _loadLocal();
     final key='${resource['resource_key']??''}'.trim();
     if(key.isEmpty)throw ArgumentError('resource_key is required');
     final body=<String,dynamic>{
+      if(signedIn)'account_id':userId,
       'resource_key':key,
       'saved':saved,
       if(saved)'resource_type':'${resource['resource_type']??'resource'}',
@@ -54,7 +71,7 @@ class SavedResourceStore {
     if(signedIn)pending[key]=body;
     await _persist();
     if(signedIn)await _syncOne(key);
-  }
+  });
 
   Future<void> _syncPending()async{
     for(final key in List<String>.from(pending.keys)){await _syncOne(key);}
@@ -63,7 +80,8 @@ class SavedResourceStore {
   Future<void> _syncOne(String key)async{
     final body=pending[key];if(body==null)return;
     try{
-      final data=_data(await api.postJson('/saved-resources',body));
+      final data=_data(await api.postJson('/saved-resources',{...body,'account_id':userId}));
+      _checkAccount(data);
       if(data['saved']==true){items[key]=Map<String,dynamic>.from(data);}else{items.remove(key);}
       pending.remove(key);
       await _persist();
@@ -83,6 +101,7 @@ class SavedResourceStore {
   }
 
   Future<void> _loadLocal()async{
+    items.clear();pending.clear();
     try{
       final raw=(await SharedPreferences.getInstance()).getString(slot);if(raw==null)return;
       final data=jsonDecode(raw) as Map;

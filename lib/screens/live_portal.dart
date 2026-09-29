@@ -40,7 +40,15 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted){setState(()=>workspace=next);await _refreshTimetable();}}
  void _courses()=>pushNu(context,MyCoursesPage(workspace:workspace,openResource:(id,label)=>_service({'id':id,'label':label}))).then((_) async {if(mounted){setState((){});await _refreshTimetable();}});
  void _setup()=>pushNu(context,StudentSetup(workspace:workspace)).then((_) {if(mounted)setState((){});});
- void _saved()=>pushNu(context,NativeSavedResourcesPage(api:api,userId:profile?['id']?.toString(),onOpen:(item){final route='${item['route']??''}'.trim();if(route.isNotEmpty)_service({'id':route,'label':'${item['title']??'Saved resource'}'});}));
+ void _saved()=>pushNu(context,NativeSavedResourcesPage(api:api,userId:profile?['id']?.toString(),onOpen:(item){
+  final code='${item['course_code']??''}'.replaceAll(' ','').toUpperCase();
+  if(RegExp(r'^[A-Z]{2,5}[0-9]{3}$').hasMatch(code)){
+   final type=item['resource_type'];
+   if(type=='course_summary'){pushNu(context,NativeSummary(api:api,code:code,signedIn:profile!=null,userId:profile?['id']?.toString()));return;}
+   if(type=='course_material'){pushNu(context,SavedMaterialPage(api:api,code:code,userId:profile?['id']?.toString()));return;}
+  }
+  final route='${item['route']??''}'.trim();if(route.isNotEmpty)_service({'id':route,'label':'${item['title']??'Saved resource'}'});
+ }));
  void _unavailable(String title)=>pushNu(context,NuPage(title:title,child:ListView(padding:const EdgeInsets.all(20),children:[NuTitle(title),const NuPanel(child:Text('This feature is not connected yet. It will become available after its account API is enabled.'))])));
  Widget _row(String title,String subtitle,IconData icon,VoidCallback tap)=>ListTile(leading:Icon(icon,color:Theme.of(context).colorScheme.primary),title:Text(title),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:tap);
 
@@ -147,7 +155,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Widget _home(){
   if(SkinTokens.of(context).skin.isPremium){
     return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:PremiumHomeLayout(
-      greeting:_greeting,meta:_meta,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
+      greeting:_greeting,meta:_meta,nextExamSummary:_nextExamSubtitle,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
       birthday:BirthdayBanner(name:'${profile?['name']??'Student'}'),motivation:MotivationCard(api:api,preview:widget.preview),latestUpdates:_news(compact:true),
       onSetup:_setup,onCourses:_courses,onExam:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}),onStudy:()=>setState(()=>tab=1),onWallet:()=>setState(()=>tab=4),onOpen:_service,
     ));

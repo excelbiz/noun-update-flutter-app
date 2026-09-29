@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -26,7 +27,7 @@ void main(){
     final client=MockClient((request)async{
       expect(request.url.path,'/api/central/index.php');
       expect(request.url.queryParameters['route'],'/saved-resources');
-      return _json({'data':{'items':[{'resource_key':'course:CIT411:material','resource_type':'course_material','title':'CIT411 Course Material','course_code':'CIT411','route':'/courses/CIT411','saved_at':'2026-09-28T12:00:00Z'}]}});
+      return _json({'data':{'account_id':'42','items':[{'resource_key':'course:CIT411:material','resource_type':'course_material','title':'CIT411 Course Material','course_code':'CIT411','route':'/courses/CIT411','saved_at':'2026-09-28T12:00:00Z'}]}});
     });
     final store=SavedResourceStore(api:_api(client),userId:'42');
     await store.load();
@@ -39,10 +40,10 @@ void main(){
     var online=false;var posts=0;
     final client=MockClient((request)async{
       if(!online)throw Exception('offline');
-      if(request.method=='GET')return _json({'data':{'items':[]}});
+      if(request.method=='GET')return _json({'data':{'account_id':'42','items':[]}});
       posts++;
       final body=jsonDecode(request.body) as Map<String,dynamic>;
-      return _json({'data':{...body,'saved_at':'2026-09-28T12:01:00Z'}});
+      return _json({'data':{...body,'account_id':'77','saved_at':'2026-09-28T12:01:00Z'}});
     });
     final store=SavedResourceStore(api:_api(client),userId:'77');
     await store.setSaved({'resource_key':'summary:GST302','resource_type':'course_summary','title':'GST302 Summary','course_code':'GST302','route':'/course-summary/GST302'},true);
@@ -65,5 +66,33 @@ void main(){
     expect(calls,0);
     expect(store.contains('guide:exam'),isTrue);
     expect(store.pending,isEmpty);
+  });
+
+  test('separate controls cannot lose bookmarks or replay an older save over removal',()async{
+    SharedPreferences.setMockInitialValues({});
+    final delayed=Completer<void>(),started=Completer<void>();var calls=0;
+    final client=MockClient((request)async{
+      final body=jsonDecode(request.body) as Map<String,dynamic>;
+      if(calls++==0){started.complete();await delayed.future;}
+      return _json({'data':{...body,'account_id':'91'}});
+    });
+    final a=SavedResourceStore(api:_api(client),userId:'91');
+    final b=SavedResourceStore(api:_api(client),userId:'91');
+    final resource={'resource_key':'course:CIT411:material','resource_type':'course_material','title':'CIT411','route':'/courses/CIT411'};
+    final saving=a.setSaved(resource,true);await started.future;
+    final removing=b.setSaved(resource,false);delayed.complete();await Future.wait([saving,removing]);
+    final cached=jsonDecode((await SharedPreferences.getInstance()).getString(a.slot)!) as Map;
+    expect(cached['items'],isEmpty);expect(cached['pending'],isEmpty);expect(calls,2);
+    final guestA=SavedResourceStore(api:_api(client)),guestB=SavedResourceStore(api:_api(client));
+    await guestA.setSaved(resource,true);
+    await guestB.setSaved({...resource,'resource_key':'second'},true);
+    await guestA.load();expect(guestA.items.length,2);
+  });
+  test('a different account response cannot replace or acknowledge queued bookmarks',()async{
+    SharedPreferences.setMockInitialValues({});
+    final client=MockClient((request)async=>_json({'data':{'account_id':'other','items':[],'saved':true,'resource_key':'my-resource'}}));
+    final store=SavedResourceStore(api:_api(client),userId:'owner');
+    await store.setSaved({'resource_key':'my-resource','resource_type':'guide','title':'My guide'},true);
+    await store.load();expect(store.contains('my-resource'),isTrue);expect(store.pending,isNotEmpty);
   });
 }

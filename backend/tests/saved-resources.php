@@ -17,3 +17,7 @@ $s->save(501,['resource_key'=>'course:CIT411:material','saved'=>false]);
 ok_saved(count($s->all(501)['items'])===0,'remove saved resource');
 reject_saved(fn()=>$s->save(501,['resource_key'=>'bad key','saved'=>true,'resource_type'=>'resource','title'=>'Bad']));
 reject_saved(fn()=>$s->save(501,['resource_key'=>'ok','saved'=>true,'resource_type'=>'resource','title'=>'','route'=>'https://evil.example']));
+
+ok_saved($s->all(501)['account_id']==='501','responses identify the authenticated owner');
+reject_saved(fn()=>$s->save(502,['account_id'=>'501','resource_key'=>'course:CIT411','saved'=>false]));
+ok_saved(count($s->all(502)['items'])===0,'queued write cannot follow a switched session');

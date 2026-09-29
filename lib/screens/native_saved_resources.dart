@@ -38,7 +38,7 @@ class _NativeSavedResourcesPageState extends State<NativeSavedResourcesPage>{
   }
 
   Future<void> _remove(Map<String,dynamic> item)async{
-    await store.setSaved(item,false);
+    try{await store.setSaved(item,false);}catch(e){if(mounted)nuMessage(context,e);return;}
     if(mounted){
       setState((){});
       nuMessage(context,store.pending.isEmpty?'Removed from saved resources.':'Removed on this device. Account sync is pending.');
