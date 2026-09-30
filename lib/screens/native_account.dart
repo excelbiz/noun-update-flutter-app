@@ -3,6 +3,7 @@ import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
 import '../widgets/skin_art.dart';
 import '../core/skin_theme.dart';
+import '../widgets/editorial_layouts.dart';
 import 'native_tools.dart';
 
 class NativeAuth extends StatefulWidget {
@@ -12,7 +13,7 @@ class NativeAuth extends StatefulWidget {
 }
 class _NativeAuthState extends State<NativeAuth>{
  final email=TextEditingController(),password=TextEditingController(),name=TextEditingController(),code=TextEditingController();
- late String mode;bool busy=false,hidden=true;String? message;
+ late String mode;bool busy=false,hidden=true,welcome=true;String? message;
  @override void initState(){super.initState();mode=widget.initialMode;}
  @override void dispose(){email.dispose();password.dispose();name.dispose();code.dispose();super.dispose();}
  Future<void> submit()async{if(busy)return;setState((){busy=true;message=null;});try{
@@ -36,7 +37,9 @@ class _NativeAuthState extends State<NativeAuth>{
    ]),
   ],
  ));
- @override Widget build(BuildContext context)=>NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
+ @override Widget build(BuildContext context) {
+ if(SkinTokens.of(context).skin==AppSkin.elegantEditorial && welcome && mode=='login')return EditorialWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
+ return NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
  if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
  Container(transform:Matrix4.translationValues(0,-18,0),padding:EdgeInsets.fromLTRB(20,23,20,18),decoration:BoxDecoration(color:Theme.of(context).colorScheme.surface,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  if(mode!='login')NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password',_=>'Enter your reset code'}),
@@ -49,6 +52,7 @@ class _NativeAuthState extends State<NativeAuth>{
  SizedBox(height:10),OutlinedButton(onPressed:()=>setState((){mode=mode=='login'?'register':'login';message=null;}),child:Text(mode=='login'?'Create an account':'Back to sign in')),
  SizedBox(height:14),Row(children:[Expanded(child:Divider()),Padding(padding:EdgeInsets.symmetric(horizontal:12),child:Text('Explore at your pace',style:TextStyle(fontSize:11))),Expanded(child:Divider())]),TextButton.icon(onPressed:()=>Navigator.pop(context),icon:Icon(Icons.person_outline),label:Text('Continue as guest')),SizedBox(height:8),_insideTools(),Text('One account. More possibilities.',textAlign:TextAlign.center,style:TextStyle(fontSize:11,color:Theme.of(context).colorScheme.primary)),
  ])),]));
+ }
 }
 class NativeProfile extends StatefulWidget {
  const NativeProfile({super.key,required this.api,required this.name});final ApiClient api;final String name;

@@ -8,6 +8,7 @@ class SkinBackdrop extends StatelessWidget {
   @override Widget build(BuildContext context) {
     final t=SkinTokens.of(context);
     if(!t.skin.isPremium)return Material(color:Theme.of(context).scaffoldBackgroundColor,child:child);
+    if(t.skin==AppSkin.elegantEditorial)return Material(color:t.background,child:child);
     final dark=Theme.of(context).brightness==Brightness.dark;
     final imageOpacity=switch(t.skin){AppSkin.minimalAcademic=>dark ? .14 : .10,AppSkin.elegantEditorial=>dark ? .20 : .16,AppSkin.productivityDashboard=>dark ? .22 : .14,_=>dark ? .42 : .26};
     final alignment=switch(t.skin){AppSkin.studentFriendly||AppSkin.friendlyModern=>Alignment.topRight,AppSkin.futureTech=>Alignment.centerRight,_=>Alignment.topCenter};
@@ -30,7 +31,6 @@ class SkinBackdrop extends StatelessWidget {
       if(t.skin==AppSkin.glassmorphism)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_GlassOrbs()))),
       if(t.skin==AppSkin.futureTech)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_LightPaths()))),
       if(t.skin==AppSkin.productivityDashboard)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_DashboardGrid()))),
-      if(t.skin==AppSkin.elegantEditorial)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_EditorialRule()))),
       if(t.skin==AppSkin.boldPremium)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_BoldBands()))),
       if(t.skin==AppSkin.studentFriendly||t.skin==AppSkin.friendlyModern)const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_SoftBubbles()))),
       child,
@@ -137,11 +137,6 @@ class _GlassOrbs extends CustomPainter {
   const _GlassOrbs({this.hero=false});final bool hero;
   @override void paint(Canvas c,Size s){final a=Paint()..color=const Color(0xffbdf5df).withValues(alpha:hero ? .10 : .12);final b=Paint()..color=const Color(0xffffd77c).withValues(alpha:hero ? .08 : .07);c.drawCircle(Offset(s.width*.88,s.height*.16),hero?75:120,a);c.drawCircle(Offset(s.width*.10,s.height*.72),hero?60:95,b);}
   @override bool shouldRepaint(covariant _GlassOrbs oldDelegate)=>hero!=oldDelegate.hero;
-}
-class _EditorialRule extends CustomPainter {
-  const _EditorialRule();
-  @override void paint(Canvas c,Size s){final p=Paint()..color=const Color(0xff8a7040).withValues(alpha:.10)..strokeWidth=.7;for(double y=44;y<s.height;y+=52)c.drawLine(Offset(18,y),Offset(s.width-18,y),p);}
-  @override bool shouldRepaint(covariant _EditorialRule oldDelegate)=>false;
 }
 class _BoldBands extends CustomPainter {
   const _BoldBands();

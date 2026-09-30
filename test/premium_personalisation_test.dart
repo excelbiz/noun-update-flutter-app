@@ -86,7 +86,7 @@ void main(){
    await tester.runAsync(()async{for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
    expect(tester.takeException(),isNull);await capture(tester,key,'skin-${skin.name}-light');
    for(final label in ['Study','Tools']){
-     await tester.tap(find.text(label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     await tester.tap(find.text(skin==AppSkin.elegantEditorial?(label=='Tools'?'More':label=='Profile'?'Wallet':label):label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
      if(label=='Tools')expect(find.text('No tools match your search.'),findsNothing);
      await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-light');
    }
@@ -95,7 +95,7 @@ void main(){
    await capture(tester,key,'skin-${skin.name}-dark');expect(PremiumService.instance.isPremium,isFalse);
    expect(find.byType(LivePortal),findsOneWidget);
    for(final label in ['Study','Tools','Updates','Profile']){
-     await tester.tap(find.text(label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     await tester.tap(find.text(skin==AppSkin.elegantEditorial?(label=='Tools'?'More':label=='Profile'?'Wallet':label):label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
      if(label=='Tools')expect(find.text('No tools match your search.'),findsNothing);
      if(label=='Study'||label=='Tools')await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-dark');
    }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/skin_theme.dart';
 import 'native_ui.dart';
 import 'skin_art.dart';
+import 'editorial_layouts.dart';
 
 class PremiumTopBar extends StatelessWidget implements PreferredSizeWidget {
   const PremiumTopBar({super.key, required this.onTools, required this.onRefresh, required this.onNotifications});
@@ -84,14 +85,21 @@ class PremiumBottomNavigation extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final tech = t.skin == AppSkin.futureTech;
     final glass = t.skin == AppSkin.glassmorphism;
+    final editorial = t.skin == AppSkin.elegantEditorial;
+    final destinations = editorial ? <({IconData icon, IconData selected, String label})>[
+      items[0], items[1], items[3],
+      (icon: Icons.account_balance_wallet_outlined, selected: Icons.account_balance_wallet_rounded, label: 'Wallet'),
+      (icon: Icons.more_horiz, selected: Icons.more_horiz, label: 'More'),
+    ] : items;
+    final order = editorial ? [0, 1, 3, 4, 2] : [0, 1, 2, 3, 4];
     final background = dark ? Color.lerp(t.surface, Colors.black, .10)! : t.surface;
     final bar = SafeArea(
       top: false,
       child: Container(
-        height: 68,
+        height: t.skin == AppSkin.elegantEditorial ? 61 : 68,
         padding: EdgeInsets.symmetric(horizontal: tech ? 8 : 10, vertical: 7),
         decoration: BoxDecoration(color: background.withValues(alpha: glass ? .78 : 1), border: Border(top: BorderSide(color: (tech ? t.primary : t.gold).withValues(alpha: tech ? .36 : .16)))),
-        child: Row(children: [for (var i = 0; i < items.length; i++) Expanded(child: _NavItem(item: items[i], selected: i == index, onTap: () => onChanged(i)))]),
+        child: Row(children: [for (var i = 0; i < destinations.length; i++) Expanded(child: _NavItem(item: destinations[i], selected: order[i] == index, onTap: () => onChanged(order[i])))]),
       ),
     );
     if (!glass) return bar;
@@ -120,7 +128,7 @@ class _NavItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(color: selected ? (tech ? active.withValues(alpha: .12) : Color.lerp(t.surface, active, .12)) : Colors.transparent, borderRadius: BorderRadius.circular(friendly ? 22 : 12), border: tech && selected ? Border.all(color: active.withValues(alpha: .45)) : null),
+          decoration: BoxDecoration(color: selected && t.skin != AppSkin.elegantEditorial ? (tech ? active.withValues(alpha: .12) : Color.lerp(t.surface, active, .12)) : Colors.transparent, borderRadius: BorderRadius.circular(friendly ? 22 : 12), border: tech && selected ? Border.all(color: active.withValues(alpha: .45)) : null),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(selected ? item.selected : item.icon, size: selected && tech ? 23 : 21, color: selected ? active : t.ink.withValues(alpha: .62)),
             const SizedBox(height: 3),
@@ -133,7 +141,11 @@ class _NavItem extends StatelessWidget {
 }
 
 class PremiumHomeLayout extends StatelessWidget {
-  const PremiumHomeLayout({super.key, required this.greeting, required this.meta, required this.nextExamSummary, this.workspaceStatus=const SizedBox.shrink(), required this.courseCount, required this.walletBalance, required this.setupNeeded, required this.quickServices, required this.birthday, required this.motivation, required this.latestUpdates, required this.onSetup, required this.onCourses, required this.onExam, required this.onStudy, required this.onWallet, required this.onOpen});
+  const PremiumHomeLayout({super.key, required this.greeting, required this.meta, required this.nextExamSummary, this.nextExam, this.studyCentre, this.continueCourse, this.onSearch, this.workspaceStatus=const SizedBox.shrink(), required this.courseCount, required this.walletBalance, required this.setupNeeded, required this.quickServices, required this.birthday, required this.motivation, required this.latestUpdates, required this.onSetup, required this.onCourses, required this.onExam, required this.onStudy, required this.onWallet, required this.onOpen});
+  final Map<String, dynamic>? nextExam;
+  final String? studyCentre;
+  final Widget? continueCourse;
+  final VoidCallback? onSearch;
   final Widget workspaceStatus;
   final String nextExamSummary;
   final String greeting;
@@ -220,7 +232,17 @@ class PremiumHomeLayout extends StatelessWidget {
 
   Widget _minimal(BuildContext c) { final t = SkinTokens.of(c); return _page([_heading(c, greeting, subtitle: meta), _setupCard(c), Container(padding: const EdgeInsets.symmetric(vertical: 14), decoration: BoxDecoration(border: Border(top: BorderSide(color: t.ink.withValues(alpha: .10)), bottom: BorderSide(color: t.ink.withValues(alpha: .10)))), child: _actionCard(c, title: 'Next examination', subtitle: nextExamSummary, icon: Icons.calendar_today_outlined, onTap: onExam, tone: t.primary)), const SizedBox(height: 18), _metrics(c, [('Courses', '$courseCount', Icons.book_outlined, t.primary), ('Wallet', walletBalance, Icons.account_balance_wallet_outlined, t.gold)]), _tail(c, 'Quick actions')]); }
 
-  Widget _editorial(BuildContext c) { final t = SkinTokens.of(c); return _page([_heading(c, greeting, subtitle: meta), _setupCard(c), _actionCard(c, title: 'Next examination', subtitle: nextExamSummary, icon: Icons.event_note_rounded, onTap: onExam, tone: Colors.red.shade700), const SizedBox(height: 10), _actionCard(c, title: 'Continue studying', subtitle: 'Return to your reading and revision library.', icon: Icons.auto_stories_rounded, onTap: onStudy, tone: t.primary), const SizedBox(height: 12), _metrics(c, [('Wallet', walletBalance, Icons.wallet_outlined, t.gold), ('Courses', '$courseCount', Icons.school_outlined, t.primary)]), _tail(c, 'Selected tools')]); }
+  Widget _editorial(BuildContext c) => ListView(key: const PageStorageKey('home'), padding: const EdgeInsets.fromLTRB(16, 14, 16, 28), children: [
+    EditorialSearch(onTap: onSearch ?? onStudy, label: 'Search for courses, updates, resources…'),
+    workspaceStatus, birthday,
+    EditorialExamCard(summary: nextExamSummary, exam: nextExam, centre: studyCentre, onTap: onExam),
+    const SizedBox(height: 12), latestUpdates,
+    EditorialHeading('Continue Studying', action: onCourses),
+    continueCourse ?? EditorialPanel(onTap: onStudy, child: Row(children: [const Icon(Icons.menu_book_outlined, color: editorialGreen), const SizedBox(width: 10), Expanded(child: Text(courseCount == 0 ? 'Add your courses to begin.' : '$courseCount courses in your library', style: editorialText(c, size: 13))), const Icon(Icons.arrow_forward, size: 19)])),
+    const EditorialHeading('Quick Tools'), EditorialQuickTools(services: quickServices, onOpen: onOpen),
+    const SizedBox(height: 16), motivation,
+    if (setupNeeded) _setupCard(c),
+  ]);
 
   Widget _productivity(BuildContext c) { final t = SkinTokens.of(c); return _page([_heading(c, greeting, subtitle: meta), _setupCard(c), Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: t.heroSurface, borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('NEXT EXAM', style: Theme.of(c).textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: .82), letterSpacing: 1.2)), const SizedBox(height: 6), Text(nextExamSummary, style: Theme.of(c).textTheme.titleLarge?.copyWith(color: Colors.white, fontFamily: t.displayFont, fontWeight: FontWeight.w800)), const SizedBox(height: 12), FilledButton.tonal(onPressed: onExam, child: const Text('View timetable'))])), const SizedBox(height: 12), _metrics(c, [('Tasks', '$courseCount courses', Icons.checklist_rounded, Colors.red), ('Wallet', walletBalance, Icons.wallet_rounded, Colors.teal), ('Study', 'Resume', Icons.play_arrow_rounded, Colors.blue)]), const SizedBox(height: 12), _actionCard(c, title: 'Continue studying', subtitle: 'Move one course forward today.', icon: Icons.menu_book_rounded, onTap: onStudy, tone: t.primary), _tail(c, 'Command shortcuts')]); }
 
@@ -232,7 +254,9 @@ class PremiumHomeLayout extends StatelessWidget {
 }
 
 class PremiumStudyLayout extends StatelessWidget {
-  const PremiumStudyLayout({super.key, required this.courseCount, required this.services, required this.onCourses, required this.onOpen, required this.onSaved, required this.onDownloads, required this.onFocus});
+  const PremiumStudyLayout({super.key, required this.courseCount, required this.services, required this.onCourses, required this.onOpen, required this.onSaved, required this.onDownloads, required this.onFocus, this.onSearch, this.motivation = const SizedBox.shrink()});
+  final VoidCallback? onSearch;
+  final Widget motivation;
   final int courseCount;
   final List<Map<String, dynamic>> services;
   final VoidCallback onCourses;
@@ -244,6 +268,7 @@ class PremiumStudyLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = SkinTokens.of(context);
+    if (t.skin == AppSkin.elegantEditorial) return EditorialStudyLayout(services: services, onOpen: onOpen, onCourses: onCourses, onSearch: onSearch ?? onCourses, onSaved: onSaved, onDownloads: onDownloads, onFocus: onFocus, motivation: motivation);
     final grid = <AppSkin>{AppSkin.glassmorphism, AppSkin.studentFriendly, AppSkin.elegantEditorial, AppSkin.productivityDashboard, AppSkin.friendlyModern, AppSkin.boldPremium}.contains(t.skin);
     return ListView(key: const PageStorageKey('study'), padding: const EdgeInsets.fromLTRB(18, 18, 18, 28), children: [
       _StudyHeader(courseCount: courseCount, onCourses: onCourses),

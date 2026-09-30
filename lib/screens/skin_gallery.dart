@@ -34,7 +34,7 @@ class SkinPreview extends StatefulWidget {
 }
 class _SkinPreviewState extends State<SkinPreview> {
   bool dark=false,saving=false,login=false;
-  late final previewApi=_SkinPreviewApi();
+  late final previewApi=_SkinPreviewApi(editorial:widget.skin==AppSkin.elegantEditorial);
   Future<void> apply()async{
     final api=widget.api;if(api==null)return;
     final service=PremiumService.instance;
@@ -52,7 +52,7 @@ class _SkinPreviewState extends State<SkinPreview> {
       ]),
       body:Column(children:[
         Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),color:Theme.of(context).colorScheme.secondaryContainer,child:const Text('STYLE PREVIEW · SAMPLE CONTENT',style:TextStyle(fontSize:10,letterSpacing:1))),
-        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true)),
+        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true,previewData:widget.skin==AppSkin.elegantEditorial?editorialPreviewData():null)),
         SafeArea(top:false,child:Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),child:ListenableBuilder(listenable:PremiumService.instance,builder:(context,_)=>Row(children:[
           Expanded(child:Text(widget.skin.isPremium?'Free preview · Premium to apply':'Your free default design',style:const TextStyle(fontSize:11))),
           FilledButton(onPressed:saving||widget.api==null||(widget.skin.isPremium&&!PremiumService.instance.allows('premium_skins'))?null:apply,child:Text(saving?'Saving…':'Apply skin')),
@@ -64,11 +64,34 @@ class _SkinPreviewState extends State<SkinPreview> {
 /// Isolated read-only fixture: previews never contact payment/auth endpoints,
 /// grant access or write to the real account. LivePortal is the real screen tree.
 class _SkinPreviewApi extends ApiClient {
+  _SkinPreviewApi({this.editorial=false});
+  final bool editorial;
   @override Future<Map<String,dynamic>> getJson(String path)async{
     if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
-    if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':'Discipline today, a brighter tomorrow.','author':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':editorial?'Discipline today creates the freedom you want tomorrow.':'Discipline today, a brighter tomorrow.','author':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(editorial&&path=='/study/CIT321')return {'data':{'course_title':'Computer Systems and Networks','sections':[for(var i=0;i<20;i++){'index':i}]}};
+    if(editorial&&path=='/study/CIT321/state')return {'data':{'done':[for(var i=0;i<13;i++)i],'notes':'','revision':0}};
+    if(editorial&&path.startsWith('/posts/'))return {'data':{'items':[{'id':0,'category':'news','title':'Examination timetable now available','published_at':DateTime.now().toIso8601String()}]}};
     if(path.startsWith('/posts/'))return {'data':{'items':[]}};
     return {'data':{'items':[]}};
   }
   @override Future<Map<String,dynamic>> postJson(String path,Map<String,dynamic> body,{String? idempotencyKey})async=>throw const ApiException('This is a design preview. Return to the app to use your account.');
+}
+
+/// Read-only sample account for the clearly labelled Elegant Editorial preview.
+/// This data is never used by the live account or persisted as membership.
+Map<String,dynamic> editorialPreviewData(){
+  final date=DateTime.now().add(const Duration(days:12));
+  final examDate=DateTime(date.year,date.month,date.day,8);
+  return {
+   'details':{'Name':'Tunde Adebayo','Programme':'B.Sc. Computer Science','Level':'300 Level','Study centre':'Abuja Study Centre'},
+   'courses':['CIT321'],
+   'profile':<String,dynamic>{'id':'editorial-sample','name':'Tunde Adebayo','email':'student@example.test','matric_number':'NOUN/2023/123456'},
+   'wallet':<String,dynamic>{'balance_kobo':520000,'transactions':[
+    {'title':'Premium Subscription','amount_kobo':-300000,'created_at':DateTime.now().subtract(const Duration(days:3)).toIso8601String(),'status':'posted'},
+    {'title':'Wallet Top Up','amount_kobo':500000,'created_at':DateTime.now().subtract(const Duration(days:5)).toIso8601String(),'status':'posted'},
+    {'title':'Study Material Purchase','amount_kobo':-150000,'created_at':DateTime.now().subtract(const Duration(days:13)).toIso8601String(),'status':'posted'},
+   ]},
+   'next_exam':<String,dynamic>{'course_code':'CIT321','course_title':'Computer Systems and Networks','date':'${examDate.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][examDate.month-1]} ${examDate.year}','time':'9:00 AM WAT','exam_datetime':examDate.toIso8601String(),'is_past':false},
+  };
 }

@@ -33,7 +33,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.glassmorphism=>'sans-serif-light',
     AppSkin.studentFriendly=>'sans-serif',
     AppSkin.minimalAcademic=>'NUSans',
-    AppSkin.elegantEditorial=>'NUReading',
+    AppSkin.elegantEditorial=>'NUSans',
     AppSkin.productivityDashboard=>'sans-serif-condensed',
     AppSkin.friendlyModern=>'NUSans',
     AppSkin.futureTech=>'monospace',
@@ -55,7 +55,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   };
   String get numberFont => switch(skin){
     AppSkin.productivityDashboard||AppSkin.futureTech=>'monospace',
-    AppSkin.premiumDark||AppSkin.elegantEditorial=>'NUReading',
+    AppSkin.premiumDark=>'NUReading',
     _=>bodyFont,
   };
   List<String> get fontFallback => const ['NUSans','Roboto','Arial'];
@@ -172,7 +172,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
       AppSkin.glassmorphism => dark ? [0xff092b25,0xff21473f,0xffb7f7d9,0xffffdc87] : [0xffdceee6,0xffedf8f2,0xff005642,0xff755400],
       AppSkin.studentFriendly => dark ? [0xff14271e,0xff223f31,0xffa9eec3,0xffffd77e] : [0xfff9fcf4,0xffffffff,0xff096442,0xff875300],
       AppSkin.minimalAcademic => dark ? [0xff191e19,0xff252e26,0xffb6d3bb,0xffd8c89d] : [0xfff6f5ef,0xfffffefa,0xff234e38,0xff746345],
-      AppSkin.elegantEditorial => dark ? [0xff211e16,0xff302d23,0xffd4e6cb,0xffe3c581] : [0xfff6f0df,0xfffffaed,0xff163b2a,0xff805e19],
+      AppSkin.elegantEditorial => dark ? [0xff0e2119,0xff193529,0xffb5dec2,0xffe3c581] : [0xfff7f4eb,0xfffffcf3,0xff005037,0xff8c6824],
       AppSkin.productivityDashboard => dark ? [0xff0b1e22,0xff183039,0xff93dbc3,0xff9ccfff] : [0xffeef4f6,0xffffffff,0xff005749,0xff265c83],
       AppSkin.friendlyModern => dark ? [0xff232a20,0xff343e2e,0xffc1e8ae,0xffefd29a] : [0xfff8f7eb,0xfffffef8,0xff37613f,0xff795826],
       AppSkin.futureTech => dark ? [0xff021710,0xff082c20,0xff5aefad,0xffffd858] : [0xffe7f8ef,0xfff6fff9,0xff005c3b,0xff746000],
