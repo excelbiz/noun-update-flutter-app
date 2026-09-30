@@ -207,7 +207,7 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
   return base.copyWith(
     colorScheme:scheme,scaffoldBackgroundColor:t.background,extensions:[t],textTheme:text,
     cardTheme:base.cardTheme.copyWith(color:t.surface,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),
-    appBarTheme:base.appBarTheme.copyWith(titleTextStyle:text.titleLarge,toolbarTextStyle:text.bodyMedium),
+    appBarTheme:base.appBarTheme.copyWith(titleTextStyle:text.titleLarge?.copyWith(color:base.appBarTheme.foregroundColor),toolbarTextStyle:text.bodyMedium?.copyWith(color:base.appBarTheme.foregroundColor)),
     navigationBarTheme:base.navigationBarTheme.copyWith(backgroundColor:t.surface,indicatorColor:scheme.secondaryContainer,labelTextStyle:WidgetStatePropertyAll(text.labelSmall)),
     inputDecorationTheme:base.inputDecorationTheme.copyWith(labelStyle:text.bodyMedium,hintStyle:text.bodyMedium?.copyWith(color:t.ink.withValues(alpha:.55))),
     filledButtonTheme:FilledButtonThemeData(style:base.filledButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),

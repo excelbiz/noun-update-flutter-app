@@ -18,8 +18,8 @@ class PremiumTopBar extends StatelessWidget implements PreferredSizeWidget {
     final t = SkinTokens.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final lightShell = <AppSkin>{AppSkin.smartCampus, AppSkin.studentFriendly, AppSkin.minimalAcademic, AppSkin.elegantEditorial, AppSkin.friendlyModern, AppSkin.boldPremium}.contains(t.skin) && !dark;
-    final foreground = lightShell ? t.ink : Colors.white;
     final background = lightShell ? t.surface.withValues(alpha: .97) : Color.lerp(t.background, t.primary, .14)!.withValues(alpha: .97);
+    final foreground = ThemeData.estimateBrightnessForColor(background) == Brightness.light ? t.ink : Colors.white;
     final tech = t.skin == AppSkin.futureTech;
     return AppBar(
       elevation: 0,
