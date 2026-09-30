@@ -20,6 +20,10 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   final AppSkin skin;
   final Color background, surface, primary, gold, ink;
   final double radius;
+  // Night palettes use bright accents; white hero text needs a darker fill.
+  Color get heroSurface => primary.computeLuminance() > .18
+      ? Color.lerp(primary, Colors.black, .65)!
+      : primary;
 
   /// Typography is part of the layout family. The app bundles NUSans and
   /// NUReading; platform generic families are used deliberately for condensed,

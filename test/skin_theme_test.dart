@@ -30,6 +30,10 @@ void main(){
   for(final skin in AppSkin.values.where((s)=>s.isPremium)){
    for(final brightness in Brightness.values){
     final theme=buildSkinTheme(skin,brightness:brightness);
+    final tokens=theme.extension<SkinTokens>()!;
+    for(final fill in [tokens.heroSurface,Color.lerp(tokens.heroSurface,tokens.gold,.12)!]){
+     expect(contrast(Color.alphaBlend(Colors.white.withValues(alpha:.82),fill),fill),greaterThanOrEqualTo(4.5),reason:'${skin.label} hero labels $brightness');
+    }
     expect(contrast(theme.appBarTheme.titleTextStyle!.color!,theme.appBarTheme.backgroundColor!),greaterThanOrEqualTo(4.5),reason:'${skin.label} preview title $brightness');
     await tester.pumpWidget(MaterialApp(theme:theme,home:Scaffold(appBar:PremiumTopBar(onTools:(){},onRefresh:(){},onNotifications:(){}))));
     final bar=tester.widget<AppBar>(find.byType(AppBar));
