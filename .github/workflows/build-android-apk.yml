@@ -66,6 +66,18 @@ jobs:
           s = p.read_text()
           if "android.permission.INTERNET" not in s:
               s = s.replace("<application", '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+          # Preview signing keys differ between clean CI runners. Give PR and
+          # manually requested preview APKs their own application ID so review
+          # installs do not require removing an existing student app.
+          import os
+          if os.environ.get("GITHUB_EVENT_NAME") != "push":
+              s = s.replace('android:label="NOUN Update"', 'android:label="NOUN Update Preview"')
+              gradle = Path("android/app/build.gradle.kts")
+              g = gradle.read_text()
+              original = 'applicationId = "com.nounupdate.noun_update_student_app"'
+              if original not in g:
+                  raise RuntimeError("Generated Android application ID was not found")
+              gradle.write_text(g.replace(original, 'applicationId = "com.nounupdate.noun_update_student_app.preview"', 1))
           p.write_text(s)
           PY
 
