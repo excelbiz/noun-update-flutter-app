@@ -14,7 +14,8 @@ void main(){
    ))));
    await tester.pumpAndSettle();
    expect(find.text('Account birthday'),findsOneWidget);expect(find.text('Server daily quote'),findsOneWidget);
-   await tester.scrollUntilVisible(find.text('CIT411 · 30 September · 9:00 AM WAT'),180);
+   final homeScroll=find.descendant(of:find.byKey(const PageStorageKey('home')),matching:find.byType(Scrollable)).first;
+   await tester.scrollUntilVisible(find.text('CIT411 · 30 September · 9:00 AM WAT'),180,scrollable:homeScroll);
    expect(find.text('CIT411 · 30 September · 9:00 AM WAT'),findsOneWidget);expect(tester.takeException(),isNull);
   });
  }

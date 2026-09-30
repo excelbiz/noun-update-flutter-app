@@ -30,6 +30,9 @@ void main(){
    expect(item['resource_type'],summary?'course_summary':'course_material');
    expect(item['route'],summary?'/course-summary/CIT411':'/courses/CIT411');
    expect(api.paths.every((p)=>p.startsWith('/materials')),isTrue);
+   // The save confirmation can cover the last library row on a small viewport.
+   await tester.pump(const Duration(seconds:4));await tester.pumpAndSettle();
+   await tester.ensureVisible(find.text('CIT411'));
    await tester.tap(find.text('CIT411'));await tester.pumpAndSettle();
    expect(find.byType(summary?NativeSummary:NativeStudy),findsOneWidget);
    // Merely opening a summary/bookmark must never initiate a purchase.

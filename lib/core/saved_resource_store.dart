@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,10 +12,19 @@ class SavedResourceStore {
   // Serialise all stores for the same account, including library and reader controls.
   static final Map<String,Future<void>> _queues={};
   static final Map<String,DateTime> _lastAttempt={};
-  Future<void> _serial(Future<void> Function() action){
-    final next=(_queues[slot]??Future<void>.value()).then((_)=>action());
-    _queues[slot]=next.catchError((Object _){});
-    return next;
+  Future<void> _serial(Future<void> Function() action)async{
+    final previous=_queues[slot];
+    final done=Completer<void>();
+    _queues[slot]=done.future;
+    try{
+      if(previous!=null)await previous;
+      await action();
+    }finally{
+      done.complete();
+      // Release completed work instead of retaining a future from an old zone.
+      // A newer control may already own the tail; never remove its queue.
+      if(identical(_queues[slot],done.future))_queues.remove(slot);
+    }
   }
   void _checkAccount(Map<String,dynamic> data){
     if('${data['account_id']}'!=userId)throw const ApiException('Account changed or bookmark sync needs the latest API. Your device copy is safe.');
