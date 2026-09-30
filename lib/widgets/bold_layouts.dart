@@ -95,7 +95,7 @@ class BoldTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String name;
   final double textScale;
   final VoidCallback onNotifications, onSettings;
-  @override Size get preferredSize => Size.fromHeight(70 + math.max(0, textScale - 1) * 70);
+  @override Size get preferredSize => Size.fromHeight(70 + math.max(0.0, textScale - 1) * 70);
   @override Widget build(BuildContext context) {
     final t = SkinTokens.of(context);
     final heading = switch (page) {1 => 'Study', 2 => 'Tools & Wallet', 3 => 'Updates', 5 => 'Wallet', _ => 'Profile'};
@@ -146,7 +146,7 @@ class _BoldUpdateBannerState extends State<BoldUpdateBanner> {
       if (dismissed || rows.isEmpty) return const SizedBox.shrink();
       final dark = Theme.of(context).brightness == Brightness.dark;
       final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-      return Column(children: [Container(height: 118 + math.max(0, scale - 1) * 140,
+      return Column(children: [Container(height: 118 + math.max(0.0, scale - 1) * 140,
         decoration: BoxDecoration(color: dark ? const Color(0xff301b20) : const Color(0xfffff6f6),
           borderRadius: BorderRadius.circular(13), border: Border.all(color: boldRed.withValues(alpha: .14))),
         child: ClipRRect(borderRadius: BorderRadius.circular(13), child: Stack(children: [
@@ -235,7 +235,7 @@ class BoldHomeLayout extends StatelessWidget {
   }
   @override Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-    final extent = 146 + math.max(0, scale - 1) * 100;
+    final extent = 146 + math.max(0.0, scale - 1) * 100;
     return ListView(key: const PageStorageKey('home'), padding: const EdgeInsets.fromLTRB(16, 9, 16, 24), children: [
       workspaceStatus, birthday, importantUpdate,
       if (scale > 1.3) ...[SizedBox(height: extent, child: _balance(context)), const SizedBox(height: 10),
@@ -351,7 +351,7 @@ class BoldStudyLayout extends StatelessWidget {
     }
     final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
     final large = scale > 1.3;
-    final tileHeight = (MediaQuery.sizeOf(context).width < 350 ? 170.0 : 156.0) + math.max(0, scale - 1) * 100;
+    final tileHeight = (MediaQuery.sizeOf(context).width < 350 ? 170.0 : ((MediaQuery.sizeOf(context).height - 345) / 3).clamp(166.0, 190.0)) + math.max(0.0, scale - 1) * 100;
     return ListView(key: const PageStorageKey('study'), padding: const EdgeInsets.fromLTRB(16, 5, 16, 24), children: [
       BoldPanel(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11), onTap: onSearch,
         child: Row(children: [Expanded(child: Text('Search for courses, materials, topics…',
@@ -509,7 +509,7 @@ class _BoldToolsLayoutState extends State<BoldToolsLayout> {
       }),
       GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: essential.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: scale > 1.3 ? 1 : 2,
-          mainAxisExtent: (MediaQuery.sizeOf(context).width < 350 ? 129.0 : 120.0) + math.max(0, scale - 1) * 90,
+          mainAxisExtent: (MediaQuery.sizeOf(context).width < 350 ? 129.0 : 120.0) + math.max(0.0, scale - 1) * 90,
           crossAxisSpacing: 10, mainAxisSpacing: 10), itemBuilder: (context, i) {
           final s = essential[i], id = '${s['id']}';
           final label = id == 'mock' ? 'Mock e-Exam' : serviceLabel(id, '${s['label']}');
@@ -546,7 +546,7 @@ class BoldWelcome extends StatelessWidget {
   @override Widget build(BuildContext context) => Scaffold(backgroundColor: SkinTokens.of(context).background,
     body: LayoutBuilder(builder: (context, box) {
       final t = SkinTokens.of(context), scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-      final height = math.max(box.maxHeight, 820 + math.max(0, scale - 1) * 520);
+      final height = math.max(box.maxHeight, 820 + math.max(0.0, scale - 1) * 520);
       return SingleChildScrollView(child: SizedBox(height: height, child: Stack(children: [
         Positioned(top: 0, left: 0, right: 0, height: height * .50, child: ExcludeSemantics(child:
           Image.asset('assets/images/skins/bold-premium-welcome.webp', fit: BoxFit.cover, alignment: Alignment.topCenter))),
@@ -559,12 +559,12 @@ class BoldWelcome extends StatelessWidget {
           Text('Learn Anytime', textAlign: TextAlign.center, style: boldText(context, size: 29, weight: FontWeight.w800)),
           Text('Go Further', textAlign: TextAlign.center, style: boldText(context, size: 29, color: t.primary, weight: FontWeight.w800)),
           const SizedBox(height: 9), Text('Your complete NOUN student\nsupport app.', textAlign: TextAlign.center, style: boldText(context, size: 14)),
-          const SizedBox(height: 27), SizedBox(height: 49 + math.max(0, scale - 1) * 25,
+          const SizedBox(height: 27), SizedBox(height: 49 + math.max(0.0, scale - 1) * 25,
             child: FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xff005532), foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: onLogin,
               child: Row(children: [const SizedBox(width: 20), Expanded(child: Text('Sign In', textAlign: TextAlign.center,
                 style: boldText(context, size: 14, color: Colors.white, weight: FontWeight.w700))), const Icon(Icons.arrow_forward, size: 20)]))),
-          const SizedBox(height: 11), SizedBox(height: 49 + math.max(0, scale - 1) * 25,
+          const SizedBox(height: 11), SizedBox(height: 49 + math.max(0.0, scale - 1) * 25,
             child: OutlinedButton(style: OutlinedButton.styleFrom(side: BorderSide(color: t.primary.withValues(alpha: .60)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: onRegister,
               child: Text('Create Account', style: boldText(context, size: 14, weight: FontWeight.w600)))),
