@@ -4,6 +4,7 @@ import '../widgets/native_ui.dart';
 import '../widgets/skin_art.dart';
 import '../core/skin_theme.dart';
 import '../widgets/editorial_layouts.dart';
+import '../widgets/bold_layouts.dart';
 import 'native_tools.dart';
 
 class NativeAuth extends StatefulWidget {
@@ -38,6 +39,7 @@ class _NativeAuthState extends State<NativeAuth>{
   ],
  ));
  @override Widget build(BuildContext context) {
+ if(SkinTokens.of(context).skin==AppSkin.boldPremium && welcome && mode=='login')return BoldWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  if(SkinTokens.of(context).skin==AppSkin.elegantEditorial && welcome && mode=='login')return EditorialWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  return NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
  if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),

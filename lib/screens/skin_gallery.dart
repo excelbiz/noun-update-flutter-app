@@ -34,7 +34,7 @@ class SkinPreview extends StatefulWidget {
 }
 class _SkinPreviewState extends State<SkinPreview> {
   bool dark=false,saving=false,login=false;
-  late final previewApi=_SkinPreviewApi(editorial:widget.skin==AppSkin.elegantEditorial);
+  late final previewApi=_SkinPreviewApi(editorial:widget.skin==AppSkin.elegantEditorial,bold:widget.skin==AppSkin.boldPremium);
   Future<void> apply()async{
     final api=widget.api;if(api==null)return;
     final service=PremiumService.instance;
@@ -52,7 +52,7 @@ class _SkinPreviewState extends State<SkinPreview> {
       ]),
       body:Column(children:[
         Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),color:Theme.of(context).colorScheme.secondaryContainer,child:const Text('STYLE PREVIEW · SAMPLE CONTENT',style:TextStyle(fontSize:10,letterSpacing:1))),
-        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true,previewData:widget.skin==AppSkin.elegantEditorial?editorialPreviewData():null)),
+        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true,previewData:widget.skin==AppSkin.elegantEditorial?editorialPreviewData():widget.skin==AppSkin.boldPremium?boldPreviewData():null)),
         SafeArea(top:false,child:Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),child:ListenableBuilder(listenable:PremiumService.instance,builder:(context,_)=>Row(children:[
           Expanded(child:Text(widget.skin.isPremium?'Free preview · Premium to apply':'Your free default design',style:const TextStyle(fontSize:11))),
           FilledButton(onPressed:saving||widget.api==null||(widget.skin.isPremium&&!PremiumService.instance.allows('premium_skins'))?null:apply,child:Text(saving?'Saving…':'Apply skin')),
@@ -64,11 +64,14 @@ class _SkinPreviewState extends State<SkinPreview> {
 /// Isolated read-only fixture: previews never contact payment/auth endpoints,
 /// grant access or write to the real account. LivePortal is the real screen tree.
 class _SkinPreviewApi extends ApiClient {
-  _SkinPreviewApi({this.editorial=false});
-  final bool editorial;
+  _SkinPreviewApi({this.editorial=false,this.bold=false});
+  final bool editorial,bold;
   @override Future<Map<String,dynamic>> getJson(String path)async{
     if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
-    if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':editorial?'Discipline today creates the freedom you want tomorrow.':'Discipline today, a brighter tomorrow.','author':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':editorial?'Discipline today creates the freedom you want tomorrow.':bold?'Consistency today creates success tomorrow.':'Discipline today, a brighter tomorrow.','author':bold?'NOUN Update':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(bold&&path=='/study/EDU302')return {'data':{'course_title':'Research Methods in Education','sections':[for(var i=0;i<20;i++){'index':i}]}};
+    if(bold&&path=='/study/EDU302/state')return {'data':{'done':[for(var i=0;i<12;i++)i],'notes':'','revision':0}};
+    if(bold&&path.startsWith('/posts/'))return {'data':{'items':boldPreviewNotices()}};
     if(editorial&&path=='/study/CIT321')return {'data':{'course_title':'Computer Systems and Networks','sections':[for(var i=0;i<20;i++){'index':i}]}};
     if(editorial&&path=='/study/CIT321/state')return {'data':{'done':[for(var i=0;i<13;i++)i],'notes':'','revision':0}};
     if(editorial&&path.startsWith('/posts/'))return {'data':{'items':[{'id':0,'category':'news','title':'Examination timetable now available','published_at':DateTime.now().toIso8601String()}]}};
@@ -94,4 +97,26 @@ Map<String,dynamic> editorialPreviewData(){
    ]},
    'next_exam':<String,dynamic>{'course_code':'CIT321','course_title':'Computer Systems and Networks','date':'${examDate.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][examDate.month-1]} ${examDate.year}','time':'9:00 AM WAT','exam_datetime':examDate.toIso8601String(),'is_past':false},
   };
+}
+
+// Isolated design data: no account, entitlement or wallet writes.
+List<Map<String,dynamic>> boldPreviewNotices()=>[
+ {'id':0,'category':'news','title':'2026_2 Exam Timetable is now available!','published_at':DateTime.now().toIso8601String()},
+ {'id':1,'category':'news','title':'NOUN releases 2026_2 exam guidelines','published_at':DateTime.now().subtract(const Duration(hours:2)).toIso8601String()},
+ {'id':2,'category':'news','title':'Keep your study plan up to date','published_at':DateTime.now().subtract(const Duration(days:1)).toIso8601String()},
+];
+Map<String,dynamic> boldPreviewData(){
+ final date=DateTime.now().add(const Duration(days:2));
+ final exam=DateTime(date.year,date.month,date.day,8);
+ return {
+  'details':{'Name':'NOUN Student','Programme':'B.Ed. Education','Level':'300 Level','Study centre':'Abeokuta Study Centre'},
+  'courses':['EDU302'],
+  'profile':<String,dynamic>{'id':'bold-sample','name':'NOUN Student','email':'student@example.test','matric_number':'NOUN/2024/123456'},
+  'wallet':<String,dynamic>{'balance_kobo':500000,'transactions':[
+   {'title':'Wallet Top Up','amount_kobo':500000,'created_at':DateTime.now().subtract(const Duration(days:2)).toIso8601String(),'status':'posted'},
+   {'title':'Exam Practice (Mock)','amount_kobo':-50000,'created_at':DateTime.now().subtract(const Duration(days:4)).toIso8601String(),'status':'posted'},
+   {'title':'Study Material Purchase','amount_kobo':-30000,'created_at':DateTime.now().subtract(const Duration(days:6)).toIso8601String(),'status':'posted'},
+  ]},
+  'next_exam':<String,dynamic>{'course_code':'EDU302','course_title':'Research Methods in Education','date':'${exam.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][exam.month-1]} ${exam.year}','time':'9:00 AM WAT','exam_datetime':exam.toIso8601String(),'is_past':false},
+ };
 }

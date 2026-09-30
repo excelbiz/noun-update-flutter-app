@@ -147,6 +147,7 @@ class SkinQuotePanel extends StatelessWidget {
   final t=SkinTokens.of(context);
   if(!t.skin.isPremium)return NuPanel(child:child);
   if(t.skin==AppSkin.elegantEditorial)return Container(margin:const EdgeInsets.only(bottom:14),padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:t.surface,borderRadius:BorderRadius.circular(13),border:Border.all(color:t.gold.withValues(alpha:.16))),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.format_quote_rounded,color:t.gold,size:28),const SizedBox(width:12),Expanded(child:child)]));
+  if(t.skin==AppSkin.boldPremium)return Container(margin:const EdgeInsets.only(bottom:14),padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),decoration:BoxDecoration(color:Color.lerp(t.surface,t.primary,.075),borderRadius:BorderRadius.circular(13),border:Border.all(color:t.primary.withValues(alpha:.12))),child:child);
   final dark=nuIsDark(context);
   return Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(borderRadius:BorderRadius.circular(t.radius),border:Border.all(color:t.gold.withValues(alpha:.35))),child:ClipRRect(borderRadius:BorderRadius.circular(t.radius),child:Stack(children:[
    Positioned.fill(child:ExcludeSemantics(child:Image.asset('assets/images/skins/study.webp',cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.centerRight))),

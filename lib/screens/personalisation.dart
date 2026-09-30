@@ -173,6 +173,16 @@ class _MotivationCardState extends State<MotivationCard> with WidgetsBindingObse
   @override Widget build(BuildContext context){
     final q=quote;if(q==null||q['date']!=today)return const SizedBox.shrink();
     final editorial=SkinTokens.of(context).skin==AppSkin.elegantEditorial;
+    if(SkinTokens.of(context).skin==AppSkin.boldPremium)return SkinQuotePanel(child:Column(children:[
+      Text('“${q['quote']}”',textAlign:TextAlign.center,style:const TextStyle(fontFamily:'NUReading',fontSize:17,fontStyle:FontStyle.italic,height:1.25,fontWeight:FontWeight.w600)),
+      const SizedBox(height:7),Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        Flexible(child:Text('— ${q['author']}',textAlign:TextAlign.center,style:const TextStyle(fontFamily:'NUSans',fontSize:11))),
+        const SizedBox(width:5),SizedBox(width:28,height:28,child:PopupMenuButton<String>(tooltip:'Quote actions',padding:EdgeInsets.zero,iconSize:17,
+          onSelected:(action){if(action=='share'){shareQuote(q);}else if(!saving){saveQuote(q);}},
+          itemBuilder:(_)=>[const PopupMenuItem(value:'share',child:Text('Share Quote')),PopupMenuItem(value:'save',enabled:!saving,child:Text(saving?'Saving…':'Save Quote'))],
+        )),
+      ]),if(offline)const Text('Saved for today · Offline',style:TextStyle(fontSize:11)),
+    ]));
     return SkinQuotePanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       if(!editorial)...[Text('TODAY’S MOTIVATION',style:TextStyle(color:Theme.of(context).colorScheme.primary,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.5)),const SizedBox(height:12)],
       Text(editorial?'${q['quote']}':'“${q['quote']}”',style:TextStyle(fontFamily:editorial?'NUSans':null,fontSize:editorial?14:21,height:editorial?1.25:1.4,fontWeight:editorial?FontWeight.w400:FontWeight.w700)),const SizedBox(height:10),

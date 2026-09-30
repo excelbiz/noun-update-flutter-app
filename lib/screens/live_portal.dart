@@ -11,6 +11,7 @@ import '../widgets/native_ui.dart';
 import '../widgets/skin_art.dart';
 import '../widgets/premium_layouts.dart';
 import '../widgets/editorial_layouts.dart';
+import '../widgets/bold_layouts.dart';
 import '../core/skin_theme.dart';
 import 'native_tools.dart';
 import 'native_timetable.dart';
@@ -130,12 +131,12 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final id='${s['id']}',title='${s['id']=='courses'?'Course Materials':s['label']}';
   final destination='${s['url']??s['path']??''}';
   final websiteBacked=s['mode']=='web'&&destination.trim().isNotEmpty&&safeNounUpdateDestination(destination)!=null;
-  if(id=='wallet'){setState(()=>tab=4);return;}
+  if(id=='wallet'){_openWallet();return;}
   if(['news','guides','scholarships','career','blog'].contains(id)){setState((){tab=3;category=id;feed=_feed();});return;}
   final Widget page=switch(id){
    'courses'||'course-materials'||'study-hub'=>MaterialLibrary(api:api,userId:profile?['id']?.toString()),
    'course-summary'=>MaterialLibrary(api:api,userId:profile?['id']?.toString(),summaries:true),
-   'exam-summary'=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);setState(()=>tab=4);}),
+   'exam-summary'=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);_openWallet();}),
    'personalized-timetable'=>NativeTimetable(api:api,courses:List<String>.from(workspace.courses),onManageCourses:(){Navigator.of(context).pop();_courses();}),
    'calendar'=>NativeCalendar(api),'fees'||'fee-check'=>NativeFees(api),'cgpa-calculator'=>NativeCgpa(),
    _=>websiteBacked?NativeSiteService(title:title,destination:destination):NativeUnavailable(title),
@@ -152,15 +153,19 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  String get _greeting=>'${DateTime.now().hour<12?'Good morning':DateTime.now().hour<18?'Good afternoon':'Good evening'}${(workspace.details['Name']??profile?['name']??'').toString().isEmpty?'':', ${workspace.details['Name']??profile?['name']}'}';
  String get _editorialGreeting{final name='${workspace.details['Name']??profile?['name']??''}'.trim().split(RegExp(r'\s+')).first;return '${DateTime.now().hour<12?'Good morning':DateTime.now().hour<18?'Good afternoon':'Good evening'}${name.isEmpty?'':', $name'}';}
  String get _meta=>[workspace.details['Programme'],workspace.details['Level'],workspace.details['Semester']].whereType<String>().where((v)=>v.isNotEmpty).join(' · ');
- List<Map<String,dynamic>> get _quickServices=>[for(final id in (SkinTokens.of(context).skin==AppSkin.elegantEditorial?['past-questions','courses','personalized-timetable','result']:['fees','calendar','courses','exam-summary']))...services.where((s)=>s['id']==id).take(1)];
+ bool get _bold=>SkinTokens.of(context).skin==AppSkin.boldPremium;
+ int get _visibleTab=>tab==5&&!_bold?4:tab;
+ void _openWallet()=>setState(()=>tab=_bold?5:4);
+ String get _walletLabel=>wallet==null?'—':_bold?editorialMoney(wallet!['balance_kobo']):naira(wallet!['balance_kobo']);
+ List<Map<String,dynamic>> get _quickServices=>[for(final id in (SkinTokens.of(context).skin==AppSkin.elegantEditorial?['past-questions','courses','personalized-timetable','result']:_bold?['fees','past-questions','mock','result']:['fees','calendar','courses','exam-summary']))...services.where((s)=>s['id']==id).take(1)];
  List<Map<String,dynamic>> get _studyServices=>services.where((s)=>['courses','course-summary','exam-summary','past-questions','mock','study-hub','pop-practice'].contains(s['id'])).toList();
 
  Widget _home(){
   if(SkinTokens.of(context).skin.isPremium){
     return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:PremiumHomeLayout(
-      greeting:_greeting,meta:_meta,onSearch:()=>setState(()=>tab=2),nextExam:timetable?.periodMismatch==false&&timetable?.nextExam!=null?{'course_code':timetable!.nextExam!.courseCode,'course_title':timetable!.nextExam!.courseTitle,'date':timetable!.nextExam!.date,'time':timetable!.nextExam!.time,'exam_datetime':timetable!.nextExam!.examDateTime?.toIso8601String()}:null,studyCentre:workspace.details['Study centre'],continueCourse:SkinTokens.of(context).skin==AppSkin.elegantEditorial?EditorialContinueCourse(api:api,preview:widget.preview,courseCode:workspace.courses.firstOrNull,userId:profile?['id']?.toString(),onTap:_courses):null,workspaceStatus:WorkspaceConflictNotice(workspace:workspace),nextExamSummary:_nextExamSubtitle,courseCount:workspace.courses.length,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
+      greeting:_greeting,meta:_meta,onTopUp:profile==null?_login:_fundDialog,importantUpdate:_bold?BoldUpdateBanner(feed:feed,onOpen:(r)=>pushNu(context,ArticlePage(api:api,item:r))):const SizedBox.shrink(),onSearch:()=>setState(()=>tab=2),nextExam:timetable?.periodMismatch==false&&timetable?.nextExam!=null?{'course_code':timetable!.nextExam!.courseCode,'course_title':timetable!.nextExam!.courseTitle,'date':timetable!.nextExam!.date,'time':timetable!.nextExam!.time,'exam_datetime':timetable!.nextExam!.examDateTime?.toIso8601String()}:null,studyCentre:workspace.details['Study centre'],continueCourse:SkinTokens.of(context).skin==AppSkin.elegantEditorial?EditorialContinueCourse(api:api,preview:widget.preview,courseCode:workspace.courses.firstOrNull,userId:profile?['id']?.toString(),onTap:_courses):_bold?BoldContinueCourse(api:api,preview:widget.preview,courseCode:workspace.courses.firstOrNull,userId:profile?['id']?.toString(),onTap:_courses):null,workspaceStatus:WorkspaceConflictNotice(workspace:workspace),nextExamSummary:_nextExamSubtitle,courseCount:workspace.courses.length,walletBalance:_walletLabel,setupNeeded:workspace.details.isEmpty,quickServices:_quickServices,
       birthday:BirthdayBanner(name:'${profile?['name']??'Student'}'),motivation:MotivationCard(api:api,preview:widget.preview),latestUpdates:_news(compact:true),
-      onSetup:_setup,onCourses:_courses,onExam:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}),onStudy:()=>setState(()=>tab=1),onWallet:()=>setState(()=>tab=4),onOpen:_service,
+      onSetup:_setup,onCourses:_courses,onExam:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}),onStudy:()=>setState(()=>tab=1),onWallet:_openWallet,onOpen:_service,
     ));
   }
   return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},child:ListView(key:const PageStorageKey('home'),padding:const EdgeInsets.fromLTRB(20,20,20,28),children:[
@@ -187,8 +192,11 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  }
  Widget _tools(){
   final rows=services.where((s)=>'${s['label']} ${s['group']}'.toLowerCase().contains(search.toLowerCase())&&!['news','guides','scholarships','career','blog','wallet'].contains(s['id'])).toList();
+  if(_bold)return BoldToolsLayout(services:rows,balance:_walletLabel,signedIn:profile!=null,transactions:records(wallet?['transactions']),onOpen:_service,
+    onTopUp:profile==null?_login:_fundDialog,onPremium:()=>pushNu(context,PremiumPage(api:api)),onHistory:_walletHistory,onUpdates:()=>setState(()=>tab=3),search:search,onSearch:(v)=>setState(()=>search=v),pinned:workspace.pins,
+    onTogglePin:(s)=>_run(()async{final id='${s['id']}',old=Set<String>.from(workspace.pins);if(!workspace.pins.add(id))workspace.pins.remove(id);try{await workspace.save();}catch(_){workspace.pins=old;rethrow;}if(mounted)setState((){});}));
   if(SkinTokens.of(context).skin.isPremium){
-    return PremiumToolsLayout(rows:rows,pinned:workspace.pins,onSearch:(v)=>setState(()=>search=v),onOpen:_service,walletBalance:wallet==null?'—':naira(wallet!['balance_kobo']),onWallet:()=>setState(()=>tab=4),onTogglePin:(s)=>_run(()async{final id='${s['id']}',old=Set<String>.from(workspace.pins);if(!workspace.pins.add(id))workspace.pins.remove(id);try{await workspace.save();}catch(_){workspace.pins=old;rethrow;}if(mounted)setState((){});}));
+    return PremiumToolsLayout(rows:rows,pinned:workspace.pins,onSearch:(v)=>setState(()=>search=v),onOpen:_service,walletBalance:_walletLabel,onWallet:()=>setState(()=>tab=4),onTogglePin:(s)=>_run(()async{final id='${s['id']}',old=Set<String>.from(workspace.pins);if(!workspace.pins.add(id))workspace.pins.remove(id);try{await workspace.save();}catch(_){workspace.pins=old;rethrow;}if(mounted)setState((){});}));
   }
   final pinned=rows.where((s)=>workspace.pins.contains(s['id'])).toList();
   Widget tool(Map<String,dynamic> s){
@@ -207,6 +215,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   if(s.hasError)return AsyncError('Updates could not load. Please try again.',()=>setState(()=>feed=_feed()));
   if(!s.hasData)return const Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator()));
   final rows=records(s.data!['items']);if(rows.isEmpty)return const NuPanel(child:Text('No published updates in this category yet.'));
+  if(compact&&_bold)return BoldLatestUpdate(item:rows.first,onTap:()=>pushNu(context,ArticlePage(api:api,item:rows.first)));
   if(compact&&SkinTokens.of(context).skin==AppSkin.elegantEditorial){final r=rows.first;return EditorialPanel(onTap:()=>pushNu(context,ArticlePage(api:api,item:r)),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.campaign_rounded,color:editorialRed,size:31),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Latest Update',style:editorialText(context,size:13,weight:FontWeight.w700)),const SizedBox(height:5),Text('${r['title']}',maxLines:2,overflow:TextOverflow.ellipsis,style:editorialText(context,size:13)),const SizedBox(height:5),Text('Check the latest published notice.',style:editorialText(context,size:10))])),const Icon(Icons.chevron_right,color:editorialRed)]));}
   return Column(children:[for(final r in compact?rows.take(3):rows)NuPanel(padding:0,child:ListTile(contentPadding:const EdgeInsets.all(14),leading:const GlossIcon(Icons.campaign_rounded,size:44),title:Text('${r['title']}',maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)),subtitle:Text('${r['published_at']}',style:const TextStyle(fontSize:11)),onTap:()=>pushNu(context,ArticlePage(api:api,item:r))))]);
  });
@@ -253,13 +262,22 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    const EditorialHeading('Help & support'),const EditorialPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869\n\nIndependent student support. Not an official arm of the National Open University of Nigeria.')),
   ]);
  }
+ void _walletHistory()=>pushNu(context,NuPage(title:'Wallet history',child:ListView(padding:const EdgeInsets.all(16),children:[BoldTransactions(rows:records(wallet?['transactions']),onAll:()=>Navigator.pop(context))])));
+ Widget _boldWallet()=>ListView(key:const PageStorageKey('wallet'),padding:const EdgeInsets.fromLTRB(16,8,16,24),children:[
+  BoldBalanceStrip(balance:_walletLabel,signedIn:profile!=null,onTopUp:profile==null?_login:_fundDialog),const SizedBox(height:14),
+  BoldMembershipBanner(onOpen:()=>pushNu(context,PremiumPage(api:api))),
+  if(accountError!=null)AsyncError(accountError!,_loadAccount),
+  if(pendingReference!=null)NuPanel(child:Column(children:[const Text('A payment is awaiting confirmation.'),SelectableText(pendingReference!,style:const TextStyle(fontSize:11)),TextButton(onPressed:busy?null:()=>_run(_recheck),child:const Text('Recheck payment'))])),
+  BoldTransactions(rows:records(wallet?['transactions']),onAll:_walletHistory),
+  const BoldHeading('Your account'),BoldPanel(onTap:()=>setState(()=>tab=4),child:Row(children:[const Icon(Icons.person_outline),const SizedBox(width:10),Expanded(child:Text('Profile, purchases & preferences',style:boldText(context))),const Icon(Icons.chevron_right)])),
+ ]);
  Future<void> _fundDialog()async{await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:const Text('Add funds'),content:TextField(controller:amount,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:const InputDecoration(labelText:'Amount (₦)')),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Cancel')),FilledButton(onPressed:(){Navigator.pop(c);_run(_fund);},child:const Text('Continue'))]));}
  @override Widget build(BuildContext context){
   final premium=SkinTokens.of(context).skin.isPremium;
-  final appBar=SkinTokens.of(context).skin==AppSkin.elegantEditorial?EditorialTopBar(page:tab,textScale:MediaQuery.textScalerOf(context).scale(14)/14,greeting:_editorialGreeting,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):premium?PremiumTopBar(onTools:()=>setState(()=>tab=2),onRefresh:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))):AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:38),const SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:const Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]);
+  final appBar=_bold?BoldTopBar(page:tab,name:'${workspace.details['Name']??profile?['name']??'NOUN Student'}',textScale:MediaQuery.textScalerOf(context).scale(14)/14,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):SkinTokens.of(context).skin==AppSkin.elegantEditorial?EditorialTopBar(page:tab,textScale:MediaQuery.textScalerOf(context).scale(14)/14,greeting:_editorialGreeting,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):premium?PremiumTopBar(onTools:()=>setState(()=>tab=2),onRefresh:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))):AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:38),const SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:const Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]);
   return Scaffold(backgroundColor:SkinTokens.of(context).skin==AppSkin.elegantEditorial?const Color(0xff003c29):premium?SkinTokens.of(context).background:nuDeep,appBar:appBar,
-   body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(premium?SkinTokens.of(context).radius:25)),child:SkinBackdrop(child:Column(children:[if(busy)const LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),_=>_profile()}))]))),
-   bottomNavigationBar:premium?PremiumBottomNavigation(index:tab,onChanged:(v)=>setState(()=>tab=v)):NavigationBar(height:64,selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:[NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home_rounded,color:Theme.of(context).colorScheme.primary),label:'Home'),const NavigationDestination(icon:Icon(Icons.menu_book_outlined),label:'Study'),const NavigationDestination(icon:Icon(Icons.grid_view_rounded),label:'Tools'),const NavigationDestination(icon:Icon(Icons.newspaper_outlined),label:'Updates'),const NavigationDestination(icon:Icon(Icons.person_outline_rounded),label:'Profile')]),
+   body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(_bold?0:premium?SkinTokens.of(context).radius:25)),child:SkinBackdrop(child:Column(children:[if(busy)const LinearProgressIndicator(minHeight:2),Expanded(child:SafeArea(top:false,child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),5=>_bold?_boldWallet():_profile(),_=>_profile()}))]))),
+   bottomNavigationBar:premium?PremiumBottomNavigation(index:_visibleTab,onChanged:(v)=>setState(()=>tab=v)):NavigationBar(height:64,selectedIndex:_visibleTab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:[NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home_rounded,color:Theme.of(context).colorScheme.primary),label:'Home'),const NavigationDestination(icon:Icon(Icons.menu_book_outlined),label:'Study'),const NavigationDestination(icon:Icon(Icons.grid_view_rounded),label:'Tools'),const NavigationDestination(icon:Icon(Icons.newspaper_outlined),label:'Updates'),const NavigationDestination(icon:Icon(Icons.person_outline_rounded),label:'Profile')]),
   );
  }
 }

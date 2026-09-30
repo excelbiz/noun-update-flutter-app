@@ -37,7 +37,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.productivityDashboard=>'sans-serif-condensed',
     AppSkin.friendlyModern=>'NUSans',
     AppSkin.futureTech=>'monospace',
-    AppSkin.boldPremium=>'sans-serif',
+    AppSkin.boldPremium=>'NUSans',
     _=>'NUSans',
   };
   String get displayFont => switch(skin){
@@ -127,7 +127,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.productivityDashboard=>'Learn today. A brighter tomorrow.',
     AppSkin.friendlyModern=>'Knowledge today, a brighter tomorrow.',
     AppSkin.futureTech=>'EVERYTHING YOU NEED TO EXCEL',
-    AppSkin.boldPremium=>'ALL YOUR ACADEMIC RESOURCES IN ONE PLACE',
+    AppSkin.boldPremium=>'Learn · Prepare · Excel',
     _=>'Learn smart. Study confidently.',
   };
   String get toolsSubtitle => switch(skin){
@@ -140,24 +140,27 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.productivityDashboard=>'Plan, check, calculate and keep moving.',
     AppSkin.friendlyModern=>'Smart tools for a smoother NOUN journey.',
     AppSkin.futureTech=>'HELPFUL UTILITIES FOR NOUN STUDENTS',
-    AppSkin.boldPremium=>'ESSENTIAL TOOLS · REAL SUPPORT · GREATER POSSIBILITIES',
+    AppSkin.boldPremium=>'More tools. A smoother NOUN experience.',
     _=>'Useful shortcuts for every stage of your semester.',
   };
 
   String get backdropAsset => 'assets/images/skins/${switch(skin){
-    AppSkin.smartCampus||AppSkin.productivityDashboard||AppSkin.boldPremium=>'campus',
+    AppSkin.smartCampus||AppSkin.productivityDashboard=>'campus',
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
     AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    AppSkin.boldPremium=>'bold-premium-welcome',
     _=>'campus',
   }}.webp';
   String get heroAsset => 'assets/images/skins/${switch(skin){
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
     AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    AppSkin.boldPremium=>'bold-premium-welcome',
     _=>'campus',
   }}.webp';
   String get loginAsset => 'assets/images/skins/${switch(skin){
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
     AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    AppSkin.boldPremium=>'bold-premium-welcome',
     _=>'campus',
   }}.webp';
   bool get resourceList => [AppSkin.smartCampus,AppSkin.premiumDark,AppSkin.minimalAcademic,AppSkin.futureTech].contains(skin);
@@ -176,7 +179,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
       AppSkin.productivityDashboard => dark ? [0xff0b1e22,0xff183039,0xff93dbc3,0xff9ccfff] : [0xffeef4f6,0xffffffff,0xff005749,0xff265c83],
       AppSkin.friendlyModern => dark ? [0xff232a20,0xff343e2e,0xffc1e8ae,0xffefd29a] : [0xfff8f7eb,0xfffffef8,0xff37613f,0xff795826],
       AppSkin.futureTech => dark ? [0xff021710,0xff082c20,0xff5aefad,0xffffd858] : [0xffe7f8ef,0xfff6fff9,0xff005c3b,0xff746000],
-      AppSkin.boldPremium => dark ? [0xff061d16,0xff10382a,0xfff5d474,0xffa9edc2] : [0xfff3f6f3,0xffffffff,0xff004d30,0xff8c5600],
+      AppSkin.boldPremium => dark ? [0xff0c2018,0xff17352a,0xffa6dfbd,0xffffce62] : [0xfff5f8fa,0xffffffff,0xff00653d,0xff9c7410],
       AppSkin.defaultNoun => dark ? [0xff101715,0xff17201d,0xffa5dfbd,0xffffd979] : [0xfff8faf9,0xffffffff,0xff00553a,0xff795800],
     };
     final radius=switch(skin){AppSkin.minimalAcademic=>10.0,AppSkin.elegantEditorial=>8.0,AppSkin.friendlyModern=>26.0,AppSkin.studentFriendly=>22.0,AppSkin.productivityDashboard=>12.0,AppSkin.boldPremium=>14.0,_=>18.0};
