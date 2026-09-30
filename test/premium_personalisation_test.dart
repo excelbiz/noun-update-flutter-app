@@ -83,7 +83,7 @@ void main(){
    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
    final key=GlobalKey();await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,home:SkinPreview(skin:skin))));await tester.pumpAndSettle();
-   await tester.runAsync(()async{for(final a in ['campus','students','study']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
+   await tester.runAsync(()async{for(final a in ['campus','students','study',if(skin==AppSkin.elegantEditorial)'editorial-emblem']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(SkinPreview)));});await tester.pumpAndSettle();
    expect(tester.takeException(),isNull);await capture(tester,key,'skin-${skin.name}-light');
    for(final label in ['Study','Tools']){
      await tester.tap(find.text(skin==AppSkin.elegantEditorial?(label=='Tools'?'More':label=='Profile'?'Wallet':label):label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
@@ -100,6 +100,7 @@ void main(){
      if(label=='Study'||label=='Tools')await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-dark');
    }
    await tester.tap(find.byTooltip('Preview sign-in'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+   if(skin==AppSkin.elegantEditorial){await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/editorial-campus.webp'),tester.element(find.byType(SkinPreview))));await tester.pumpAndSettle();}
    await capture(tester,key,'skin-${skin.name}-login-dark');
    expect((await SharedPreferences.getInstance()).getString('nu-daily-motivation'),isNull);
    await tester.tap(find.byTooltip('Preview dashboard'));await tester.pumpAndSettle();

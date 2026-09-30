@@ -96,7 +96,7 @@ class PremiumBottomNavigation extends StatelessWidget {
     final bar = SafeArea(
       top: false,
       child: Container(
-        height: t.skin == AppSkin.elegantEditorial ? 61 : 68,
+        height: editorial ? 61 + (MediaQuery.textScalerOf(context).scale(12) / 12 - 1).clamp(0, 3) * 20 : 68,
         padding: EdgeInsets.symmetric(horizontal: tech ? 8 : 10, vertical: 7),
         decoration: BoxDecoration(color: background.withValues(alpha: glass ? .78 : 1), border: Border(top: BorderSide(color: (tech ? t.primary : t.gold).withValues(alpha: tech ? .36 : .16)))),
         child: Row(children: [for (var i = 0; i < destinations.length; i++) Expanded(child: _NavItem(item: destinations[i], selected: order[i] == index, onTap: () => onChanged(order[i])))]),

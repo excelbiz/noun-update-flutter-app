@@ -28,6 +28,7 @@ class EditorialReviewApi extends ApiClient {
 void main(){
  TestWidgetsFlutterBinding.ensureInitialized();
  setUpAll(()async{
+   await rootBundle.loadString('assets/data/services.json');
    for(final f in [('NUSans','NUSans-Regular.ttf'),('NUReading','NUReading.ttf')]){await (FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File('assets/fonts/${f.$2}').readAsBytesSync())))).load();}
    final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
    await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
@@ -41,7 +42,7 @@ void main(){
    final theme=buildSkinTheme(AppSkin.elegantEditorial,brightness:scenario.$4?Brightness.dark:Brightness.light);
    Widget wrap(Widget child)=>RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:theme,builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scenario.$3)),child:child!),home:child));
    await tester.pumpWidget(wrap(LivePortal(apiClient:api,preview:true,previewData:editorialPreviewData())));
-   await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(LivePortal))));await tester.pumpAndSettle();
+   await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/editorial-emblem.webp'),tester.element(find.byType(LivePortal))));await tester.pumpAndSettle();
    expect(find.text('CIT321'),findsWidgets);expect(find.text('65% complete'),findsOneWidget);expect(tester.takeException(),isNull);
    final suffix='${scenario.$2.toInt()}-${scenario.$4?'dark':'light'}';
    if(scenario.$1==390)await capture(tester,key,'editorial-home-$suffix');

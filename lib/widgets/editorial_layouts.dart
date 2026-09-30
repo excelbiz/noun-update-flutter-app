@@ -11,20 +11,34 @@ const editorialGreen = Color(0xff005037);
 const editorialRed = Color(0xffa01724);
 const editorialGold = Color(0xffb18a35);
 
+String editorialMoney(dynamic kobo) {
+  final amount = (num.tryParse('$kobo') ?? 0) / 100;
+  final parts = amount.abs().toStringAsFixed(2).split('.');
+  final digits = parts[0].replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+  return '${amount < 0 ? '−' : ''}₦$digits.${parts[1]}';
+}
+
 TextStyle editorialText(BuildContext context, {double size = 13, Color? color, FontWeight weight = FontWeight.w400}) => TextStyle(fontFamily: 'NUSans', fontSize: size, height: 1.25, color: color ?? SkinTokens.of(context).ink, fontWeight: weight);
 
+class EditorialLogo extends StatelessWidget {
+  const EditorialLogo({super.key, this.size = 46});
+  final double size;
+  @override Widget build(BuildContext context) => Image.asset('assets/images/skins/editorial-emblem.webp', width: size, height: size, fit: BoxFit.contain, semanticLabel: 'NOUN Update Educational Consultant');
+}
+
 class EditorialTopBar extends StatelessWidget implements PreferredSizeWidget {
-  const EditorialTopBar({super.key, required this.page, required this.greeting, required this.onNotifications, required this.onSettings});
+  const EditorialTopBar({super.key, required this.page, required this.greeting, required this.onNotifications, required this.onSettings, this.textScale = 1});
+  final double textScale;
   final int page;
   final String greeting;
   final VoidCallback onNotifications, onSettings;
-  @override Size get preferredSize => Size.fromHeight(page == 0 ? 100 : 64);
+  @override Size get preferredSize => Size.fromHeight(page == 0 ? 100 + (textScale - 1).clamp(0, 3) * 90 : 64 + (textScale - 1).clamp(0, 3) * 30);
   @override Widget build(BuildContext context) => AppBar(
     toolbarHeight: preferredSize.height,
     backgroundColor: const Color(0xff003c29), foregroundColor: Colors.white,
     elevation: 0, scrolledUnderElevation: 0, titleSpacing: 18,
     title: page == 4 ? Text('Wallet & Profile', style: editorialText(context, size: 20, color: Colors.white, weight: FontWeight.w700)) : Row(children: [
-      BrandLogo(size: page == 0 ? 54 : 46), const SizedBox(width: 12),
+      EditorialLogo(size: page == 0 ? 54 : 46), const SizedBox(width: 12),
       Expanded(child: page == 0 ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Welcome back,', style: editorialText(context, size: 12, color: const Color(0xffe6efdf))),
         const SizedBox(height: 3), Text(greeting, maxLines: 2, overflow: TextOverflow.ellipsis, style: editorialText(context, size: 18, color: Colors.white, weight: FontWeight.w700)),
@@ -100,7 +114,7 @@ class EditorialQuickTools extends StatelessWidget {
     Widget tile(int i) {
       final s = items[i], id = '${s['id']}';
       final tone = switch(id) {'past-questions' => editorialGreen, 'courses' => editorialRed, 'personalized-timetable' => editorialGold, _ => editorialGreen};
-      final label = switch(id) {'courses' => 'Study Materials', 'personalized-timetable' => 'Exam Timetable', 'result-checker' => 'Results Checker', _ => serviceLabel(id, '${s['label']}')};
+      final label = switch(id) {'courses' => 'Study Materials', 'personalized-timetable' => 'Exam Timetable', 'result' => 'Results Checker', _ => serviceLabel(id, '${s['label']}')};
       return EditorialPanel(padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 5), onTap: () => onOpen(s), child: Column(children: [Container(width: 38, height: 38, decoration: BoxDecoration(gradient: LinearGradient(colors: [Color.lerp(tone, Colors.white, .1)!, tone]), borderRadius: BorderRadius.circular(10)), child: Icon(serviceIcon(id), size: 21, color: Colors.white)), const SizedBox(height: 8), Text(label, textAlign: TextAlign.center, maxLines: 3, style: editorialText(context, size: 10))]));
     }
     if (wideText) return Wrap(spacing: 8, runSpacing: 8, children: [for (var i = 0; i < items.length; i++) SizedBox(width: (constraints.maxWidth - 8) / 2, child: tile(i))]);
@@ -191,11 +205,11 @@ class EditorialWallet extends StatelessWidget {
   ]);
   Widget _transaction(BuildContext context, Map<String, dynamic> row) {
     final rawStatus = row['status']?.toString();
-    final success = ['credited', 'successful', 'success', 'completed'].contains(rawStatus?.toLowerCase());
+    final success = ['credited', 'successful', 'success', 'completed', 'posted'].contains(rawStatus?.toLowerCase());
     final topup = '${row['type'] ?? row['title']}'.toLowerCase().contains('top');
     final date = DateTime.tryParse('${row['created_at'] ?? ''}');
     final dateLabel = date == null ? '${row['created_at'] ?? ''}' : '${date.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.month-1]} ${date.year}';
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Row(children: [CircleAvatar(radius: 20, backgroundColor: topup ? const Color(0xffd9efd7) : const Color(0xfff3e8c6), child: Icon(topup ? Icons.add : Icons.description_rounded, color: topup ? editorialGreen : editorialGold, size: 23)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${row['title'] ?? 'Wallet transaction'}', style: editorialText(context, size: 12, weight: FontWeight.w700)), const SizedBox(height: 4), Text(dateLabel, style: editorialText(context, size: 10, color: SkinTokens.of(context).ink.withValues(alpha: .65)))])), const SizedBox(width: 8), Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(naira(row['amount_kobo']), style: editorialText(context, size: 12, weight: FontWeight.w700)), if (rawStatus != null) ...[const SizedBox(height: 4), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: success ? const Color(0xffd5efcf) : const Color(0xfff3e8c6), borderRadius: BorderRadius.circular(6)), child: Text(success ? 'Successful' : rawStatus, style: editorialText(context, size: 9, color: const Color(0xff243b28))))]])]));
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Row(children: [CircleAvatar(radius: 20, backgroundColor: topup ? const Color(0xffd9efd7) : const Color(0xfff3e8c6), child: Icon(topup ? Icons.add : Icons.description_rounded, color: topup ? editorialGreen : editorialGold, size: 23)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${row['title'] ?? 'Wallet transaction'}', style: editorialText(context, size: 12, weight: FontWeight.w700)), const SizedBox(height: 4), Text(dateLabel, style: editorialText(context, size: 10, color: SkinTokens.of(context).ink.withValues(alpha: .65)))])), const SizedBox(width: 8), Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(editorialMoney(row['amount_kobo']), style: editorialText(context, size: 12, weight: FontWeight.w700)), if (rawStatus != null) ...[const SizedBox(height: 4), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: success ? const Color(0xffd5efcf) : const Color(0xfff3e8c6), borderRadius: BorderRadius.circular(6)), child: Text(success ? 'Successful' : rawStatus, style: editorialText(context, size: 9, color: const Color(0xff243b28))))]])]));
   }
 }
 
@@ -217,11 +231,12 @@ class EditorialWelcome extends StatelessWidget {
     final minimum = 760.0 + (MediaQuery.textScalerOf(context).scale(14) / 14 - 1).clamp(0, 3) * 340;
     final height = constraints.maxHeight < minimum ? minimum : constraints.maxHeight;
     return SingleChildScrollView(child: SizedBox(height: height, child: Stack(fit: StackFit.expand, children: [
-      Image.asset('assets/images/skins/editorial-campus.webp', fit: BoxFit.cover),
+      const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xff003c29), Color(0xfff5f0df)]))),
+      Positioned(top: height * .15, left: 0, right: 0, bottom: 0, child: Image.asset('assets/images/skins/editorial-campus.webp', fit: BoxFit.cover)),
       const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x33002f20), Colors.transparent, Color(0xfff5f0df)], stops: [0, .74, 1]))),
       SafeArea(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 28), child: Column(children: [
         const SizedBox(height: 18), Align(alignment: Alignment.centerLeft, child: IconButton(tooltip: 'Continue as guest', onPressed: onGuest, icon: const Icon(Icons.arrow_back, color: Colors.white))),
-        const SizedBox(height: 12), const BrandLogo(size: 190), const SizedBox(height: 16),
+        const SizedBox(height: 12), EditorialLogo(size: height >= 950 ? 230 : 200), const SizedBox(height: 16),
         const Text('Your Academic\nCompanion at NOUN', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'NUReading', fontSize: 28, height: 1.08, color: Colors.white, fontWeight: FontWeight.w500)), const SizedBox(height: 11),
         Text('Updates. Resources. Past Questions.\nA Brighter You Always.', textAlign: TextAlign.center, style: editorialText(context, size: 13, color: Colors.white)),
         const Spacer(),
