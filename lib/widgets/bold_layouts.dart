@@ -211,7 +211,7 @@ class BoldHomeLayout extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [
       const Icon(Icons.account_balance_wallet_rounded, size: 19, color: boldGreen), const SizedBox(width: 6),
       Expanded(child: Text('Wallet Balance', style: boldText(c, size: 11, color: SkinTokens.of(c).primary, weight: FontWeight.w600))),
-    ]), const SizedBox(height: 12), Text(balance, style: boldText(c, size: 22, weight: FontWeight.w800)),
+    ]), const SizedBox(height: 12), FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Text(balance,style:boldText(c,size:22,weight:FontWeight.w800))),
     const Spacer(), InkWell(onTap: onTopUp, child: Padding(padding: const EdgeInsets.symmetric(vertical: 4),
       child: Text('${balance == '—' ? 'Sign in' : 'Top Up Wallet'} →', style: boldText(c,
         size: 11, color: SkinTokens.of(c).primary, weight: FontWeight.w700)))),

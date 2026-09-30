@@ -16,7 +16,7 @@ import 'live_portal_test.dart' show capture;
 class BoldReviewApi extends ApiClient {
   final writes = <String>[];
   @override Future<Map<String,dynamic>> getJson(String path) async {
-    if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
+    if(path=='/services')return {'data':{'items':jsonDecode(File('assets/data/services.json').readAsStringSync())}};
     if(path=='/study/EDU302/state')return {'data':{'done':[for(var i=0;i<12;i++)i]}};
     if(path=='/study/EDU302')return {'data':{'course_title':'Research Methods in Education','sections':[for(var i=0;i<20;i++){'index':i}]}};
     if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':'Consistency today creates success tomorrow.','author':'NOUN Update','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
@@ -49,9 +49,15 @@ void main(){
      debugShowCheckedModeBanner:false,theme:buildSkinTheme(skin,brightness:scenario.$4?Brightness.dark:Brightness.light),
      builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scenario.$3)),child:child!),home:child));
    final portal=LivePortal(apiClient:api,preview:true,previewData:boldPreviewData());
-   await tester.pumpWidget(wrap(portal));await tester.pumpAndSettle();
-   expect(find.text('60% complete'),findsOneWidget);expect(find.text('₦5,000.00'),findsOneWidget);
+   await tester.pumpWidget(wrap(portal));await tester.runAsync(()=>rootBundle.loadString('assets/data/services.json'));await tester.pumpAndSettle();
+   expect(tester.widget<BoldQuickTools>(find.byType(BoldQuickTools)).services.length,4);
    expect(find.text('IMPORTANT UPDATE'),findsWidgets);expect(tester.takeException(),isNull);
+   if(find.text('60% complete').evaluate().isEmpty){
+     await tester.scrollUntilVisible(find.byType(BoldContinueCourse),150,scrollable:find.byType(Scrollable).first);await tester.pumpAndSettle();
+   }
+   expect(find.text('60% complete'),findsOneWidget);expect(tester.takeException(),isNull);
+   final homeScroll=tester.state<ScrollableState>(find.descendant(of:find.byKey(const PageStorageKey('home')),matching:find.byType(Scrollable)).first);
+   homeScroll.position.jumpTo(0);await tester.pumpAndSettle();expect(find.text('₦5,000.00'),findsOneWidget);
    final suffix='${scenario.$2.toInt()}-${scenario.$4?'dark':'light'}';
    final screenshots=scenario.$1==390&&scenario.$3==1;
    if(screenshots)await capture(tester,key,'bold-home-$suffix');
@@ -60,6 +66,8 @@ void main(){
      expect(find.text('IMPORTANT UPDATE'),findsNothing);
    }
    await tester.tap(find.text('Study').last);await tester.pumpAndSettle();
+   final studyScroll=tester.state<ScrollableState>(find.descendant(of:find.byKey(const PageStorageKey('study')),matching:find.byType(Scrollable)).first);
+   studyScroll.position.jumpTo(0);await tester.pumpAndSettle();
    if(scenario.$3<=1.3){
    final titles=find.byType(BoldStudyLayout).evaluate().single;
    final rects=[for(final title in ['My Courses','Course Summary','Exam Summary','Past Questions','Course Materials','Study Hub'])tester.getRect(find.descendant(of:find.byWidget(titles.widget),matching:find.text(title)))];
