@@ -55,6 +55,7 @@ void main(){
      expect(title.top-icon.bottom,closeTo(18,0.1));
    }
    await tester.scrollUntilVisible(find.byTooltip('Quote actions'),100,scrollable:find.byType(Scrollable).first);
+   await Scrollable.ensureVisible(tester.element(find.byTooltip('Quote actions')),alignment:0.5);await tester.pumpAndSettle();
    await tester.tap(find.byTooltip('Quote actions'));await tester.pumpAndSettle();
    expect(find.text('Share Quote'),findsOneWidget);expect(find.text('Save Quote'),findsOneWidget);
    await tester.tap(find.text('Save Quote'));await tester.pumpAndSettle();
