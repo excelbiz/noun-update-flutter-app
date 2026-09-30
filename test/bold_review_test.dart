@@ -50,12 +50,13 @@ void main(){
      builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scenario.$3)),child:child!),home:child));
    final portal=LivePortal(apiClient:api,preview:true,previewData:boldPreviewData());
    await tester.pumpWidget(wrap(portal));await tester.runAsync(()=>rootBundle.loadString('assets/data/services.json'));await tester.pumpAndSettle();
-   expect(tester.widget<BoldQuickTools>(find.byType(BoldQuickTools)).services.length,4);
    expect(find.text('IMPORTANT UPDATE'),findsWidgets);expect(tester.takeException(),isNull);
    if(find.text('60% complete').evaluate().isEmpty){
      await tester.scrollUntilVisible(find.byType(BoldContinueCourse),150,scrollable:find.byType(Scrollable).first);await tester.pumpAndSettle();
    }
    expect(find.text('60% complete'),findsOneWidget);expect(tester.takeException(),isNull);
+   await tester.scrollUntilVisible(find.byType(BoldQuickTools),100,scrollable:find.byType(Scrollable).first);await tester.pumpAndSettle();
+   expect(tester.widget<BoldQuickTools>(find.byType(BoldQuickTools)).services.length,4);
    final homeScroll=tester.state<ScrollableState>(find.descendant(of:find.byKey(const PageStorageKey('home')),matching:find.byType(Scrollable)).first);
    homeScroll.position.jumpTo(0);await tester.pumpAndSettle();expect(find.text('₦5,000.00'),findsOneWidget);
    final suffix='${scenario.$2.toInt()}-${scenario.$4?'dark':'light'}';
@@ -82,7 +83,7 @@ void main(){
    expect(api.writes,isEmpty);await tester.pump(const Duration(seconds:5));await tester.pumpAndSettle();
    await tester.tap(find.text('Tools').last);await tester.pumpAndSettle();
    expect(find.text('Tools & Wallet'),findsOneWidget);expect(find.text('Explore'),findsOneWidget);expect(find.text('Active'),findsNothing);
-   for(final title in ['Fee Checker','PAS Status','Personalised Timetable','Mock e-Exam','Result Checker','CGPA Calculator'])expect(find.text(title),findsWidgets);
+   for(final title in ['Fee Checker','PAS Status','Personalised Timetable','Mock e-Exam','Result Checker','CGPA Calculator']){expect(find.text(title),findsWidgets);}
    expect(tester.takeException(),isNull);
    if(screenshots)await capture(tester,key,'bold-tools-$suffix');
    await tester.tap(find.text('See All').first);await tester.pumpAndSettle();
