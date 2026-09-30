@@ -1,3 +1,4 @@
+import 'bold_line_icons.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -132,7 +133,9 @@ class _NavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(color: selected && t.skin != AppSkin.elegantEditorial && t.skin != AppSkin.boldPremium ? (tech ? active.withValues(alpha: .12) : Color.lerp(t.surface, active, .12)) : Colors.transparent, borderRadius: BorderRadius.circular(friendly ? 22 : 12), border: tech && selected ? Border.all(color: active.withValues(alpha: .45)) : null),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(selected ? item.selected : item.icon, size: selected && tech ? 23 : 21, color: selected ? active : t.ink.withValues(alpha: .62)),
+            if (t.skin == AppSkin.boldPremium && ['Tools','Study','Wallet'].contains(item.label))
+              BoldLineIcon(switch(item.label){'Tools'=>'tools','Study'=>'my-courses',_=>'fees'}, size:21, color:selected?active:t.ink.withValues(alpha:.62))
+            else Icon(selected ? item.selected : item.icon, size: selected && tech ? 23 : 21, color: selected ? active : t.ink.withValues(alpha: .62)),
             const SizedBox(height: 3),
             Text(item.label, maxLines: 1, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontFamily: t.bodyFont, fontSize: 9, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, letterSpacing: tech ? .5 : 0, color: selected ? active : t.ink.withValues(alpha: .72))),
           ]),

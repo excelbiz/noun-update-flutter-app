@@ -33,7 +33,9 @@ void main(){
  setUpAll(()async{
    await rootBundle.loadString('assets/data/services.json');
    for(final f in [('NUSans','NUSans-Regular.ttf'),('NUReading','NUReading.ttf')]){
-     await (FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File('assets/fonts/${f.$2}').readAsBytesSync())))).load();
+     final loader=FontLoader(f.$1)..addFont(Future.value(ByteData.sublistView(File('assets/fonts/${f.$2}').readAsBytesSync())));
+     if(f.$1=='NUSans'){loader.addFont(Future.value(ByteData.sublistView(File('assets/fonts/NUSans-Bold.ttf').readAsBytesSync())));}
+     await loader.load();
    }
    final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
    await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
@@ -110,4 +112,20 @@ void main(){
    await tester.pumpWidget(const SizedBox.shrink());
   });
  }
+ testWidgets('Bold notice carousel fits long titles and opens the published item',(tester)async{
+  tester.view.physicalSize=const Size(320,640);tester.view.devicePixelRatio=1;
+  addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+  final notices=[{'id':7,'title':'Registration and examination arrangements for students awaiting programme and study centre changes this semester'},
+    {'id':8,'title':'Short published notice'}];
+  Map<String,dynamic>? opened;
+  await tester.pumpWidget(MaterialApp(theme:buildSkinTheme(AppSkin.boldPremium),
+    builder:(context,child)=>MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(1.5)),child:child!),
+    home:Scaffold(body:Padding(padding:const EdgeInsets.all(16),child:BoldUpdateBanner(
+      feed:Future.value({'items':notices}),onOpen:(row)=>opened=row)))));
+  await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+  await tester.drag(find.byType(PageView),const Offset(-270,0));await tester.pumpAndSettle();
+  await tester.tap(find.text('Short published notice'));await tester.pumpAndSettle();
+  expect(opened?['id'],8);expect(tester.takeException(),isNull);
+ });
+
 }

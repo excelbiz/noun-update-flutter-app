@@ -8,6 +8,7 @@ import '../core/skin_theme.dart';
 import '../core/study_state_store.dart';
 import 'editorial_layouts.dart' show EditorialCrown, editorialMoney;
 import 'native_ui.dart';
+import 'bold_line_icons.dart';
 
 const boldGreen = Color(0xff007046);
 const boldPurple = Color(0xff5926a5);
@@ -61,8 +62,9 @@ class BoldPanel extends StatelessWidget {
 }
 
 class BoldGlyph extends StatelessWidget {
-  const BoldGlyph(this.icon, {super.key, this.tone = boldGreen, this.size = 43});
+  const BoldGlyph(this.icon, {super.key, this.tone = boldGreen, this.size = 43, this.lineId});
   final IconData icon;
+  final String? lineId;
   final Color tone;
   final double size;
   @override Widget build(BuildContext context) => Container(width: size, height: size,
@@ -72,7 +74,8 @@ class BoldGlyph extends StatelessWidget {
       border: Border.all(color: Colors.white.withValues(alpha: .30)),
       boxShadow: [BoxShadow(color: tone.withValues(alpha: .13), blurRadius: 7,
         offset: const Offset(0, 3))]),
-    child: Icon(icon, size: size * .62, color: Colors.white));
+    child: Center(child: lineId == null || !BoldLineIcon.supports(lineId!) ? Icon(icon, size: size * .62, color: Colors.white)
+      : BoldLineIcon(lineId!, size: size * .62)));
 }
 
 class BoldHeading extends StatelessWidget {
@@ -145,36 +148,46 @@ class _BoldUpdateBannerState extends State<BoldUpdateBanner> {
       final rows = records(snapshot.data?['items']).take(5).toList();
       if (dismissed || rows.isEmpty) return const SizedBox.shrink();
       final dark = Theme.of(context).brightness == Brightness.dark;
-      final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
-      return Column(children: [Container(height: 118 + math.max(0.0, scale - 1) * 140,
-        decoration: BoxDecoration(color: dark ? const Color(0xff301b20) : const Color(0xfffff6f6),
-          borderRadius: BorderRadius.circular(13), border: Border.all(color: boldRed.withValues(alpha: .14))),
-        child: ClipRRect(borderRadius: BorderRadius.circular(13), child: Stack(children: [
-          Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 4, color: boldRed)),
-          PageView.builder(controller: controller, itemCount: rows.length,
-            onPageChanged: (value) => setState(() => page = value), itemBuilder: (context, i) => InkWell(
-              onTap: () => widget.onOpen(rows[i]), child: Padding(padding: const EdgeInsets.fromLTRB(12, 13, 30, 12),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.campaign_rounded, color: boldRed, size: 36), const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('IMPORTANT UPDATE', style: boldText(context, size: 10,
-                      color: dark ? const Color(0xffffa4a8) : boldRed, weight: FontWeight.w800)),
-                    const SizedBox(height: 5), Text('${rows[i]['title']}', maxLines: 3,
-                      overflow: TextOverflow.ellipsis, style: boldText(context, size: 13, weight: FontWeight.w700)),
-                    const Spacer(), Text('Tap to view details →', style: boldText(context, size: 10)),
-                  ])),
-                ])))),
-          Positioned(top: 0, right: 0, child: IconButton(tooltip: 'Dismiss update',
-            onPressed: () => setState(() => dismissed = true), icon: Icon(Icons.close,
-              size: 16, color: SkinTokens.of(context).ink.withValues(alpha: .45)))),
-        ]))),
-        if (rows.length > 1) Padding(padding: const EdgeInsets.only(top: 9), child: Row(
-          mainAxisAlignment: MainAxisAlignment.center, children: [for (var i = 0; i < rows.length; i++)
-            Container(width: 5, height: 5, margin: const EdgeInsets.symmetric(horizontal: 3),
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                color: i == page ? boldGreen : SkinTokens.of(context).ink.withValues(alpha: .18)))])),
-        const SizedBox(height: 13),
-      ]);
+      return LayoutBuilder(builder: (context, box) {
+        final textWidth = math.max(1.0, math.min(230.0, box.maxWidth - 90));
+        final labelStyle = boldText(context, size: 11, color: dark ? const Color(0xffffa4a8) : boldRed, weight: FontWeight.w800);
+        final titleStyle = boldText(context, size: 15, weight: FontWeight.w700);
+        final actionStyle = boldText(context, size: 10);
+        double measure(String text, TextStyle style, int lines) {
+          final painter = TextPainter(text: TextSpan(text: text, style: style), maxLines: lines,
+            ellipsis: '…', textDirection: Directionality.of(context), textScaler: MediaQuery.textScalerOf(context))..layout(maxWidth: textWidth);
+          final height = painter.height; painter.dispose(); return height;
+        }
+        final titleHeight = rows.map((r) => measure('${r['title']}', titleStyle, 3)).reduce(math.max);
+        final cardHeight = 27 + measure('IMPORTANT UPDATE', labelStyle, 2) + 5 + titleHeight + 10 + measure('Tap to view details →', actionStyle, 2);
+        return Column(children: [Container(height: cardHeight,
+          decoration: BoxDecoration(color: dark ? const Color(0xff301b20) : const Color(0xfffff6f6),
+            borderRadius: BorderRadius.circular(13), border: Border.all(color: boldRed.withValues(alpha: .14))),
+          child: ClipRRect(borderRadius: BorderRadius.circular(13), child: Stack(children: [
+            Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 4, color: boldRed)),
+            PageView.builder(controller: controller, itemCount: rows.length,
+              onPageChanged: (value) => setState(() => page = value), itemBuilder: (context, i) => InkWell(
+                onTap: () => widget.onOpen(rows[i]), child: Padding(padding: const EdgeInsets.fromLTRB(12, 13, 30, 12),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.campaign_rounded, color: boldRed, size: 36), const SizedBox(width: 10),
+                    SizedBox(width: textWidth, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('IMPORTANT UPDATE', style: labelStyle), const SizedBox(height: 5),
+                      Text('${rows[i]['title']}', maxLines: 3, overflow: TextOverflow.ellipsis, style: titleStyle),
+                      const SizedBox(height: 10), Text('Tap to view details →', style: actionStyle),
+                    ])),
+                  ])))),
+            Positioned(top: 0, right: 0, child: IconButton(tooltip: 'Dismiss update',
+              onPressed: () => setState(() => dismissed = true), icon: Icon(Icons.close,
+                size: 16, color: SkinTokens.of(context).ink.withValues(alpha: .45)))),
+          ]))),
+          if (rows.length > 1) Padding(padding: const EdgeInsets.only(top: 9), child: Row(
+            mainAxisAlignment: MainAxisAlignment.center, children: [for (var i = 0; i < rows.length; i++)
+              Container(width: 5, height: 5, margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(shape: BoxShape.circle,
+                  color: i == page ? boldGreen : SkinTokens.of(context).ink.withValues(alpha: .18)))])),
+          const SizedBox(height: 13),
+        ]);
+      });
     });
 }
 
@@ -209,7 +222,7 @@ class BoldHomeLayout extends StatelessWidget {
   final Widget? setup;
   Widget _balance(BuildContext c) => BoldPanel(onTap: onWallet, child: Column(
     crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [
-      const Icon(Icons.account_balance_wallet_rounded, size: 19, color: boldGreen), const SizedBox(width: 6),
+      const BoldGlyph(Icons.account_balance_wallet_outlined, lineId: 'fees', size: 20), const SizedBox(width: 6),
       Expanded(child: Text('Wallet Balance', style: boldText(c, size: 11, color: SkinTokens.of(c).primary, weight: FontWeight.w600))),
     ]), const SizedBox(height: 12), FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Text(balance,style:boldText(c,size:22,weight:FontWeight.w800))),
     const Spacer(), InkWell(onTap: onTopUp, child: Padding(padding: const EdgeInsets.symmetric(vertical: 4),
@@ -221,7 +234,7 @@ class BoldHomeLayout extends StatelessWidget {
     final remaining = date?.difference(DateTime.now());
     final days = remaining == null || remaining.isNegative ? null : (remaining.inSeconds / 86400).ceil();
     return BoldPanel(onTap: onExam, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [const Icon(Icons.calendar_month_rounded, size: 20, color: Color(0xff1684a9)),
+      Row(children: [const BoldGlyph(Icons.calendar_month_outlined, lineId: 'personalized-timetable', size: 20, tone: Color(0xff1684a9)),
         const SizedBox(width: 6), Expanded(child: Text('Next Exam', style: boldText(c, size: 11, weight: FontWeight.w700)))]),
       const SizedBox(height: 10), if (nextExam == null) Expanded(child: Text(nextExamSummary,
         maxLines: 5, overflow: TextOverflow.ellipsis, style: boldText(c, size: 11))) else ...[
@@ -262,7 +275,7 @@ class BoldQuickTools extends StatelessWidget {
       final label = switch (id) {'mock' => 'Mock e-Exam', _ => serviceLabel(id, '${s['label']}')};
       return InkWell(onTap: () => onOpen(s), borderRadius: BorderRadius.circular(12), child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2), child: Column(children: [
-          BoldGlyph(boldToolIcon(id), tone: boldToolTone(id), size: 48), const SizedBox(height: 8),
+          BoldGlyph(boldToolIcon(id), lineId: id == 'past-questions' ? 'past-paper' : id, tone: boldToolTone(id), size: 48), const SizedBox(height: 8),
           Text(label, maxLines: 3, textAlign: TextAlign.center, style: boldText(context, size: 10, weight: FontWeight.w600)),
         ])));
     }
@@ -370,7 +383,7 @@ class BoldStudyLayout extends StatelessWidget {
           child: Material(color: Colors.transparent, child: InkWell(onTap: cell.tap,
             borderRadius: BorderRadius.circular(14), child: Padding(padding: const EdgeInsets.all(15),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(cell.icon, size: 35, color: const Color(0xffeef8e9)), const SizedBox(height: 13),
+                BoldLineIcon(cell.id, size: 35, color: const Color(0xffeef8e9)), const SizedBox(height: 13),
                 Text(cell.title, maxLines: 2, overflow: TextOverflow.ellipsis,
                   style: boldText(context, size: 15, color: Colors.white, weight: FontWeight.w700)),
                 const SizedBox(height: 5), Expanded(child: Text(cell.caption, maxLines: 3,
@@ -385,7 +398,7 @@ class BoldStudyLayout extends StatelessWidget {
       ])),
       for (final s in services.where((s) => !ids.contains(s['id']))) Padding(padding: const EdgeInsets.only(top: 10),
         child: BoldPanel(onTap: () => onOpen(s), child: Row(children: [
-          BoldGlyph(boldToolIcon('${s['id']}'), tone: boldToolTone('${s['id']}'), size: 34), const SizedBox(width: 10),
+          BoldGlyph(boldToolIcon('${s['id']}'), lineId: '${s['id']}', tone: boldToolTone('${s['id']}'), size: 34), const SizedBox(width: 10),
           Expanded(child: Text(serviceLabel('${s['id']}', '${s['label']}'), style: boldText(context, weight: FontWeight.w600))),
           const Icon(Icons.chevron_right, size: 20),
         ]))),
@@ -401,7 +414,7 @@ class BoldBalanceStrip extends StatelessWidget {
   @override Widget build(BuildContext context) {
     final wideText = MediaQuery.textScalerOf(context).scale(12) > 16;
     final info = Row(children:[
-      const BoldGlyph(Icons.account_balance_wallet_outlined, tone: Color(0xff086661), size: 44),
+      const BoldGlyph(Icons.account_balance_wallet_outlined, lineId: 'fees', tone: Color(0xff086661), size: 44),
       const SizedBox(width:11), Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text('Wallet Balance',style:boldText(context,size:10)),const SizedBox(height:4),
         Text(balance,style:boldText(context,size:20,weight:FontWeight.w800)),
@@ -517,7 +530,7 @@ class _BoldToolsLayoutState extends State<BoldToolsLayout> {
             'pas-status' => 'Check your assessment status', 'personalized-timetable' => 'Create and manage your study schedule',
             'mock' => 'Practise with real exam experience', 'result' => 'Check your results instantly', _ => 'Calculate your CGPA easily'};
           return BoldPanel(padding: const EdgeInsets.all(11), onTap: () => onOpen(s), child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: [BoldGlyph(boldToolIcon(id), tone: boldToolTone(id), size: 32),
+            crossAxisAlignment: CrossAxisAlignment.start, children: [BoldGlyph(boldToolIcon(id), lineId: id, tone: boldToolTone(id), size: 32),
               const SizedBox(height: 7), Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: boldText(context, size: 12, weight: FontWeight.w700)), const SizedBox(height: 3),
               Expanded(child: Text(caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: boldText(context, size: 10))),
@@ -532,7 +545,7 @@ class _BoldToolsLayoutState extends State<BoldToolsLayout> {
       if (services.isEmpty) Padding(padding: const EdgeInsets.only(top: 16), child: Text('No tools match your search.', style: boldText(context))),
       for (final s in [...services.where((s) => pinned.contains('${s['id']}')), ...rest.where((s) => !pinned.contains('${s['id']}'))])
         Padding(padding: const EdgeInsets.only(top: 10), child: BoldPanel(padding: EdgeInsets.zero,
-          child: ListTile(leading: BoldGlyph(boldToolIcon('${s['id']}'), tone: boldToolTone('${s['id']}'), size: 34),
+          child: ListTile(leading: BoldGlyph(boldToolIcon('${s['id']}'), lineId: '${s['id']}', tone: boldToolTone('${s['id']}'), size: 34),
             title: Text(serviceLabel('${s['id']}', '${s['label']}'), style: boldText(context, weight: FontWeight.w600)),
             onTap: () => onOpen(s), trailing: IconButton(tooltip: pinned.contains('${s['id']}') ? 'Unpin tool' : 'Pin tool',
               onPressed: () => onTogglePin(s), icon: Icon(pinned.contains('${s['id']}') ? Icons.push_pin : Icons.push_pin_outlined, size: 19))))),
@@ -557,7 +570,10 @@ class BoldWelcome extends StatelessWidget {
           child: IgnorePointer(child: CustomPaint(painter: _BoldWelcomeWave(t.background)))),
         Positioned(top: height * .515, left: 28, right: 28, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('Learn Anytime', textAlign: TextAlign.center, style: boldText(context, size: 29, weight: FontWeight.w800)),
-          Text('Go Further', textAlign: TextAlign.center, style: boldText(context, size: 29, color: t.primary, weight: FontWeight.w800)),
+          ShaderMask(blendMode: BlendMode.srcIn, shaderCallback: (bounds) => LinearGradient(
+            colors: [t.primary, Theme.of(context).brightness == Brightness.dark ? const Color(0xffe3c46e) : const Color(0xff817519), t.primary],
+            stops: const [0, .55, 1]).createShader(bounds), child: Text('Go Further', textAlign: TextAlign.center,
+            style: boldText(context, size: 29, color: Colors.white, weight: FontWeight.w800))),
           const SizedBox(height: 9), Text('Your complete NOUN student\nsupport app.', textAlign: TextAlign.center, style: boldText(context, size: 14)),
           const SizedBox(height: 27), SizedBox(height: 49 + math.max(0.0, scale - 1) * 25,
             child: FilledButton(style: FilledButton.styleFrom(backgroundColor: const Color(0xff005532), foregroundColor: Colors.white,
