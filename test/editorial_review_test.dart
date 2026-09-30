@@ -33,7 +33,7 @@ void main(){
    final icons=File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
    await (FontLoader('MaterialIcons')..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())))).load();
  });
- for(final scenario in [(390.0,844.0,1.0,false),(390.0,1040.0,1.0,false),(390.0,844.0,1.0,true),(320.0,844.0,1.5,false),(320.0,844.0,1.5,true)]){
+ for(final scenario in [(390.0,844.0,1.0,false),(390.0,1040.0,1.0,false),(390.0,844.0,1.0,true),(320.0,844.0,1.0,false),(390.0,844.0,1.25,false),(320.0,844.0,1.5,false),(320.0,844.0,1.5,true)]){
   testWidgets('Elegant Editorial real layouts ${scenario.$1}x${scenario.$2} scale ${scenario.$3} dark ${scenario.$4}',(tester)async{
    SharedPreferences.setMockInitialValues({});PremiumService.instance.clear();addTearDown(PremiumService.instance.clear);
    tester.view.physicalSize=Size(scenario.$1,scenario.$2);tester.view.devicePixelRatio=1;
@@ -45,18 +45,33 @@ void main(){
    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/editorial-emblem.webp'),tester.element(find.byType(LivePortal))));await tester.pumpAndSettle();
    expect(find.text('CIT321'),findsWidgets);expect(find.text('65% complete'),findsOneWidget);expect(tester.takeException(),isNull);
    final suffix='${scenario.$2.toInt()}-${scenario.$4?'dark':'light'}';
-   if(scenario.$1==390)await capture(tester,key,'editorial-home-$suffix');
+   if(scenario.$1==390&&scenario.$3==1)await capture(tester,key,'editorial-home-$suffix');
    await tester.tap(find.text('Study').last);await tester.pumpAndSettle();
    expect(find.text('Course Summary'),findsOneWidget);expect(find.text('Exam Summary'),findsOneWidget);expect(tester.takeException(),isNull);
-   if(scenario.$1==390)await capture(tester,key,'editorial-study-$suffix');
+   if(scenario.$1==390&&scenario.$3==1){
+     // Extra screen height must not stretch the poster's compact study cards.
+     final icon=tester.getRect(find.byIcon(Icons.menu_book_outlined).first);
+     final title=tester.getRect(find.text('Course Summary'));
+     expect(title.top-icon.bottom,closeTo(18,0.1));
+   }
+   await tester.scrollUntilVisible(find.byTooltip('Quote actions'),100,scrollable:find.byType(Scrollable).first);
+   await tester.tap(find.byTooltip('Quote actions'));await tester.pumpAndSettle();
+   expect(find.text('Share Quote'),findsOneWidget);expect(find.text('Save Quote'),findsOneWidget);
+   await tester.tap(find.text('Save Quote'));await tester.pumpAndSettle();
+   expect(api.writes,isEmpty);
+   await tester.pump(const Duration(seconds:5));await tester.pumpAndSettle();
+   // Restore the first viewport for the visual review captures.
+   await tester.drag(find.byType(ListView).first,const Offset(0,1500));await tester.pumpAndSettle();
+
+   if(scenario.$1==390&&scenario.$3==1)await capture(tester,key,'editorial-study-$suffix');
    await tester.tap(find.text('Wallet').last);await tester.pumpAndSettle();
    expect(find.text('₦5,200.00'),findsOneWidget);expect(find.text('Active'),findsNothing);expect(tester.takeException(),isNull);
-   if(scenario.$1==390)await capture(tester,key,'editorial-wallet-$suffix');
+   if(scenario.$1==390&&scenario.$3==1)await capture(tester,key,'editorial-wallet-$suffix');
    await tester.scrollUntilVisible(find.text('My Exam Summaries'),200,scrollable:find.byType(Scrollable).first);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await tester.tap(find.text('More').last);await tester.pumpAndSettle();expect(find.byType(TextField),findsOneWidget);expect(tester.takeException(),isNull);
    await tester.pumpWidget(wrap(NativeAuth(api)));
    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/editorial-campus.webp'),tester.element(find.byType(NativeAuth))));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
-   if(scenario.$1==390)await capture(tester,key,'editorial-welcome-$suffix');
+   if(scenario.$1==390&&scenario.$3==1)await capture(tester,key,'editorial-welcome-$suffix');
    await tester.scrollUntilVisible(find.text('Log In'),200,scrollable:find.byType(Scrollable).first);await tester.tap(find.text('Log In'));await tester.pumpAndSettle();
    expect(find.widgetWithText(TextField,'Email address'),findsOneWidget);expect(find.widgetWithText(TextField,'Password'),findsOneWidget);expect(tester.takeException(),isNull);
    expect(api.writes,isEmpty);expect(PremiumService.instance.isPremium,isFalse);expect((await SharedPreferences.getInstance()).getString('nu-study-editorial-sample-CIT321'),isNull);

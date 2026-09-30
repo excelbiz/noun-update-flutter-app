@@ -9,7 +9,7 @@ import 'native_ui.dart';
 
 const editorialGreen = Color(0xff005037);
 const editorialRed = Color(0xffa01724);
-const editorialGold = Color(0xffb18a35);
+const editorialGold = Color(0xffc79b40);
 
 String editorialMoney(dynamic kobo) {
   final amount = (num.tryParse('$kobo') ?? 0) / 100;
@@ -191,12 +191,14 @@ class EditorialStudyLayout extends StatelessWidget {
       cells.add((label: serviceLabel(id, '${s['label']}'), caption: switch(id) {'course-summary' => 'Concise notes and key points', 'exam-summary' => 'Key areas, tips and revision resources', 'past-questions' => 'Years of past questions with answers', 'courses' => 'Download and read course content', _ => 'Study tips, guides and useful resources'}, icon: switch(id) {'course-summary' => Icons.menu_book_outlined, 'exam-summary' || 'courses' => Icons.description_rounded, 'past-questions' => Icons.help_rounded, _ => Icons.groups_rounded}, tone: switch(id) {'exam-summary' || 'study-hub' => editorialGold, 'past-questions' => editorialRed, _ => editorialGreen}, ivory: false, tap: () => onOpen(s)));
     }
     final large = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final tileHeight = ((MediaQuery.sizeOf(context).height - 365) / 3).clamp(164.0, 220.0);
+    // Keep the poster's compact card proportions on taller phones too.
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final tileHeight = (MediaQuery.sizeOf(context).width < 350 ? 182.0 : 164.0) + (textScale - 1).clamp(0, 1) * 100;
     return ListView(key: const PageStorageKey('study'), padding: const EdgeInsets.fromLTRB(16, 14, 16, 24), children: [
       EditorialSearch(onTap: onSearch),
       GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: cells.length, gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: large ? 1 : 2, crossAxisSpacing: 10, mainAxisSpacing: 10, mainAxisExtent: large ? 200 : tileHeight), itemBuilder: (context, i) {
         final cell = cells[i], ink = cell.ivory ? SkinTokens.of(context).ink : Colors.white;
-        return Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(13), boxShadow: [BoxShadow(color: cell.tone.withValues(alpha: .09), blurRadius: 12, offset: const Offset(0, 4))], gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: cell.ivory ? [SkinTokens.of(context).surface, SkinTokens.of(context).background] : [Color.lerp(cell.tone, Colors.white, .08)!, Color.lerp(cell.tone, Colors.black, .12)!]), border: Border.all(color: cell.ivory ? editorialGold.withValues(alpha: .16) : Colors.white.withValues(alpha: .10))), child: Material(color: Colors.transparent, child: InkWell(onTap: cell.tap, borderRadius: BorderRadius.circular(13), child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Align(alignment: Alignment.center, child: Icon(cell.icon, size: 43, color: cell.ivory ? SkinTokens.of(context).primary : const Color(0xfffff8e4))), const Spacer(), Text(cell.label, style: editorialText(context, size: 16, color: ink, weight: FontWeight.w700)), const SizedBox(height: 6), Text(cell.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: editorialText(context, size: 11, color: ink.withValues(alpha: .94)))])))));
+        return Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(13), boxShadow: [BoxShadow(color: cell.tone.withValues(alpha: .09), blurRadius: 12, offset: const Offset(0, 4))], gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: cell.ivory ? [SkinTokens.of(context).surface, SkinTokens.of(context).background] : [Color.lerp(cell.tone, Colors.white, .08)!, Color.lerp(cell.tone, Colors.black, .12)!]), border: Border.all(color: cell.ivory ? editorialGold.withValues(alpha: .16) : Colors.white.withValues(alpha: .10))), child: Material(color: Colors.transparent, child: InkWell(onTap: cell.tap, borderRadius: BorderRadius.circular(13), child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Align(alignment: Alignment.center, child: Icon(cell.icon, size: 43, color: cell.ivory ? SkinTokens.of(context).primary : const Color(0xfffff8e4))), const SizedBox(height: 18), Text(cell.label, style: editorialText(context, size: 16, color: ink, weight: FontWeight.w700)), const SizedBox(height: 6), Text(cell.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: editorialText(context, size: 11, color: ink.withValues(alpha: .94)))])))));
       }),
       const SizedBox(height: 17), motivation,
       EditorialHeading('Your library'),

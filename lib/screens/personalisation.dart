@@ -162,13 +162,34 @@ class _MotivationCardState extends State<MotivationCard> with WidgetsBindingObse
       try{final q=jsonDecode(prefs.getString('nu-daily-motivation')??'null');if(q is Map&&q['date']==today&&mounted)setState((){quote=Map<String,dynamic>.from(q);offline=true;});}catch(_){/* Discard damaged cache. */}
     }
   }
-  @override Widget build(BuildContext context){final q=quote;if(q==null||q['date']!=today)return const SizedBox.shrink();final editorial=SkinTokens.of(context).skin==AppSkin.elegantEditorial;return SkinQuotePanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    if(!editorial)...[Text('TODAY’S MOTIVATION',style:TextStyle(color:Theme.of(context).colorScheme.primary,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.5)),const SizedBox(height:12)],
-    Text(editorial?'${q['quote']}':'“${q['quote']}”',style:TextStyle(fontFamily:editorial?'NUSans':null,fontSize:editorial?14:21,height:editorial?1.25:1.4,fontWeight:editorial?FontWeight.w400:FontWeight.w700)),const SizedBox(height:10),Align(alignment:editorial?Alignment.centerRight:Alignment.centerLeft,child:Text('— ${q['author']}',style:TextStyle(fontSize:editorial?11:null))),
-    if(offline)const Text('Saved for today · Offline',style:TextStyle(fontSize:11)),
-    Wrap(spacing:8,children:[TextButton.icon(onPressed:()=>pushNu(context,BrandedShareCard(title:'Today’s motivation',message:'${q['quote']}',author:'${q['author']}')),icon:const Icon(Icons.share_outlined),label:const Text('Share Quote')),
-    TextButton.icon(onPressed:saving?null:()async{if(PremiumService.instance.accountId==null){nuMessage(context,'Sign in to save your favourite quotes.');return;}setState(()=>saving=true);try{await widget.api.postJson('/motivation/saved',{'quote_id':int.parse('${q['id']}'),'saved':true});if(context.mounted)nuMessage(context,'Added to Saved Motivation.');}catch(e){if(context.mounted)nuMessage(context,e);}finally{if(mounted)setState(()=>saving=false);}},icon:const Icon(Icons.favorite_border),label:const Text('Save Quote'))]),
-  ]));}
+  void shareQuote(Map<String,dynamic> q)=>pushNu(context,BrandedShareCard(title:'Today’s motivation',message:'${q['quote']}',author:'${q['author']}'));
+  Future<void> saveQuote(Map<String,dynamic> q)async{
+    if(PremiumService.instance.accountId==null){nuMessage(context,'Sign in to save your favourite quotes.');return;}
+    setState(()=>saving=true);
+    try{await widget.api.postJson('/motivation/saved',{'quote_id':int.parse('${q['id']}'),'saved':true});if(mounted)nuMessage(context,'Added to Saved Motivation.');}
+    catch(e){if(mounted)nuMessage(context,e);}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
+  @override Widget build(BuildContext context){
+    final q=quote;if(q==null||q['date']!=today)return const SizedBox.shrink();
+    final editorial=SkinTokens.of(context).skin==AppSkin.elegantEditorial;
+    return SkinQuotePanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      if(!editorial)...[Text('TODAY’S MOTIVATION',style:TextStyle(color:Theme.of(context).colorScheme.primary,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1.5)),const SizedBox(height:12)],
+      Text(editorial?'${q['quote']}':'“${q['quote']}”',style:TextStyle(fontFamily:editorial?'NUSans':null,fontSize:editorial?14:21,height:editorial?1.25:1.4,fontWeight:editorial?FontWeight.w400:FontWeight.w700)),const SizedBox(height:10),
+      if(editorial) Row(children:[
+        Expanded(child:Text('— ${q['author']}',textAlign:TextAlign.right,style:const TextStyle(fontFamily:'NUSans',fontSize:11))),
+        PopupMenuButton<String>(tooltip:'Quote actions',padding:EdgeInsets.zero,iconSize:18,constraints:const BoxConstraints(minWidth:180),
+          onSelected:(action){if(action=='share'){shareQuote(q);}else if(!saving){saveQuote(q);}},
+          itemBuilder:(_)=>[const PopupMenuItem(value:'share',child:Text('Share Quote')),PopupMenuItem(value:'save',enabled:!saving,child:Text(saving?'Saving…':'Save Quote'))],
+        ),
+      ]) else Text('— ${q['author']}'),
+      if(offline)const Text('Saved for today · Offline',style:TextStyle(fontSize:11)),
+      if(!editorial) Wrap(spacing:8,children:[
+        TextButton.icon(onPressed:()=>shareQuote(q),icon:const Icon(Icons.share_outlined),label:const Text('Share Quote')),
+        TextButton.icon(onPressed:saving?null:()=>saveQuote(q),icon:const Icon(Icons.favorite_border),label:const Text('Save Quote')),
+      ]),
+    ]));
+  }
 }
 class SavedMotivation extends StatefulWidget {
   const SavedMotivation({super.key,required this.api});final ApiClient api;
