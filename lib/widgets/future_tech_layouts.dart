@@ -46,8 +46,8 @@ class TechTopBar extends StatelessWidget implements PreferredSizeWidget{
   final title=switch(page){1=>'Study',2=>'Tools',3=>'Updates',_=>'Profile'};
   final subtitle=switch(page){1=>'Everything you need to excel',2=>'Helpful utilities for NOUN students',3=>'Stay informed. Stay ahead.',_=>'Your NOUN journey, organised'};
   return AppBar(backgroundColor:t.background,foregroundColor:t.ink,toolbarHeight:preferredSize.height,elevation:0,scrolledUnderElevation:0,titleSpacing:16,
-   title:Row(children:[Container(width:39,height:39,decoration:BoxDecoration(shape:BoxShape.circle,color:page==0?t.ink:t.primary.withValues(alpha:.08),border:Border.all(color:t.primary.withValues(alpha:.45))),
-    child:Icon(page==0?Icons.person:page==1?Icons.check_circle_outline:page==2?Icons.handyman_outlined:Icons.person_outline,color:page==0?t.heroSurface:t.primary,size:page==0?29:33)),
+   title:Row(children:[Container(width:39,height:39,decoration:BoxDecoration(shape:BoxShape.circle,color:page==0?(nuIsDark(c)?t.ink:t.primary):t.primary.withValues(alpha:.08),border:Border.all(color:t.primary.withValues(alpha:.45))),
+    child:Icon(page==0?Icons.person:page==1?Icons.check_circle_outline:page==2?Icons.handyman_outlined:Icons.person_outline,color:page==0?(nuIsDark(c)?t.heroSurface:Colors.white):t.primary,size:page==0?29:33)),
     const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      if(page==0)Text('Hello,',style:techText(c,size:10)),Text(page==0?'${name.isEmpty?'NOUN Student':name} 👋':title,maxLines:2,overflow:TextOverflow.ellipsis,style:techText(c,size:page==0?15:24,weight:FontWeight.w700)),
      const SizedBox(height:3),Text(page==0?'Keep going, greater things ahead!':subtitle,maxLines:2,style:techText(c,size:10,color:t.ink.withValues(alpha:.76))),
@@ -66,7 +66,7 @@ class TechNavigation extends StatelessWidget{
    child:Row(children:[destination(0,'Home',Icons.home_rounded),destination(1,'Study',Icons.menu_book_outlined),
     Expanded(child:Transform.translate(offset:const Offset(0,-10),child:Center(child:Tooltip(message:'My Courses hub',child:Semantics(button:true,label:'My Courses hub',child:InkWell(onTap:onCourses,borderRadius:BorderRadius.circular(32),child:Container(width:56,height:56,
      decoration:BoxDecoration(shape:BoxShape.circle,gradient:RadialGradient(colors:[Color.lerp(t.heroSurface,techGold,.20)!,t.heroSurface]),border:Border.all(color:techGold,width:1.8),boxShadow:[BoxShadow(color:techGold.withValues(alpha:.24),blurRadius:10)]),
-     child:Icon(Icons.school_rounded,size:28,color:t.primary)))))))),destination(2,'Tools',Icons.grid_view_rounded),destination(4,'Profile',Icons.person_outline_rounded)])));
+     child:Icon(Icons.school_rounded,size:28,color:nuIsDark(c)?t.primary:techGold)))))))),destination(2,'Tools',Icons.grid_view_rounded),destination(4,'Profile',Icons.person_outline_rounded)])));
  }
 }
 class TechResourceRow extends StatelessWidget{
