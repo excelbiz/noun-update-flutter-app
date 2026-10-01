@@ -87,7 +87,7 @@ class NuPanel extends StatelessWidget {
   final tech=skinned&&tokens.skin==AppSkin.futureTech;
   final luxury=skinned&&tokens.skin==AppSkin.premiumDark;
   final radius=tokens?.radius??18;
-  final fill=skinned?(color==nuDeep||color==nuGreen?tokens.heroSurface:color==Colors.white?tokens.surface:Color.lerp(tokens.surface,color,nuIsDark(context)?.10:.075)!):nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
+  final fill=skinned?(color==nuDeep||color==nuGreen?tokens.heroSurface:color==Colors.white?tokens.surface:Color.lerp(tokens.surface,color,nuIsDark(context) ? .10 : .075)!):nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
   final panel=Container(padding:EdgeInsets.all(padding),decoration:BoxDecoration(
    color:glass?fill.withValues(alpha:.70):fill,
    gradient:skinned&&(tech||luxury)?LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill,Color.lerp(fill,tokens.primary,.07)!]):null,

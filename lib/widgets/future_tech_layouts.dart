@@ -23,8 +23,8 @@ class TechPanel extends StatelessWidget{
   return Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
    gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:dark?
     [Color.lerp(t.surface,accent,.12)!,t.surface,Color.lerp(t.background,accent,.08)!]:[t.surface,Color.lerp(t.surface,accent,.035)!]),
-   border:Border.all(color:accent.withValues(alpha:dark?.36:.22)),
-   boxShadow:[BoxShadow(color:accent.withValues(alpha:dark?.07:.04),blurRadius:12)]),
+   border:Border.all(color:accent.withValues(alpha:dark ? .36 : .22)),
+   boxShadow:[BoxShadow(color:accent.withValues(alpha:dark ? .07 : .04),blurRadius:12)]),
    child:Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(12),child:Padding(padding:EdgeInsets.all(padding),child:child))));
  }
 }
