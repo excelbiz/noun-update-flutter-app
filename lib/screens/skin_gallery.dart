@@ -68,6 +68,8 @@ class _SkinPreviewApi extends ApiClient {
   _SkinPreviewApi({this.editorial=false,this.bold=false,this.future=false});
   final bool editorial,bold,future;
   @override Future<Map<String,dynamic>> getJson(String path)async{
+    if(path=='/fees/options')return {'data':{'items':[{'program':'B.Sc. Computer Science','level':'300','semester':'2026_2'}]}};
+    if(path.startsWith('/materials'))return {'data':{'items':[{'course_code':editorial?'CIT321':bold?'EDU302':'GST101','title':editorial?'Computer Systems and Networks':bold?'Research Methods in Education':'Use of English'}]}};
     if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
     if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':editorial?'Discipline today creates the freedom you want tomorrow.':bold?'Consistency today creates success tomorrow.':'Discipline today, a brighter tomorrow.','author':bold?'NOUN Update':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
     if(future&&path.startsWith('/study/'))return futurePreviewStudy(path);

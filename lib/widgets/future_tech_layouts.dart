@@ -106,7 +106,7 @@ class TechExamCard extends StatelessWidget{
     if(exam!=null)Text('${exam!['course_title']}',style:techText(c,size:11)),
    ])),if(date!=null)Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),decoration:BoxDecoration(color:const Color(0xffdf293b),borderRadius:BorderRadius.circular(9)),child:Column(children:[
     Text('${date.day}',style:techText(c,size:24,color:Colors.white,weight:FontWeight.w700)),Text('${const ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][date.month-1]} ${date.year}',style:techText(c,size:8,color:Colors.white)),
-   ])),]),if(exam!=null)...[const SizedBox(height:10),Wrap(spacing:12,runSpacing:6,children:[Text('◷ ${exam!['time']??''}',style:techText(c,size:10)),if(centre?.isNotEmpty==true)Text('⌖ $centre',style:techText(c,size:10))])]]));
+   ])),]),if(exam!=null)...[const SizedBox(height:10),Wrap(spacing:12,runSpacing:6,children:[Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.schedule,size:13),const SizedBox(width:4),Text('${exam!['time']??''}',style:techText(c,size:10))]),if(centre?.isNotEmpty==true)Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.location_on_outlined,size:13),const SizedBox(width:4),Text('$centre',style:techText(c,size:10))])])]]));
  }
 }
 class TechStudyProgress extends StatefulWidget{
