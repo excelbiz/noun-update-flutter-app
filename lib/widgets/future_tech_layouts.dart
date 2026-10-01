@@ -17,7 +17,7 @@ IconData techIcon(String id)=>switch(id){'my-courses'=>Icons.menu_book_rounded,'
  'study-hub'=>Icons.school_rounded,'fees'=>Icons.account_balance_wallet_outlined,'pas-status'=>Icons.description_outlined,'personalized-timetable'=>Icons.calendar_month_rounded,'result'=>Icons.bar_chart_rounded,'cgpa-calculator'=>Icons.calculate_outlined,'mock'=>Icons.desktop_windows_outlined,'project-topic-generator'=>Icons.lightbulb_outline,_=>serviceIcon(id)};
 
 class TechGlyph extends StatelessWidget{
- const TechGlyph(this.icon,{super.key,this.color=Color(0xff0aaf70),this.size=43});
+ const TechGlyph(this.icon,{super.key,this.color=const Color(0xff0aaf70),this.size=43});
  final IconData icon;final Color color;final double size;
  @override Widget build(BuildContext c)=>ExcludeSemantics(child:Container(width:size,height:size,
   decoration:BoxDecoration(borderRadius:BorderRadius.circular(size*.24),
