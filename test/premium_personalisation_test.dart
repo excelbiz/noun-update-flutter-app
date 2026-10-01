@@ -91,16 +91,18 @@ void main(){
      await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-light');
    }
    await tester.tap(find.text('Home').last);await tester.pumpAndSettle();
+   if(skin==AppSkin.futureTech){await tester.tap(find.byTooltip('Preview light'));await tester.pumpAndSettle();}
    await tester.tap(find.byTooltip('Preview dark'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    await capture(tester,key,'skin-${skin.name}-dark');expect(PremiumService.instance.isPremium,isFalse);
    expect(find.byType(LivePortal),findsOneWidget);
    for(final label in ['Study','Tools','Updates','Profile']){
-     await tester.tap(find.text(skin==AppSkin.elegantEditorial?(label=='Tools'?'More':label=='Profile'?'Wallet':label):skin==AppSkin.boldPremium&&label=='Updates'?'Wallet':label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
+     if(skin==AppSkin.futureTech&&label=='Updates'){await tester.tap(find.text('Tools').last);await tester.pumpAndSettle();await tester.scrollUntilVisible(find.text('News, guides & scholarships'),300,scrollable:find.byType(Scrollable).first);await tester.tap(find.text('News, guides & scholarships'));}else await tester.tap(find.text(skin==AppSkin.elegantEditorial?(label=='Tools'?'More':label=='Profile'?'Wallet':label):skin==AppSkin.boldPremium&&label=='Updates'?'Wallet':label).last);await tester.pumpAndSettle();expect(tester.takeException(),isNull);
      if(label=='Tools')expect(find.text('No tools match your search.'),findsNothing);
      if(label=='Study'||label=='Tools')await capture(tester,key,'skin-${skin.name}-${label.toLowerCase()}-dark');
    }
    await tester.tap(find.byTooltip('Preview sign-in'));await tester.pumpAndSettle();expect(tester.takeException(),isNull);
    if(skin==AppSkin.boldPremium){await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/bold-premium-welcome.webp'),tester.element(find.byType(SkinPreview))));await tester.pumpAndSettle();}
+   if(skin==AppSkin.futureTech){await tester.runAsync(()async{for(final a in ['future-tech-campus','editorial-emblem']){await precacheImage(AssetImage('assets/images/skins/$a.webp'),tester.element(find.byType(SkinPreview)));}});await tester.pumpAndSettle();}
    if(skin==AppSkin.elegantEditorial){await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/skins/editorial-campus.webp'),tester.element(find.byType(SkinPreview))));await tester.pumpAndSettle();}
    await capture(tester,key,'skin-${skin.name}-login-dark');
    expect((await SharedPreferences.getInstance()).getString('nu-daily-motivation'),isNull);

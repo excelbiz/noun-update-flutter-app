@@ -8,6 +8,7 @@ class SkinBackdrop extends StatelessWidget {
   @override Widget build(BuildContext context) {
     final t=SkinTokens.of(context);
     if(!t.skin.isPremium)return Material(color:Theme.of(context).scaffoldBackgroundColor,child:child);
+    if(t.skin==AppSkin.futureTech)return Material(color:t.background,child:Stack(fit:StackFit.expand,children:[const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_LightPaths()))),child]));
     if(t.skin==AppSkin.elegantEditorial||t.skin==AppSkin.boldPremium)return Material(color:t.background,child:child);
     final dark=Theme.of(context).brightness==Brightness.dark;
     final imageOpacity=switch(t.skin){AppSkin.minimalAcademic=>dark ? .14 : .10,AppSkin.elegantEditorial=>dark ? .20 : .16,AppSkin.productivityDashboard=>dark ? .22 : .14,_=>dark ? .42 : .26};
@@ -152,7 +153,7 @@ Color skinServiceColour(String id)=>switch(id){
 };
 class SkinHeaderArt extends StatelessWidget {
  const SkinHeaderArt({super.key});
- @override Widget build(BuildContext context){final t=SkinTokens.of(context);return ExcludeSemantics(child:Stack(fit:StackFit.expand,children:[
+ @override Widget build(BuildContext context){final t=SkinTokens.of(context);if(t.skin==AppSkin.futureTech)return IgnorePointer(child:CustomPaint(painter:_LightPaths()));return ExcludeSemantics(child:Stack(fit:StackFit.expand,children:[
   Opacity(opacity:t.skin==AppSkin.minimalAcademic ? .20 : .42,child:Image.asset(t.backdropAsset,cacheWidth:768,fit:BoxFit.cover,alignment:Alignment.topCenter)),
   DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color.lerp(const Color(0xff003425),t.primary,.20)!.withValues(alpha:.92),Color.lerp(const Color(0xff003728),t.gold,.12)!.withValues(alpha:.78)]))),
  ]));}

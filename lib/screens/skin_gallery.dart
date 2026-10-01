@@ -34,7 +34,8 @@ class SkinPreview extends StatefulWidget {
 }
 class _SkinPreviewState extends State<SkinPreview> {
   bool dark=false,saving=false,login=false;
-  late final previewApi=_SkinPreviewApi(editorial:widget.skin==AppSkin.elegantEditorial,bold:widget.skin==AppSkin.boldPremium);
+  late final previewApi=_SkinPreviewApi(editorial:widget.skin==AppSkin.elegantEditorial,bold:widget.skin==AppSkin.boldPremium,future:widget.skin==AppSkin.futureTech);
+  @override void initState(){super.initState();dark=widget.skin==AppSkin.futureTech;}
   Future<void> apply()async{
     final api=widget.api;if(api==null)return;
     final service=PremiumService.instance;
@@ -52,7 +53,7 @@ class _SkinPreviewState extends State<SkinPreview> {
       ]),
       body:Column(children:[
         Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),color:Theme.of(context).colorScheme.secondaryContainer,child:const Text('STYLE PREVIEW · SAMPLE CONTENT',style:TextStyle(fontSize:10,letterSpacing:1))),
-        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true,previewData:widget.skin==AppSkin.elegantEditorial?editorialPreviewData():widget.skin==AppSkin.boldPremium?boldPreviewData():null)),
+        Expanded(child:login?NativeAuth(previewApi):LivePortal(apiClient:previewApi,preview:true,previewData:widget.skin==AppSkin.elegantEditorial?editorialPreviewData():widget.skin==AppSkin.boldPremium?boldPreviewData():widget.skin==AppSkin.futureTech?futurePreviewData():null)),
         SafeArea(top:false,child:Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:5),child:ListenableBuilder(listenable:PremiumService.instance,builder:(context,_)=>Row(children:[
           Expanded(child:Text(widget.skin.isPremium?'Free preview · Premium to apply':'Your free default design',style:const TextStyle(fontSize:11))),
           FilledButton(onPressed:saving||widget.api==null||(widget.skin.isPremium&&!PremiumService.instance.allows('premium_skins'))?null:apply,child:Text(saving?'Saving…':'Apply skin')),
@@ -64,11 +65,13 @@ class _SkinPreviewState extends State<SkinPreview> {
 /// Isolated read-only fixture: previews never contact payment/auth endpoints,
 /// grant access or write to the real account. LivePortal is the real screen tree.
 class _SkinPreviewApi extends ApiClient {
-  _SkinPreviewApi({this.editorial=false,this.bold=false});
-  final bool editorial,bold;
+  _SkinPreviewApi({this.editorial=false,this.bold=false,this.future=false});
+  final bool editorial,bold,future;
   @override Future<Map<String,dynamic>> getJson(String path)async{
     if(path=='/services')return {'data':{'items':jsonDecode(await rootBundle.loadString('assets/data/services.json'))}};
     if(path=='/motivation/today')return {'data':{'quote':{'id':0,'quote':editorial?'Discipline today creates the freedom you want tomorrow.':bold?'Consistency today creates success tomorrow.':'Discipline today, a brighter tomorrow.','author':bold?'NOUN Update':'NOUN Update · sample','date':DateTime.now().toUtc().add(const Duration(hours:1)).toIso8601String().substring(0,10)}}};
+    if(future&&path.startsWith('/study/'))return futurePreviewStudy(path);
+    if(future&&path.startsWith('/posts/'))return {'data':{'items':boldPreviewNotices()}};
     if(bold&&path=='/study/EDU302')return {'data':{'course_title':'Research Methods in Education','sections':[for(var i=0;i<20;i++){'index':i}]}};
     if(bold&&path=='/study/EDU302/state')return {'data':{'done':[for(var i=0;i<12;i++)i],'notes':'','revision':0}};
     if(bold&&path.startsWith('/posts/'))return {'data':{'items':boldPreviewNotices()}};
@@ -119,4 +122,19 @@ Map<String,dynamic> boldPreviewData(){
   ]},
   'next_exam':<String,dynamic>{'course_code':'EDU302','course_title':'Research Methods in Education','date':'${exam.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][exam.month-1]} ${exam.year}','time':'9:00 AM WAT','exam_datetime':exam.toIso8601String(),'is_past':false},
  };
+}
+
+// Read-only Future Tech samples. Progress is derived from these section records.
+Map<String,dynamic> futurePreviewStudy(String path){
+ final code=path.split('/')[2],count=code=='GST101'?20:code=='CIT101'?23:10,done=code=='GST101'?14:code=='CIT101'?0:10;
+ if(path.endsWith('/state'))return {'data':{'done':[for(var i=0;i<done;i++)i],'notes':'','revision':0}};
+ return {'data':{'course_title':code=='GST101'?'Use of English':code=='CIT101'?'Introduction to Computing':'Study resources','sections':[for(var i=0;i<count;i++){'index':i,'title':'Unit ${i+1}','content':'Sample course section for style review.'}]}};
+}
+Map<String,dynamic> futurePreviewData(){
+ final sample=boldPreviewData(),date=DateTime.now().add(const Duration(days:15)),exam=DateTime(date.year,date.month,date.day,9);
+ sample['courses']=['GST101','GST102','GST103','GST104','GST105','CIT101'];
+ sample['profile']['id']='future-sample';sample['wallet']['balance_kobo']=1250000;
+ sample['details']['Programme']='B.Sc. Computer Science';
+ sample['next_exam']={'course_code':'GST101','course_title':'Use of English','date':'${exam.day}/${exam.month}/${exam.year}','time':'10:00 AM WAT','exam_datetime':exam.toIso8601String(),'is_past':false};
+ return sample;
 }

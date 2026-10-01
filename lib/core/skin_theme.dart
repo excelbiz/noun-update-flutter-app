@@ -36,7 +36,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>'NUSans',
     AppSkin.productivityDashboard=>'sans-serif-condensed',
     AppSkin.friendlyModern=>'NUSans',
-    AppSkin.futureTech=>'monospace',
+    AppSkin.futureTech=>'NUSans',
     AppSkin.boldPremium=>'NUSans',
     _=>'NUSans',
   };
@@ -49,12 +49,12 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>'NUReading',
     AppSkin.productivityDashboard=>'sans-serif-condensed',
     AppSkin.friendlyModern=>'NUSans',
-    AppSkin.futureTech=>'sans-serif-condensed',
+    AppSkin.futureTech=>'NUSans',
     AppSkin.boldPremium=>'NUSans',
     _=>'NUSans',
   };
   String get numberFont => switch(skin){
-    AppSkin.productivityDashboard||AppSkin.futureTech=>'monospace',
+    AppSkin.productivityDashboard||AppSkin.futureTech=>'NUSans',
     AppSkin.premiumDark=>'NUReading',
     _=>bodyFont,
   };
@@ -82,7 +82,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>-.45,
     AppSkin.productivityDashboard=>-.20,
     AppSkin.friendlyModern=>-.20,
-    AppSkin.futureTech=>.55,
+    AppSkin.futureTech=>-.20,
     AppSkin.boldPremium=>-.55,
     _=>-.15,
   };
@@ -94,7 +94,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>.75,
     AppSkin.productivityDashboard=>.65,
     AppSkin.friendlyModern=>.10,
-    AppSkin.futureTech=>1.70,
+    AppSkin.futureTech=>.30,
     AppSkin.boldPremium=>1.10,
     _=>.35,
   };
@@ -126,7 +126,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>'Prepare smarter. Do better.',
     AppSkin.productivityDashboard=>'Learn today. A brighter tomorrow.',
     AppSkin.friendlyModern=>'Knowledge today, a brighter tomorrow.',
-    AppSkin.futureTech=>'EVERYTHING YOU NEED TO EXCEL',
+    AppSkin.futureTech=>'Everything you need to excel',
     AppSkin.boldPremium=>'Learn · Prepare · Excel',
     _=>'Learn smart. Study confidently.',
   };
@@ -139,7 +139,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
     AppSkin.elegantEditorial=>'A considered collection of academic utilities.',
     AppSkin.productivityDashboard=>'Plan, check, calculate and keep moving.',
     AppSkin.friendlyModern=>'Smart tools for a smoother NOUN journey.',
-    AppSkin.futureTech=>'HELPFUL UTILITIES FOR NOUN STUDENTS',
+    AppSkin.futureTech=>'Helpful utilities for NOUN students',
     AppSkin.boldPremium=>'More tools. A smoother NOUN experience.',
     _=>'Useful shortcuts for every stage of your semester.',
   };
@@ -147,7 +147,8 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   String get backdropAsset => 'assets/images/skins/${switch(skin){
     AppSkin.smartCampus||AppSkin.productivityDashboard=>'campus',
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
-    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    AppSkin.futureTech=>'future-tech-campus',
+    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial=>'study',
     AppSkin.boldPremium=>'bold-premium-welcome',
     _=>'campus',
   }}.webp';
@@ -159,7 +160,8 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
   }}.webp';
   String get loginAsset => 'assets/images/skins/${switch(skin){
     AppSkin.studentFriendly||AppSkin.friendlyModern=>'students',
-    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial||AppSkin.futureTech=>'study',
+    AppSkin.futureTech=>'future-tech-campus',
+    AppSkin.premiumDark||AppSkin.glassmorphism||AppSkin.minimalAcademic||AppSkin.elegantEditorial=>'study',
     AppSkin.boldPremium=>'bold-premium-welcome',
     _=>'campus',
   }}.webp';
@@ -182,7 +184,7 @@ class SkinTokens extends ThemeExtension<SkinTokens> {
       AppSkin.boldPremium => dark ? [0xff0c2018,0xff17352a,0xffa6dfbd,0xffffce62] : [0xfff5f8fa,0xffffffff,0xff00653d,0xff9c7410],
       AppSkin.defaultNoun => dark ? [0xff101715,0xff17201d,0xffa5dfbd,0xffffd979] : [0xfff8faf9,0xffffffff,0xff00553a,0xff795800],
     };
-    final radius=switch(skin){AppSkin.minimalAcademic=>10.0,AppSkin.elegantEditorial=>8.0,AppSkin.friendlyModern=>26.0,AppSkin.studentFriendly=>22.0,AppSkin.productivityDashboard=>12.0,AppSkin.boldPremium=>14.0,_=>18.0};
+    final radius=switch(skin){AppSkin.minimalAcademic=>10.0,AppSkin.elegantEditorial=>8.0,AppSkin.friendlyModern=>26.0,AppSkin.studentFriendly=>22.0,AppSkin.productivityDashboard=>12.0,AppSkin.boldPremium=>14.0,AppSkin.futureTech=>12.0,_=>18.0};
     return SkinTokens(skin:skin,background:Color(palette[0]),surface:Color(palette[1]),primary:Color(palette[2]),gold:Color(palette[3]),ink:Color(dark?0xfff2f6ef:0xff132b23),radius:radius);
   }
   @override SkinTokens copyWith({AppSkin? skin, Color? background, Color? surface, Color? primary, Color? gold, Color? ink, double? radius}) =>
@@ -196,7 +198,14 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
   final t=SkinTokens.forSkin(skin,brightness);
   final base=buildAppTheme(brightness:brightness,fontFamily:t.bodyFont,accent:accent);
   final scheme=ColorScheme.fromSeed(seedColor:t.primary,brightness:brightness).copyWith(
-    primary:t.primary,secondary:t.gold,surface:t.surface,onSurface:t.ink,surfaceContainerLow:t.surface);
+    primary:t.primary,onPrimary:t.primary.computeLuminance()>.18?const Color(0xff09281c):Colors.white,
+    secondary:t.gold,onSecondary:t.gold.computeLuminance()>.18?const Color(0xff202311):Colors.white,
+    surface:t.surface,onSurface:t.ink,surfaceContainerLow:t.surface,
+    surfaceContainer:t.surface,surfaceContainerHigh:Color.lerp(t.surface,t.primary,.05),
+    surfaceContainerHighest:Color.lerp(t.surface,t.primary,.10),
+    primaryContainer:Color.lerp(t.surface,t.primary,.12),onPrimaryContainer:t.ink,
+    secondaryContainer:Color.lerp(t.surface,t.gold,.13),onSecondaryContainer:t.ink,
+    onSurfaceVariant:t.ink.withValues(alpha:.72),outline:t.primary.withValues(alpha:.45),outlineVariant:t.ink.withValues(alpha:.12));
   final body=base.textTheme.apply(fontFamily:t.bodyFont,fontFamilyFallback:t.fontFallback,bodyColor:t.ink,displayColor:t.ink);
   final text=body.copyWith(
     displayLarge:body.displayLarge?.copyWith(fontFamily:t.displayFont,fontFamilyFallback:t.fontFallback,fontWeight:t.headingWeight,letterSpacing:t.headingTracking,height:t.headingHeight),
@@ -216,9 +225,16 @@ ThemeData buildSkinTheme(AppSkin skin, {Brightness brightness=Brightness.light, 
     cardTheme:base.cardTheme.copyWith(color:t.surface,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),
     appBarTheme:base.appBarTheme.copyWith(titleTextStyle:text.titleLarge?.copyWith(color:base.appBarTheme.foregroundColor),toolbarTextStyle:text.bodyMedium?.copyWith(color:base.appBarTheme.foregroundColor)),
     navigationBarTheme:base.navigationBarTheme.copyWith(backgroundColor:t.surface,indicatorColor:scheme.secondaryContainer,labelTextStyle:WidgetStatePropertyAll(text.labelSmall)),
-    inputDecorationTheme:base.inputDecorationTheme.copyWith(labelStyle:text.bodyMedium,hintStyle:text.bodyMedium?.copyWith(color:t.ink.withValues(alpha:.55))),
-    filledButtonTheme:FilledButtonThemeData(style:base.filledButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
-    outlinedButtonTheme:OutlinedButtonThemeData(style:base.outlinedButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
+    inputDecorationTheme:base.inputDecorationTheme.copyWith(fillColor:t.surface,labelStyle:text.bodyMedium,hintStyle:text.bodyMedium?.copyWith(color:t.ink.withValues(alpha:.55)),
+      border:OutlineInputBorder(borderRadius:BorderRadius.circular(t.radius)),
+      enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(t.radius),borderSide:BorderSide(color:scheme.outline)),
+      focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(t.radius),borderSide:BorderSide(color:t.primary,width:1.5))),
+    listTileTheme:base.listTileTheme.copyWith(textColor:t.ink,iconColor:t.primary,titleTextStyle:text.titleMedium?.copyWith(fontSize:14),subtitleTextStyle:text.bodySmall?.copyWith(color:scheme.onSurfaceVariant)),
+    dialogTheme:DialogThemeData(backgroundColor:t.surface,surfaceTintColor:Colors.transparent,titleTextStyle:text.titleLarge,contentTextStyle:text.bodyMedium,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),
+    popupMenuTheme:PopupMenuThemeData(color:t.surface,textStyle:text.bodyMedium,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))),
+    bottomSheetTheme:BottomSheetThemeData(backgroundColor:t.surface,modalBackgroundColor:t.surface,shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(t.radius)))),
+    filledButtonTheme:FilledButtonThemeData(style:base.filledButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge),shape:WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))))),
+    outlinedButtonTheme:OutlinedButtonThemeData(style:base.outlinedButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge),shape:WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius:BorderRadius.circular(t.radius))))),
     textButtonTheme:TextButtonThemeData(style:base.textButtonTheme.style?.copyWith(textStyle:WidgetStatePropertyAll(text.labelLarge))),
   );
 }

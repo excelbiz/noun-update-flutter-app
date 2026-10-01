@@ -11,7 +11,11 @@ Color nuTint(BuildContext context)=>Theme.of(context).colorScheme.primaryContain
 String naira(dynamic kobo)=>'₦${((num.tryParse('$kobo')??0)/100).toStringAsFixed(2)}';
 Map<String,dynamic> unpack(Map<String,dynamic> r)=>Map<String,dynamic>.from(r['data'] as Map);
 List<Map<String,dynamic>> records(dynamic x)=>(x as List? ?? []).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
-Future<T?> pushNu<T>(BuildContext context,Widget page)=>Navigator.of(context).push<T>(MaterialPageRoute(builder:(_)=>page));
+Future<T?> pushNu<T>(BuildContext context,Widget page){
+ final navigator=Navigator.of(context);
+ final themes=InheritedTheme.capture(from:context,to:navigator.context);
+ return navigator.push<T>(MaterialPageRoute(builder:(_)=>themes.wrap(page)));
+}
 void nuMessage(BuildContext context,Object message)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$message')));
 class BrandLogo extends StatelessWidget {
  const BrandLogo({super.key,this.size=42});final double size;
@@ -66,7 +70,7 @@ class StudentHero extends StatelessWidget {
  const StudentHero({super.key,this.title='Welcome back!',this.subtitle='Your resources, academic updates and study progress in one place.',this.height=255});
  final String title,subtitle;final double height;
  @override Widget build(BuildContext context)=>SizedBox(height:height,child:Stack(fit:StackFit.expand,children:[
-  Image.asset('assets/images/student-hero.webp',cacheWidth:1024,fit:BoxFit.cover,alignment:Alignment.centerRight),
+  Image.asset(SkinTokens.of(context).skin.isPremium?SkinTokens.of(context).heroAsset:'assets/images/student-hero.webp',cacheWidth:1024,fit:BoxFit.cover,alignment:Alignment.centerRight),
   DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xbb003f2b),Color(0x00003f2b)],stops:[0,.75]))),
   Align(alignment:Alignment.centerLeft,child:FractionallySizedBox(widthFactor:.52,child:Padding(padding:EdgeInsets.fromLTRB(18,10,0,10),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:Colors.white,height:1.12)),SizedBox(height:10),Text(subtitle,style:TextStyle(fontSize:12,color:Colors.white,height:1.4))])))),
  ]));
@@ -78,12 +82,12 @@ class NuPanel extends StatelessWidget {
  final Widget child;final Color color;final double padding;
  @override Widget build(BuildContext context){
   final theme=Theme.of(context),tokens=Theme.of(context).extension<SkinTokens>();
-  final skinned=tokens!=null&&color==Colors.white;
+  final skinned=tokens!=null&&tokens.skin.isPremium;
   final glass=skinned&&tokens.skin==AppSkin.glassmorphism;
   final tech=skinned&&tokens.skin==AppSkin.futureTech;
   final luxury=skinned&&tokens.skin==AppSkin.premiumDark;
   final radius=tokens?.radius??18;
-  final fill=skinned?tokens.surface:nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
+  final fill=skinned?(color==nuDeep||color==nuGreen?tokens.heroSurface:color==Colors.white?tokens.surface:Color.lerp(tokens.surface,color,nuIsDark(context)?.10:.075)!):nuIsDark(context)?(color==Colors.white?theme.colorScheme.surfaceContainerLow:Color.lerp(theme.colorScheme.surface,color,.10)!):color;
   final panel=Container(padding:EdgeInsets.all(padding),decoration:BoxDecoration(
    color:glass?fill.withValues(alpha:.70):fill,
    gradient:skinned&&(tech||luxury)?LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[fill,Color.lerp(fill,tokens.primary,.07)!]):null,
@@ -97,20 +101,31 @@ class NuPanel extends StatelessWidget {
  }
 }
 class NuPage extends StatelessWidget {const NuPage({super.key,required this.title,required this.child,this.actions});final String title;final Widget child;final List<Widget>? actions;
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:nuDeep,appBar:AppBar(flexibleSpace:SkinTokens.of(context).skin.isPremium?const SkinHeaderArt():null,backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[BrandLogo(size:30),SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:BorderRadius.vertical(top:Radius.circular(24)),child:SkinBackdrop(child:SafeArea(top:false,child:child))));}
+ @override Widget build(BuildContext context){
+ final t=SkinTokens.of(context);
+ if(!t.skin.isPremium)return Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:30),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:const BorderRadius.vertical(top:Radius.circular(24)),child:SkinBackdrop(child:SafeArea(top:false,child:child))));
+ final scale=MediaQuery.textScalerOf(context).scale(14)/14;
+ return Scaffold(backgroundColor:t.background,appBar:AppBar(backgroundColor:t.background,foregroundColor:t.ink,
+  toolbarHeight:70+(scale-1).clamp(0,2)*48,elevation:0,scrolledUnderElevation:0,
+  flexibleSpace:t.skin==AppSkin.futureTech?const SkinHeaderArt():null,
+  title:Row(children:[const BrandLogo(size:30),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(fontFamily:t.displayFont,fontSize:19,fontWeight:t.headingWeight,color:t.ink)),
+   const SizedBox(height:3),Text('NOUN Update',style:TextStyle(fontFamily:t.bodyFont,fontSize:10,color:t.ink.withValues(alpha:.65))),
+  ]))]),actions:actions),body:SkinBackdrop(child:SafeArea(top:false,child:child)));
+ }}
 class NativeUnavailable extends StatelessWidget {const NativeUnavailable(this.title,{super.key});final String title;
  @override Widget build(BuildContext context)=>NuPage(title:title,child:Center(child:Padding(padding:EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[GlossIcon(serviceIcon(title)),SizedBox(height:24),Text('$title is not connected yet',textAlign:TextAlign.center,style:TextStyle(fontSize:22,fontWeight:FontWeight.w800)),SizedBox(height:12),Text('This service will become available here when its app integration is enabled. You can continue using the other app tools.',textAlign:TextAlign.center),SizedBox(height:20),OutlinedButton(onPressed:()=>Navigator.pop(context),child:Text('Back to tools'))]))));}
 class AsyncError extends StatelessWidget {const AsyncError(this.error,this.retry,{super.key});final Object error;final VoidCallback retry;
  @override Widget build(BuildContext context)=>Padding(padding:EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.cloud_off_rounded,size:36,color:Theme.of(context).colorScheme.primary),SizedBox(height:12),Text('$error',textAlign:TextAlign.center),TextButton(onPressed:retry,child:Text('Try again'))]));}
 class GreenBanner extends StatelessWidget {const GreenBanner({super.key,required this.title,required this.text,required this.icon,this.action});final String title,text;final IconData icon;final Widget? action;
- @override Widget build(BuildContext context)=>Container(padding:EdgeInsets.all(20),decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),gradient:LinearGradient(colors:[nuDeep,nuGreen,Color(0xff149269)],begin:Alignment.topLeft,end:Alignment.bottomRight)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:24,fontWeight:FontWeight.w800,color:Colors.white,height:1.13)),SizedBox(height:9),Text(text,style:TextStyle(color:Color(0xffd8f7e8),fontSize:13)),if(action!=null)Padding(padding:EdgeInsets.only(top:12),child:action)])),SizedBox(width:10),ToolArtwork(icon:icon)]));}
+ @override Widget build(BuildContext context)=>Container(padding:EdgeInsets.all(20),decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),gradient:LinearGradient(colors:SkinTokens.of(context).skin.isPremium?[SkinTokens.of(context).heroSurface,Color.lerp(SkinTokens.of(context).heroSurface,SkinTokens.of(context).gold,.14)!]:[nuDeep,nuGreen,Color(0xff149269)],begin:Alignment.topLeft,end:Alignment.bottomRight)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:24,fontWeight:FontWeight.w800,color:Colors.white,height:1.13)),SizedBox(height:9),Text(text,style:TextStyle(color:Color(0xffd8f7e8),fontSize:13)),if(action!=null)Padding(padding:EdgeInsets.only(top:12),child:action)])),SizedBox(width:10),ToolArtwork(icon:icon)]));}
 
 class PhotoBanner extends StatelessWidget {
  const PhotoBanner({super.key,required this.title,required this.text,required this.onTap});
  final String title,text;final VoidCallback onTap;
  @override Widget build(BuildContext context)=>ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:MediaQuery.textScalerOf(context).scale(14)>18?250:176,child:Stack(fit:StackFit.expand,children:[
-  Image.asset('assets/images/student-hero.webp',cacheWidth:1024,fit:BoxFit.cover,alignment:Alignment.topRight),
-  DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xf000472f),Color(0xa0005039),Color(0x0000472f)],stops:[0,.48,1]))),
+  Image.asset(SkinTokens.of(context).skin.isPremium?SkinTokens.of(context).heroAsset:'assets/images/student-hero.webp',cacheWidth:1024,fit:BoxFit.cover,alignment:Alignment.topRight),
+  DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(colors:SkinTokens.of(context).skin.isPremium?[SkinTokens.of(context).heroSurface.withValues(alpha:.94),SkinTokens.of(context).heroSurface.withValues(alpha:.64),Colors.transparent]:[Color(0xf000472f),Color(0xa0005039),Color(0x0000472f)],stops:[0,.48,1]))),
   Padding(padding:EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('STUDENT PLANNER',style:TextStyle(fontSize:8,letterSpacing:1,color:nuGold,fontWeight:FontWeight.w800)),SizedBox(height:6),FractionallySizedBox(widthFactor:.64,child:Text(title,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:22,fontWeight:FontWeight.w800,height:1.08,color:Colors.white))),SizedBox(height:7),FractionallySizedBox(widthFactor:.62,child:Text(text,maxLines:2,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:10,color:Colors.white))),Spacer(),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep,minimumSize:Size(0,30),padding:EdgeInsets.symmetric(horizontal:13),textStyle:TextStyle(fontFamily:Theme.of(context).textTheme.bodyMedium?.fontFamily,fontSize:10,fontWeight:FontWeight.w800)),onPressed:onTap,icon:Icon(Icons.arrow_forward,size:14),label:Text('View academic calendar'))])),
  ])));
 }
@@ -118,7 +133,7 @@ class PhotoBanner extends StatelessWidget {
 class CentralWalletCard extends StatelessWidget {
  const CentralWalletCard({super.key,required this.balance,required this.onFund,required this.onHistory,required this.onTools});
  final String balance;final VoidCallback onFund,onHistory,onTools;
- @override Widget build(BuildContext context)=>Container(padding:EdgeInsets.all(14),decoration:BoxDecoration(borderRadius:BorderRadius.circular(17),gradient:LinearGradient(colors:[Color(0xff003f2e),Color(0xff007146)],begin:Alignment.topLeft,end:Alignment.bottomRight)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+ @override Widget build(BuildContext context)=>Container(padding:EdgeInsets.all(14),decoration:BoxDecoration(borderRadius:BorderRadius.circular(17),gradient:LinearGradient(colors:SkinTokens.of(context).skin.isPremium?[SkinTokens.of(context).heroSurface,Color.lerp(SkinTokens.of(context).heroSurface,SkinTokens.of(context).gold,.12)!]:[Color(0xff003f2e),Color(0xff007146)],begin:Alignment.topLeft,end:Alignment.bottomRight)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
   Row(children:[GlossIcon(Icons.account_balance_wallet_rounded,size:52),SizedBox(width:13),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Central Wallet',style:TextStyle(fontSize:12,fontWeight:FontWeight.w700,color:Colors.white)),FittedBox(fit:BoxFit.scaleDown,child:Text(balance,style:TextStyle(fontSize:27,fontWeight:FontWeight.w800,color:Colors.white))),Text('One wallet. More possibilities.',style:TextStyle(fontSize:10,color:Color(0xffd9f5e8)))]))]),
   SizedBox(height:14),Wrap(spacing:7,runSpacing:6,children:[FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:nuGold,foregroundColor:nuDeep,minimumSize:Size(0,36),padding:EdgeInsets.symmetric(horizontal:10),textStyle:TextStyle(fontFamily:Theme.of(context).textTheme.bodyMedium?.fontFamily,fontSize:11,fontWeight:FontWeight.w800)),onPressed:onFund,icon:Icon(Icons.add_circle,size:16),label:Text('Add funds')),OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:BorderSide(color:Color(0xff39a680)),minimumSize:Size(0,36),padding:EdgeInsets.symmetric(horizontal:10),textStyle:TextStyle(fontFamily:Theme.of(context).textTheme.bodyMedium?.fontFamily,fontSize:11)),onPressed:onHistory,icon:Icon(Icons.receipt_long,size:16),label:Text('History')),TextButton(style:TextButton.styleFrom(foregroundColor:Colors.white,textStyle:TextStyle(fontFamily:Theme.of(context).textTheme.bodyMedium?.fontFamily,fontSize:11)),onPressed:onTools,child:Text('Use with tools →'))]),
  ]));
