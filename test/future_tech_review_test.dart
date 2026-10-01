@@ -66,7 +66,8 @@ void main(){
  });}
  for(final skin in AppSkin.values){testWidgets('Routes retain ${skin.label} and its form/dialog theme',(tester)async{
   SharedPreferences.setMockInitialValues({});final key=GlobalKey(),api=TechReviewApi();
-  await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildSkinTheme(AppSkin.defaultNoun),home:Theme(data:buildSkinTheme(skin,brightness:Brightness.dark),child:Builder(builder:(c)=>Scaffold(body:Center(child:FilledButton(onPressed:()=>pushNu(c,NativeFees(api)),child:const Text('Open fee form'))))))))));
+  final preview=Theme(data:buildSkinTheme(skin,brightness:Brightness.dark),child:Builder(builder:(c)=>Scaffold(body:Center(child:FilledButton(onPressed:()=>pushNu(c,NativeFees(api)),child:const Text('Open fee form'))))));
+  await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildSkinTheme(AppSkin.defaultNoun),home:preview)));
   await tester.tap(find.text('Open fee form'));await tester.pumpAndSettle();
   final c=tester.element(find.byType(NativeFees)),theme=Theme.of(c);expect(SkinTokens.of(c).skin,skin);expect(theme.brightness,Brightness.dark);
   if(skin.isPremium){expect(theme.inputDecorationTheme.fillColor,SkinTokens.of(c).surface);expect(theme.dialogTheme.backgroundColor,SkinTokens.of(c).surface);}
