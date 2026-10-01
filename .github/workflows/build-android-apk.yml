@@ -89,6 +89,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Verify website tool themes in browser fixtures
+        run: python tools/verify_web_skin.py
+
       - name: Upload native screen previews
         if: always()
         uses: actions/upload-artifact@v7

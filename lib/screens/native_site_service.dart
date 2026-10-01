@@ -3,6 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../widgets/native_ui.dart';
+import '../core/skin_theme.dart';
+import '../core/web_skin.dart';
 
 final Uri nounUpdateSite=Uri.parse('https://nounupdate.com');
 
@@ -30,6 +32,19 @@ class _NativeSiteServiceState extends State<NativeSiteService>{
   WebViewController? controller;
   String? error;
   int progress=0;
+  bool pageReady=false;
+
+  @override void didChangeDependencies(){super.didChangeDependencies();if(pageReady)_applySkin();}
+
+  Future<void> _applySkin()async{
+    final web=controller;if(web==null||!mounted)return;
+    final theme=Theme.of(context),skin=SkinTokens.of(context).skin;
+    try{
+      final css=await webSkinCss(theme);if(!mounted||web!=controller||Theme.of(context)!=theme)return;
+      await web.setBackgroundColor(theme.scaffoldBackgroundColor);
+      await web.runJavaScript(webSkinScript(css,skin));
+    }catch(_){/* A presentation failure must not stop the website tool. */}
+  }
 
   @override
   void initState(){
@@ -39,6 +54,8 @@ class _NativeSiteServiceState extends State<NativeSiteService>{
     controller=WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted:(_){pageReady=false;},
+        onPageFinished:(url){pageReady=safeNounUpdateDestination(url)!=null;if(pageReady)_applySkin();},
         onProgress:(value){if(mounted)setState(()=>progress=value);},
         onNavigationRequest:(request){
           final target=Uri.tryParse(request.url);
