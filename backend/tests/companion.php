@@ -1,0 +1,72 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/../public_html/nu-mobile/companion/service.php';
+$pdo=new PDO('mysql:host=127.0.0.1;port='.(getenv('TEST_DB_PORT')?:'3306').';dbname=nu_mobile_test;charset=utf8mb4','root',getenv('TEST_DB_PASSWORD')?:'test-only-password',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+if($pdo->query('SELECT DATABASE()')->fetchColumn()!=='nu_mobile_test')throw new RuntimeException('Test DB required');
+function ok(bool $v,string $name):void{if(!$v)throw new RuntimeException('FAILED '.$name);echo "PASS $name\n";}
+function rejected(callable $f):void{try{$f();}catch(InvalidArgumentException $e){return;}throw new RuntimeException('Expected validation rejection');}
+function companionRejected(callable $f,string $reason,?int $status=null):void{try{$f();}catch(NuCompanionException $e){ok($e->reason===$reason&&($status===null||$e->status===$status),'reject '.$reason);return;}throw new RuntimeException('Expected '.$reason);}
+$sql=file_get_contents(__DIR__.'/../sql/companion.sql');$pdo->exec($sql);$pdo->exec($sql);
+// Minimal central-wallet fixture for Premium purchase tests. Integration.php owns the full wallet suite.
+$pdo->exec('DROP TABLE IF EXISTS nu_cwallet_ledger');$pdo->exec('DROP TABLE IF EXISTS nu_cwallet_orders');$pdo->exec('DROP TABLE IF EXISTS nu_cwallet_accounts');
+$pdo->exec("CREATE TABLE nu_cwallet_accounts(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,wallet_user_id BIGINT UNSIGNED NOT NULL,currency CHAR(3) NOT NULL DEFAULT 'NGN',balance_minor BIGINT NOT NULL DEFAULT 0,status ENUM('active','frozen','closed') NOT NULL DEFAULT 'active',created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_wallet(wallet_user_id,currency)) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE nu_cwallet_orders(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,order_reference VARCHAR(191) NOT NULL UNIQUE,wallet_user_id BIGINT UNSIGNED NOT NULL,wallet_account_id BIGINT UNSIGNED NOT NULL,service_code VARCHAR(80) NOT NULL,product_code VARCHAR(100) NOT NULL,amount_minor BIGINT NOT NULL,currency CHAR(3) NOT NULL DEFAULT 'NGN',payment_source ENUM('wallet','gateway_direct','legacy','free','migration') NOT NULL DEFAULT 'wallet',status ENUM('created','processing','paid','fulfilled','failed','refunded','cancelled') NOT NULL DEFAULT 'created',idempotency_key VARCHAR(255) NOT NULL UNIQUE,metadata_json LONGTEXT NULL,paid_at DATETIME NULL,fulfilled_at DATETIME NULL,refunded_at DATETIME NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE nu_cwallet_ledger(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,wallet_account_id BIGINT UNSIGNED NOT NULL,wallet_user_id BIGINT UNSIGNED NOT NULL,ledger_reference VARCHAR(191) NOT NULL UNIQUE,entry_type ENUM('credit','debit','refund','reversal','adjustment','migration_opening_balance') NOT NULL,amount_minor BIGINT NOT NULL,currency CHAR(3) NOT NULL DEFAULT 'NGN',balance_before_minor BIGINT NOT NULL,balance_after_minor BIGINT NOT NULL,service_code VARCHAR(80) NULL,service_reference VARCHAR(191) NULL,payment_provider VARCHAR(32) NULL,payment_reference VARCHAR(191) NULL,idempotency_key VARCHAR(255) NOT NULL UNIQUE,description VARCHAR(255) NULL,metadata_json LONGTEXT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
+$s=new NuCompanion($pdo);$config=$s->configuration();
+ok(count($config['plans'])===3,'exactly three initial plans');ok($config['plans'][1]['price_minor']===350000,'server price in minor units');ok(!$config['new_subscriptions_enabled'],'checkout remains disabled');
+ok($config['premium_features']['profile_frames']===true,'profile frames enabled as implemented Premium feature');
+ok(!$s->entitlement(800)['active'],'no local/client grant');
+rejected(fn()=>$s->savePreferences(800,['preferred_skin'=>'futureTech','active'=>true]));
+rejected(fn()=>$s->savePreferences(800,['profile_frame'=>'academicGold']));
+$s->savePreferences(800,['birthday'=>['month'=>2,'day'=>29,'celebration_enabled'=>true]]);
+ok($s->preferences(800)['birthday']['day']===29,'February 29 accepted without a birth year');
+ok($s->preferences(800)['profile_frame']==='classic','free profile defaults to classic frame');
+rejected(fn()=>$s->savePreferences(800,['birthday'=>['month'=>2,'day'=>30,'celebration_enabled'=>true]]));
+ok($s->preferences(801)['birthday']['day']===null,'account isolation');
+$pdo->exec("INSERT INTO nu_mobile_premium_subscriptions(account_id,plan_id,status,started_at,expires_at,regular_price_minor,amount_paid_minor) VALUES(800,'semester','active',DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY),350000,250000)");
+ok($s->entitlement(800)['active'],'server subscription active');$s->savePreferences(800,['preferred_skin'=>'futureTech','profile_frame'=>'futureGlow']);
+ok($s->preferences(800)['profile_frame']==='futureGlow','Premium profile frame saved server-side');
+$pdo->exec("UPDATE nu_mobile_premium_subscriptions SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 SECOND) WHERE account_id=800");
+ok(!$s->entitlement(800)['active'],'expired subscription rejected');ok($s->preferences(800)['preferred_skin']==='futureTech','expired preferred skin retained');
+ok($s->preferences(800)['profile_frame']==='futureGlow','expired Premium profile frame retained for reactivation');
+rejected(fn()=>$s->savePreferences(800,['preferred_skin'=>'premiumDark']));
+rejected(fn()=>$s->savePreferences(800,['profile_frame'=>'editorialInk']));
+$s->savePreferences(800,['profile_frame'=>'classic']);ok($s->preferences(800)['profile_frame']==='classic','classic profile can be restored without Premium');
+$pdo->exec("UPDATE nu_mobile_premium_plans SET promo_enabled=1,promo_price_minor=250000,promo_starts_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY),promo_ends_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id='semester'");
+ok($s->configuration()['plans'][1]['price_minor']===250000,'promotion uses server time');
+$pdo->exec("UPDATE nu_mobile_premium_plans SET promo_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 SECOND) WHERE id='semester'");ok($s->configuration()['plans'][1]['price_minor']===350000,'expired promotion regular price');
+// Wallet-backed Premium purchase: all authority remains server-side.
+$pdo->exec("DELETE FROM nu_mobile_premium_subscriptions WHERE account_id IN (900,901)");
+$pdo->exec("INSERT INTO nu_cwallet_accounts(wallet_user_id,balance_minor,status) VALUES(900,1000000,'active'),(901,500,'active')");
+companionRejected(fn()=>$s->purchase(900,900,'monthly',100000,'NGN','premium-test-request-0001'),'SUBSCRIPTIONS_DISABLED',409);
+ok((int)$pdo->query('SELECT balance_minor FROM nu_cwallet_accounts WHERE wallet_user_id=900')->fetchColumn()===1000000,'disabled sale never debits wallet');
+$pdo->exec('UPDATE nu_mobile_configuration SET new_subscriptions_enabled=1,renewals_enabled=0 WHERE id=1');
+companionRejected(fn()=>$s->purchase(900,900,'monthly',99999,'NGN','premium-test-request-0002'),'PRICE_CHANGED',409);
+ok((int)$pdo->query('SELECT COUNT(*) FROM nu_cwallet_ledger')->fetchColumn()===0,'price mismatch creates no ledger');
+companionRejected(fn()=>$s->purchase(901,901,'monthly',100000,'NGN','premium-test-request-0003'),'INSUFFICIENT_BALANCE',402);
+ok((int)$pdo->query('SELECT balance_minor FROM nu_cwallet_accounts WHERE wallet_user_id=901')->fetchColumn()===500,'insufficient balance never debits wallet');
+$purchase=$s->purchase(900,900,'monthly',100000,'NGN','premium-test-request-0004');
+ok($purchase['amount_minor']===100000&&$purchase['wallet_balance_minor']===900000,'Premium purchase debits exact server price');
+ok($s->entitlement(900)['active']&&$s->entitlement(900)['plan']==='monthly','Premium purchase activates entitlement');
+ok((int)$pdo->query("SELECT COUNT(*) FROM nu_cwallet_ledger WHERE wallet_user_id=900 AND entry_type='debit' AND service_code='mobile_premium'")->fetchColumn()===1,'Premium purchase writes one debit ledger entry');
+$duplicate=$s->purchase(900,900,'monthly',100000,'NGN','premium-test-request-0004');
+ok($duplicate['duplicate']===true&&$duplicate['wallet_balance_minor']===900000,'same purchase request is idempotent after success');
+ok((int)$pdo->query("SELECT COUNT(*) FROM nu_mobile_premium_subscriptions WHERE account_id=900 AND payment_provider='central_wallet'")->fetchColumn()===1,'duplicate purchase creates no second subscription');
+companionRejected(fn()=>$s->purchase(900,900,'monthly',100000,'NGN','premium-test-request-0005'),'RENEWALS_DISABLED',409);
+ok((int)$pdo->query('SELECT balance_minor FROM nu_cwallet_accounts WHERE wallet_user_id=900')->fetchColumn()===900000,'disabled renewal never debits wallet');
+$oldExpiry=$pdo->query("SELECT expires_at FROM nu_mobile_premium_subscriptions WHERE account_id=900 AND status='active' ORDER BY id DESC LIMIT 1")->fetchColumn();
+$pdo->exec('UPDATE nu_mobile_configuration SET renewals_enabled=1 WHERE id=1');
+$renew=$s->purchase(900,900,'semester',350000,'NGN','premium-test-request-0006');
+$newStart=$pdo->query("SELECT started_at FROM nu_mobile_premium_subscriptions WHERE account_id=900 AND plan_id='semester' ORDER BY id DESC LIMIT 1")->fetchColumn();
+ok($renew['wallet_balance_minor']===550000&&$newStart===$oldExpiry,'renewal extends from existing Premium expiry');
+ok((int)$pdo->query("SELECT COUNT(*) FROM nu_cwallet_ledger WHERE wallet_user_id=900 AND entry_type='debit' AND service_code='mobile_premium'")->fetchColumn()===2,'renewal writes exactly one additional debit');
+ok($s->dailyQuote()===null,'empty collection has no fabricated quote');
+$pdo->exec("INSERT INTO nu_mobile_motivation(quote,author) VALUES('Fixture motivation','Test'),('Second fixture','Test')");
+$q=$s->dailyQuote();ok($q===$s->dailyQuote(),'daily quote stable');$s->saveQuote(800,(int)$q['id'],true);$s->saveQuote(800,(int)$q['id'],true);
+ok(count($s->savedQuotes(800))===1,'save idempotent');ok(count($s->savedQuotes(801))===0,'saved quote account isolation');
+$s->saveQuote(800,(int)$q['id'],false);ok(count($s->savedQuotes(800))===0,'remove saved quote');
+$s->savePreferences(800,['birthday'=>['month'=>null,'day'=>null,'celebration_enabled'=>false]]);ok($s->preferences(800)['birthday']['month']===null,'birthday removal');
+$pdo->exec('DELETE FROM nu_mobile_daily_motivation');$pdo->exec('DELETE FROM nu_mobile_motivation');
+$source=tempnam(sys_get_temp_dir(),'nu-quote');file_put_contents($source,json_encode(['text'=>'Website fixture quote','author'=>'Website fixture author']));
+$websiteService=new NuCompanion($pdo,$source);$web=$websiteService->dailyQuote();ok($web['quote']==='Website fixture quote','existing website JSON quote imported');
+file_put_contents($source,json_encode(['text'=>'Later website fixture','author'=>'Website fixture author']));ok($websiteService->dailyQuote()['id']===$web['id'],'website edit does not shuffle same-day selection');unlink($source);
