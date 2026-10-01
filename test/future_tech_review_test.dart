@@ -65,7 +65,7 @@ void main(){
   if(screenshots)await capture(tester,key,'future-signin-$suffix');expect(api.writes,isEmpty);expect(PremiumService.instance.isPremium,isFalse);
  });}
  for(final skin in AppSkin.values){for(final brightness in Brightness.values){testWidgets('Routes retain ${skin.label} ${brightness.name} and its form/dialog theme',(tester)async{
-  SharedPreferences.setMockInitialValues({});final key=GlobalKey(),api=TechReviewApi();
+  SharedPreferences.setMockInitialValues({});tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);final key=GlobalKey(),api=TechReviewApi();
   final preview=Theme(data:buildSkinTheme(skin,brightness:brightness),child:Builder(builder:(c)=>Scaffold(body:Center(child:FilledButton(onPressed:()=>pushNu(c,NativeFees(api)),child:const Text('Open fee form'))))));
   await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildSkinTheme(AppSkin.defaultNoun),home:preview)));
   await tester.tap(find.text('Open fee form'));await tester.pumpAndSettle();

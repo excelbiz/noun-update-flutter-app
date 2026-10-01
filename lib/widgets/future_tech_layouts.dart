@@ -14,7 +14,17 @@ Color techTone(String id)=>switch(id){'my-courses'||'result'=>const Color(0xffd8
  _=>const Color(0xff367fde)};
 IconData techIcon(String id)=>switch(id){'my-courses'=>Icons.menu_book_rounded,'course-summary'=>Icons.article_rounded,
  'exam-summary'=>Icons.assignment_rounded,'past-questions'=>Icons.help_rounded,'courses'=>Icons.folder_rounded,
- 'study-hub'=>Icons.school_rounded,_=>serviceIcon(id)};
+ 'study-hub'=>Icons.school_rounded,'fees'=>Icons.account_balance_wallet_outlined,'pas-status'=>Icons.description_outlined,'personalized-timetable'=>Icons.calendar_month_rounded,'result'=>Icons.bar_chart_rounded,'cgpa-calculator'=>Icons.calculate_outlined,'mock'=>Icons.desktop_windows_outlined,'project-topic-generator'=>Icons.lightbulb_outline,_=>serviceIcon(id)};
+
+class TechGlyph extends StatelessWidget{
+ const TechGlyph(this.icon,{super.key,this.color=Color(0xff0aaf70),this.size=43});
+ final IconData icon;final Color color;final double size;
+ @override Widget build(BuildContext c)=>ExcludeSemantics(child:Container(width:size,height:size,
+  decoration:BoxDecoration(borderRadius:BorderRadius.circular(size*.24),
+   gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color.lerp(color,Colors.white,.13)!,color,Color.lerp(color,Colors.black,.28)!]),
+   border:Border.all(color:color.withValues(alpha:.60)),boxShadow:[BoxShadow(color:color.withValues(alpha:.25),blurRadius:12)]),
+  child:Icon(icon,size:size*.60,color:Colors.white)));
+}
 
 class TechPanel extends StatelessWidget{
  const TechPanel({super.key,required this.child,this.onTap,this.padding=12,this.tone});
@@ -22,9 +32,9 @@ class TechPanel extends StatelessWidget{
  @override Widget build(BuildContext c){final t=SkinTokens.of(c),dark=nuIsDark(c),accent=tone??t.primary;
   return Container(decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
    gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:dark?
-    [Color.lerp(t.surface,accent,.12)!,t.surface,Color.lerp(t.background,accent,.08)!]:[t.surface,Color.lerp(t.surface,accent,.035)!]),
-   border:Border.all(color:accent.withValues(alpha:dark ? .36 : .22)),
-   boxShadow:[BoxShadow(color:accent.withValues(alpha:dark ? .07 : .04),blurRadius:12)]),
+    [Color.lerp(t.surface,accent,tone==null ? .12 : .35)!,tone==null?t.surface:Color.lerp(t.background,accent,.12)!,Color.lerp(t.background,accent,.08)!]:[t.surface,Color.lerp(t.surface,accent,.035)!]),
+   border:Border.all(color:accent.withValues(alpha:dark ? (tone==null ? .36 : .65) : .22)),
+   boxShadow:[BoxShadow(color:accent.withValues(alpha:dark ? (tone==null ? .07 : .13) : .04),blurRadius:12)]),
    child:Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(12),child:Padding(padding:EdgeInsets.all(padding),child:child))));
  }
 }
@@ -54,16 +64,16 @@ class TechNavigation extends StatelessWidget{
   return SafeArea(top:false,child:Container(height:70+math.max(0.0,MediaQuery.textScalerOf(c).scale(12)/12-1)*20,padding:const EdgeInsets.symmetric(horizontal:10),
    decoration:BoxDecoration(color:t.background,border:Border(top:BorderSide(color:t.primary.withValues(alpha:.28))),borderRadius:const BorderRadius.vertical(top:Radius.circular(18))),
    child:Row(children:[destination(0,'Home',Icons.home_rounded),destination(1,'Study',Icons.menu_book_outlined),
-    Expanded(child:Center(child:Tooltip(message:'My Courses hub',child:Semantics(button:true,label:'My Courses hub',child:InkWell(onTap:onCourses,borderRadius:BorderRadius.circular(32),child:Container(width:56,height:56,
+    Expanded(child:Transform.translate(offset:const Offset(0,-10),child:Center(child:Tooltip(message:'My Courses hub',child:Semantics(button:true,label:'My Courses hub',child:InkWell(onTap:onCourses,borderRadius:BorderRadius.circular(32),child:Container(width:56,height:56,
      decoration:BoxDecoration(shape:BoxShape.circle,gradient:RadialGradient(colors:[Color.lerp(t.heroSurface,techGold,.20)!,t.heroSurface]),border:Border.all(color:techGold,width:1.8),boxShadow:[BoxShadow(color:techGold.withValues(alpha:.24),blurRadius:10)]),
-     child:Icon(Icons.school_rounded,size:28,color:t.primary))))))),destination(2,'Tools',Icons.grid_view_rounded),destination(4,'Profile',Icons.person_outline_rounded)])));
+     child:Icon(Icons.school_rounded,size:28,color:t.primary)))))))),destination(2,'Tools',Icons.grid_view_rounded),destination(4,'Profile',Icons.person_outline_rounded)])));
  }
 }
 class TechResourceRow extends StatelessWidget{
  const TechResourceRow({super.key,required this.id,required this.title,required this.caption,required this.onTap});
  final String id,title,caption;final VoidCallback onTap;
  @override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.only(bottom:9),child:TechPanel(onTap:onTap,child:Row(children:[
-  GlossIcon(techIcon(id),color:techTone(id),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  TechGlyph(techIcon(id),color:techTone(id),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Text(title,style:techText(c,size:14,weight:FontWeight.w700)),const SizedBox(height:5),Text(caption,style:techText(c,size:10,color:SkinTokens.of(c).ink.withValues(alpha:.78))),
   ])),const SizedBox(width:5),const Icon(Icons.chevron_right,size:21),])));
 }
@@ -85,7 +95,7 @@ class TechResourceLayout extends StatelessWidget{
    const SizedBox(height:14),Text(study?'Your library':'All tools',style:techText(c,size:16,weight:FontWeight.w700)),const SizedBox(height:10),
    if(!study)TextField(onChanged:onSearchChanged,decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Find a tool')),
    for(final s in services.where((s)=>!ids.contains('${s['id']}')))Padding(padding:const EdgeInsets.only(top:9),child:TechPanel(padding:0,child:ListTile(
-    leading:GlossIcon(serviceIcon('${s['id']}'),color:techTone('${s['id']}'),size:35),title:Text(serviceLabel('${s['id']}','${s['label']}')),onTap:()=>onOpen(s),
+    leading:TechGlyph(serviceIcon('${s['id']}'),color:techTone('${s['id']}'),size:35),title:Text(serviceLabel('${s['id']}','${s['label']}')),onTap:()=>onOpen(s),
     trailing:IconButton(tooltip:pinned.contains('${s['id']}')?'Unpin tool':'Pin tool',onPressed:()=>onTogglePin(s),icon:Icon(pinned.contains('${s['id']}')?Icons.push_pin:Icons.push_pin_outlined,size:18))))),
    const SizedBox(height:12),OutlinedButton.icon(onPressed:onUpdates,icon:const Icon(Icons.campaign_outlined),label:const Text('News, guides & scholarships')),
   ]);
@@ -101,7 +111,7 @@ class TechExamCard extends StatelessWidget{
  const TechExamCard({super.key,required this.summary,required this.onOpen,this.exam,this.centre});final String summary;final String? centre;final Map<String,dynamic>? exam;final VoidCallback onOpen;
  @override Widget build(BuildContext c){final date=DateTime.tryParse('${exam?['exam_datetime']}');
   return TechPanel(tone:const Color(0xffd83740),onTap:onOpen,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   const GlossIcon(Icons.calendar_month_rounded,color:Color(0xffdf293b),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Next Exam',style:techText(c,size:10,color:nuIsDark(c)?techGold:SkinTokens.of(c).gold)),const SizedBox(height:4),
+   const TechGlyph(Icons.calendar_month_rounded,color:Color(0xffdf293b),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Next Exam',style:techText(c,size:10,color:nuIsDark(c)?techGold:SkinTokens.of(c).gold)),const SizedBox(height:4),
     Text(exam==null?summary:'${exam!['course_code']}',maxLines:3,overflow:TextOverflow.ellipsis,style:techText(c,size:exam==null?12:19,weight:FontWeight.w700)),
     if(exam!=null)Text('${exam!['course_title']}',style:techText(c,size:11)),
    ])),if(date!=null)Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),decoration:BoxDecoration(color:const Color(0xffdf293b),borderRadius:BorderRadius.circular(9)),child:Column(children:[
@@ -133,11 +143,11 @@ class _TechStudyProgressState extends State<TechStudyProgress>{
    SizedBox(width:47,height:47,child:Stack(alignment:Alignment.center,children:[SizedBox.expand(child:CircularProgressIndicator(value:progress??0,strokeWidth:6,color:t.primary,backgroundColor:t.primary.withValues(alpha:.15))),Text(progress==null?'—':'${(progress!*100).round()}%',style:techText(c,size:13,weight:FontWeight.w700))])),
    const SizedBox(width:9),Expanded(child:Text(progress==null?'Open your courses':'$complete of ${widget.courses.length} courses completed',style:techText(c,size:9))),
   ])]));
-  Widget wallet()=>TechPanel(onTap:widget.onFund,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const GlossIcon(Icons.account_balance_wallet_rounded,size:30),const SizedBox(width:7),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Wallet Balance',style:techText(c,size:9)),FittedBox(fit:BoxFit.scaleDown,child:Text(widget.balance,style:techText(c,size:18,weight:FontWeight.w700)))]))]),
-   const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton(style:FilledButton.styleFrom(minimumSize:const Size(0,29),padding:const EdgeInsets.symmetric(horizontal:8),textStyle:const TextStyle(fontSize:10)),onPressed:widget.onFund,child:Text(widget.balance=='—'?'Sign in':'Fund Wallet')))]));
+  Widget wallet()=>TechPanel(onTap:widget.onFund,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const TechGlyph(Icons.account_balance_wallet_rounded,size:30),const SizedBox(width:7),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Wallet Balance',style:techText(c,size:9)),FittedBox(fit:BoxFit.scaleDown,child:Text(widget.balance,style:techText(c,size:18,weight:FontWeight.w700)))]))]),
+   const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton(style:FilledButton.styleFrom(minimumSize:const Size(0,29),padding:const EdgeInsets.symmetric(horizontal:8),textStyle:const TextStyle(fontFamily:'NUSans',fontSize:10),tapTargetSize:MaterialTapTargetSize.shrinkWrap),onPressed:widget.onFund,child:Text(widget.balance=='—'?'Sign in':'Fund Wallet')))]));
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[if(large)...[semester(),const SizedBox(height:10),wallet()]else Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:semester()),const SizedBox(width:10),Expanded(child:wallet())]),
    Padding(padding:const EdgeInsets.only(top:14,bottom:9),child:Row(children:[Expanded(child:Text('Continue Studying',style:techText(c,size:16,weight:FontWeight.w700))),TextButton(onPressed:widget.onCourses,child:const Text('View All ›',style:TextStyle(fontSize:10)))])),
-   TechPanel(onTap:widget.onCourses,child:Row(children:[const GlossIcon(Icons.bar_chart_rounded,color:Color(0xffb78a17),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   TechPanel(onTap:widget.onCourses,child:Row(children:[const TechGlyph(Icons.bar_chart_rounded,color:Color(0xffb78a17),size:43),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text(widget.courses.firstOrNull??'Add your courses',style:techText(c,size:12,weight:FontWeight.w700)),const SizedBox(height:4),Text(firstTitle??'Open your registered courses',style:techText(c,size:11,color:t.primary)),
     if(firstProgress!=null)...[const SizedBox(height:9),Row(children:[Expanded(child:LinearProgressIndicator(value:firstProgress,color:t.primary,backgroundColor:t.primary.withValues(alpha:.12),minHeight:4)),const SizedBox(width:7),Text('${(firstProgress!*100).round()}%',style:techText(c,size:9))])],
    ])),const SizedBox(width:10),Icon(Icons.play_circle_outline,size:38,color:t.primary)])),
@@ -152,8 +162,8 @@ class TechHomeLayout extends StatelessWidget{
  @override Widget build(BuildContext c){final large=MediaQuery.textScalerOf(c).scale(12)>16;
   final quick=<({String title,IconData icon,Color tone,VoidCallback tap})>[(title:'My Courses',icon:Icons.menu_book_rounded,tone:const Color(0xff0b724b),tap:onCourses)];
   for(final id in ['result','fees','personalized-timetable']){final rows=services.where((s)=>s['id']==id);if(rows.isEmpty)continue;final row=rows.first;
-   quick.add((title:switch(id){'result'=>'Results','fees'=>'Fees',_=>'Timetable'},icon:serviceIcon(id),tone:switch(id){'result'=>const Color(0xff276684),'fees'=>const Color(0xff9b7114),_=>const Color(0xff663b8a)},tap:()=>onOpen(row)));}
-  Widget cell(int i)=>TechPanel(padding:9,onTap:quick[i].tap,child:Column(children:[GlossIcon(quick[i].icon,color:quick[i].tone,size:29),const SizedBox(height:6),Text(quick[i].title,style:techText(c,size:9),textAlign:TextAlign.center)]));
+   quick.add((title:switch(id){'result'=>'Results','fees'=>'Fees',_=>'Timetable'},icon:techIcon(id),tone:switch(id){'result'=>const Color(0xff276684),'fees'=>const Color(0xff9b7114),_=>const Color(0xff663b8a)},tap:()=>onOpen(row)));}
+  Widget cell(int i)=>TechPanel(padding:9,onTap:quick[i].tap,child:Column(children:[TechGlyph(quick[i].icon,color:quick[i].tone,size:29),const SizedBox(height:6),Text(quick[i].title,style:techText(c,size:9),textAlign:TextAlign.center)]));
   return ListView(key:const PageStorageKey('home'),padding:const EdgeInsets.fromLTRB(16,6,16,24),children:[
    TechPanel(onTap:onSearch,padding:10,child:Row(children:[const Icon(Icons.search,size:18),const SizedBox(width:8),Expanded(child:Text('Search anything (courses, news, tools…)',style:techText(c,size:10)))])),const SizedBox(height:11),
    if(large)Wrap(spacing:9,runSpacing:9,children:[for(var i=0;i<quick.length;i++)SizedBox(width:(MediaQuery.sizeOf(c).width-41)/2,child:cell(i))])
