@@ -38,10 +38,12 @@ class LivePortal extends StatefulWidget {
 class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  late final ApiClient api;
  StudentWorkspace workspace=StudentWorkspace('guest');
+ int _workspaceLoad=0;
  TimetableSnapshot? timetable;
  Object? timetableError;
  bool timetableLoading=false;
- Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted){setState(()=>workspace=next);await _refreshTimetable();}}
+ int _timetableLoad=0;
+ Future<void> _workspace(String scope,{Map<String,dynamic>? bootstrapRemote})async{final request=++_workspaceLoad,generation=api.sessionGeneration;final next=StudentWorkspace(scope,api:api);await next.load(bootstrapRemote:bootstrapRemote);if(mounted&&request==_workspaceLoad&&generation==api.sessionGeneration){setState(()=>workspace=next);await _refreshTimetable();}}
  void _courses()=>pushNu(context,MyCoursesPage(workspace:workspace,openResource:(id,label)=>_service({'id':id,'label':label}))).then((_) async {if(mounted){setState((){});await _refreshTimetable();}});
  void _setup()=>pushNu(context,StudentSetup(workspace:workspace)).then((_) {if(mounted)setState((){});});
  void _saved()=>pushNu(context,NativeSavedResourcesPage(api:api,userId:profile?['id']?.toString(),onOpen:(item){
@@ -68,11 +70,12 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
  Future<Map<String,dynamic>> _feed()=>api.getJson('/posts/$category').then(unpack);
  Future<void> _refreshTimetable()async{
   if(widget.preview)return;
+  final request=++_timetableLoad,targetWorkspace=workspace;
   if(workspace.courses.isEmpty){if(mounted)setState((){timetable=null;timetableError=null;timetableLoading=false;});return;}
   if(mounted)setState(()=>timetableLoading=true);
-  try{final value=await TimetableSnapshot.fetch(api,workspace.courses);if(mounted)setState((){timetable=value;timetableError=null;});}
-  catch(e){if(mounted)setState(()=>timetableError=e);}
-  finally{if(mounted)setState(()=>timetableLoading=false);}
+  try{final value=await TimetableSnapshot.fetch(api,List<String>.from(targetWorkspace.courses));if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState((){timetable=value;timetableError=null;});}
+  catch(e){if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState(()=>timetableError=e);}
+  finally{if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState(()=>timetableLoading=false);}
  }
  String get _nextExamSubtitle{
   if(workspace.courses.isEmpty)return 'Add your registered courses to generate your personalised exam timetable.';
@@ -86,19 +89,39 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   if(mounted)setState(()=>services=rows.where((s)=>s['id']!='quizly').toList());
   try{final d=unpack(await api.getJson('/services'));if(mounted)setState(()=>services=records(d['items']).where((s)=>s['id']!='quizly').toList());}catch(_){/* Retain bundled directory. */}
  }
- Future<void> _loadAccount()async{if(widget.preview)return;try{
+ Future<void> _loadAccount()async{if(widget.preview)return;final generation=api.sessionGeneration;try{
   if(!await api.hasSession())return;
-  final b=unpack(await api.getJson('/app/bootstrap'));final p=b['profile']==null?null:Map<String,dynamic>.from(b['profile'] as Map);
+  final b=unpack(await api.getJson('/app/bootstrap'));if(!mounted||generation!=api.sessionGeneration)return;final p=b['profile']==null?null:Map<String,dynamic>.from(b['profile'] as Map);
   final rawWorkspace=b['workspace'];
   final bootstrapWorkspace=rawWorkspace is Map?Map<String,dynamic>.from(rawWorkspace):null;
   final prefs=await SharedPreferences.getInstance();
   if(p!=null){
    final scope='${p['id']}';
    await PremiumService.instance.refresh(api,scope);
+   if(!mounted||generation!=api.sessionGeneration)return;
    if(workspace.scope!=scope){await _workspace(scope,bootstrapRemote:bootstrapWorkspace);}else{await workspace.load(bootstrapRemote:bootstrapWorkspace);await _refreshTimetable();}
   }
-  if(mounted)setState((){profile=p;wallet=b['wallet']==null?null:Map<String,dynamic>.from(b['wallet'] as Map);pendingReference=p==null?null:prefs.getString('nu_pending_${p['id']}');accountError=null;});
- }catch(e){if(mounted)setState((){accountError='$e';if(e is ApiException&&e.statusCode==401){PremiumService.instance.clear();profile=null;wallet=null;}});}}
+  if(mounted&&generation==api.sessionGeneration)setState((){profile=p;wallet=b['wallet']==null?null:Map<String,dynamic>.from(b['wallet'] as Map);pendingReference=p==null?null:prefs.getString('nu_pending_${p['id']}');accountError=b['wallet_warning'] as String?;});
+ }catch(e){
+  if(!mounted)return;
+  final currentGeneration=api.sessionGeneration;
+  final hasSession=await api.hasSession();
+  if(!mounted||currentGeneration!=api.sessionGeneration||(generation!=currentGeneration&&hasSession))return;
+  if(e is ApiException&&e.statusCode==401){
+   if(hasSession)await api.clearSession();PremiumService.instance.clear();
+   if(mounted)setState((){profile=null;wallet=null;pendingReference=null;accountError='$e';});
+   await _workspace('guest');
+  }else{setState(()=>accountError='$e');}
+ }finally{
+  // Renewal can expire the session while optional personalisation is loading.
+  final currentGeneration=api.sessionGeneration;
+  final stillSignedIn=await api.hasSession();
+  if(mounted&&currentGeneration==api.sessionGeneration&&!stillSignedIn&&(profile!=null||PremiumService.instance.accountId!=null)){
+   PremiumService.instance.clear();
+   setState((){profile=null;wallet=null;pendingReference=null;accountError='Your session has expired. Please sign in again.';});
+   await _workspace('guest');
+  }
+ }}
  Future<void> _run(Future<void> Function() action)async{if(busy)return;setState(()=>busy=true);try{await action();}catch(e){if(mounted)nuMessage(context,e);}finally{if(mounted)setState(()=>busy=false);}}
  Future<void> _login()async{final ok=await pushNu<bool>(context,NativeAuth(api));if(ok==true)await _loadAccount();}
  Future<void> _fund() async {
@@ -239,7 +262,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    NuTitle('My tools & purchases'),NuPanel(padding:0,child:Column(children:[for(final t in [('course-summary','Course Summary','Understand your course, unit by unit'),('exam-summary','Exam Summary','Focused resources for revision'),('study-hub','Study Hub','Your materials, notes and progress')])ListTile(leading:GlossIcon(serviceIcon(t.$1),color:serviceColour(t.$1),size:38),title:Text(t.$2,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800)),subtitle:Text(t.$3,style:const TextStyle(fontSize:10)),trailing:const Icon(Icons.chevron_right,size:18),onTap:()=>_service({'id':t.$1,'label':t.$2}))])),
    if(pendingReference!=null)NuPanel(child:Column(children:[const Text('A payment is awaiting confirmation.'),SelectableText(pendingReference!,style:const TextStyle(fontSize:11)),TextButton(onPressed:busy?null:()=>_run(_recheck),child:const Text('Recheck payment'))])),
    NuTitle('My account'),NuPanel(padding:0,child:Column(children:[ListTile(leading:Icon(Icons.description_outlined,color:Theme.of(context).colorScheme.primary),title:const Text('My Exam Summaries'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,OrdersPage(api:api))),ListTile(leading:Icon(Icons.person_outline,color:Theme.of(context).colorScheme.primary),title:const Text('Profile details'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,NativeProfile(api:api,name:'${profile!['name']}')).then((_)=>_loadAccount())),if(PremiumService.instance.isPremium)ListTile(leading:Icon(Icons.auto_awesome_outlined,color:Theme.of(context).colorScheme.primary),title:const Text('Profile style'),subtitle:const Text('Premium frame and profile appearance'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,ProfileCosmeticsPage(api:api,name:'${profile!['name']}')).then((_)=>setState((){})))])),
-   OutlinedButton(onPressed:busy?null:()=>_run(()async{await api.postJson('/auth/logout',{});await api.clearSession();await _workspace('guest');if(mounted)setState((){PremiumService.instance.clear();profile=null;wallet=null;pendingReference=null;});}),child:const Text('Sign out')),
+   OutlinedButton(onPressed:busy?null:()=>_run(()async{final revoked=await api.signOut();PremiumService.instance.clear();if(mounted)setState((){profile=null;wallet=null;pendingReference=null;accountError=null;});await _workspace('guest');if(!revoked&&mounted)nuMessage(context,'Signed out on this device. The server could not confirm session revocation.');}),child:const Text('Sign out')),
   ],const NuTitle('Library & membership'),NuPanel(padding:0,child:Column(children:[_row('Saved items','Your reading list',Icons.bookmark_border,_saved),_row('Downloads','Manage offline resources',Icons.download_outlined,()=>_unavailable('Downloads')),_row('Premium','Membership and benefits',Icons.workspace_premium_outlined,()=>pushNu(context,PremiumPage(api:api)))])),if(profile!=null)NuPanel(padding:0,child:_row('Birthday','Let NOUN Update celebrate with you',Icons.cake_outlined,()=>pushNu(context,BirthdaySettings(api:api)).then((_){if(mounted)setState((){});}))),NuPanel(padding:0,child:_row('Saved Motivation','Your favourite quotes',Icons.favorite_border,()=>pushNu(context,SavedMotivation(api:api)))),const NuTitle('Preferences'),NuPanel(padding:0,child:ListTile(leading:const Icon(Icons.tune_rounded),title:const Text('Appearance & settings'),subtitle:const Text('Fonts, colours, display mode and connection'),trailing:const Icon(Icons.chevron_right),onTap:()=>pushNu(context,AppearanceSettings(api:api)))),NuPanel(padding:0,child:Column(children:[_row('Notifications','Updates and notification preferences',Icons.notifications_outlined,()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))),_row('Security','Account and session information',Icons.lock_outline,()=>pushNu(context,const NuPage(title:'Security',child:Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Your login token is stored in secure device storage. Website passwords and payment keys are never stored in the app. Sign out from Profile to end your session.'))))))])),const NuTitle('Help & support'),const NuPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869\n\nIndependent student support. Not an official arm of the National Open University of Nigeria.')),
  ]);
  Widget _profile(){
@@ -268,7 +291,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     _row('Notifications','Updates and notification preferences',Icons.notifications_outlined,()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))),
     _row('Security','Account and session information',Icons.lock_outline,()=>pushNu(context,const NuPage(title:'Security',child:Center(child:Padding(padding:EdgeInsets.all(24),child:Text('Your login token is stored in secure device storage. Sign out from Profile to end your session.')))))),
    ])),
-   if(profile!=null)...[const SizedBox(height:16),OutlinedButton(onPressed:busy?null:()=>_run(()async{await api.postJson('/auth/logout',{});await api.clearSession();await _workspace('guest');if(mounted)setState((){PremiumService.instance.clear();profile=null;wallet=null;pendingReference=null;});}),child:const Text('Sign out'))],
+   if(profile!=null)...[const SizedBox(height:16),OutlinedButton(onPressed:busy?null:()=>_run(()async{final revoked=await api.signOut();PremiumService.instance.clear();if(mounted)setState((){profile=null;wallet=null;pendingReference=null;accountError=null;});await _workspace('guest');if(!revoked&&mounted)nuMessage(context,'Signed out on this device. The server could not confirm session revocation.');}),child:const Text('Sign out'))],
    const EditorialHeading('Help & support'),const EditorialPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869\n\nIndependent student support. Not an official arm of the National Open University of Nigeria.')),
   ]);
  }
@@ -319,3 +342,4 @@ class OrderPage extends StatelessWidget {
  const OrderPage({required this.api,required this.id,super.key});final ApiClient api;final String id;
  @override Widget build(BuildContext context)=>NuPage(title:'Order #$id',child:FutureBuilder<Map<String,dynamic>>(future:api.getJson('/orders/$id').then(_data),builder:(context,s){if(s.hasError)return const Center(child:Text('Unable to load this order. Please reopen it.'));if(!s.hasData)return const Center(child:CircularProgressIndicator());return ListView(padding:const EdgeInsets.all(20),children:[const Text('Your Exam Summaries',style:TextStyle(fontSize:24,fontWeight:FontWeight.w800)),const SizedBox(height:18),for(final r in _items(s.data!['items']))Card(child:ListTile(title:Text(r['name'] as String),trailing:IconButton(tooltip:'Download',icon:const Icon(Icons.download),onPressed:()async{try{final d=_data(await api.postJson('/downloads/${r['id']}',{}));if(context.mounted)await pushNu(context,NativePdf(api:api,path:d['url'] as String,title:r['name'] as String));}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}})))]);}));
 }
+

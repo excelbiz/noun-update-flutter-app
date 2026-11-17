@@ -23,7 +23,7 @@ class _NativeAuthState extends State<NativeAuth>{
   final d=unpack(await widget.api.postJson(path,{'email':email.text.trim(),'password':password.text,'name':name.text.trim(),'code':code.text.trim()}));
   if(mode=='reset'){if(mounted)setState((){mode='code';message='${d['message']}';});}
   else if(mode=='code'){password.clear();if(mounted)setState((){mode='login';message='${d['message']}';});}
-  else{await SessionStore().saveTokens(accessToken:d['access_token'] as String,refreshToken:d['refresh_token'] as String);if(mounted)Navigator.pop(context,true);}
+  else{if(!mounted)return;await widget.api.saveSession(accessToken:d['access_token'] as String,refreshToken:d['refresh_token'] as String);if(mounted)Navigator.pop(context,true);}
  }catch(e){if(mounted)setState(()=>message='$e');}finally{if(mounted)setState(()=>busy=false);}}
  Widget _insideTools()=>NuPanel(color:nuMint,padding:12,child:Column(
   crossAxisAlignment:CrossAxisAlignment.start,
@@ -70,3 +70,4 @@ class _NativeProfileState extends State<NativeProfile>{
  Future<void> save()async{setState(()=>busy=true);try{await widget.api.postJson('/profile',{'name':name.text,'programme':programme.text,'level':level.text,'matric_number':matric.text});if(mounted){nuMessage(context,'Profile saved.');Navigator.pop(context);}}catch(e){if(mounted)nuMessage(context,e);}finally{if(mounted)setState(()=>busy=false);}}
  @override Widget build(BuildContext context)=>NuPage(title:'Profile details',child:ListView(padding:EdgeInsets.all(22),children:[if(error!=null)AsyncError(error!,load)else if(loading)LinearProgressIndicator(),NuTitle('About you'),for(final field in [(name,'Full name'),(programme,'Programme'),(level,'Level'),(matric,'Matric number')])Padding(padding:EdgeInsets.only(bottom:14),child:TextField(controller:field.$1,enabled:!loading,decoration:InputDecoration(labelText:field.$2))),Text('Your matric number is profile information. Continue using your email to sign in.'),SizedBox(height:20),FilledButton(onPressed:busy||loading?null:save,child:Text('Save profile'))]));
 }
+

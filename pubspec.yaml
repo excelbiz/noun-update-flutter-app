@@ -1,7 +1,7 @@
 name: noun_update_student_app
 description: Native NOUN Update student companion for Android and iOS.
 publish_to: none
-version: 0.9.6+16
+version: 0.9.7+17
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -64,3 +64,4 @@ flutter_native_splash:
     image: assets/images/launcher_foreground.png
   ios: true
   web: false
+

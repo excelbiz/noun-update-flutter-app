@@ -53,3 +53,6 @@ jobs:
 
       - name: Test enabled mobile service directory
         run: php backend/tests/services.php
+
+      - name: Test central HTTP routes during wallet outages
+        run: php backend/tests/central-router.php

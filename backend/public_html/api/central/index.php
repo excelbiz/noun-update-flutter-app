@@ -13,6 +13,8 @@ function failure(int $status, string $code, string $message): never {
     response(['error'=>['code'=>$code,'message'=>$message]], $status);
 }
 function optionalWalletSnapshot(PDO $pdo,int $accountId): array {
+    require_once dirname(__DIR__,2).'/includes/central-wallet-bootstrap.php';
+    $pdo=nu_cwallet_pdo();
     $link=$pdo->prepare('SELECT wallet_user_id FROM nu_account_wallet_links WHERE account_id=?');
     $link->execute([$accountId]);
     $walletId=(int)$link->fetchColumn();
@@ -32,8 +34,7 @@ function optionalWalletSnapshot(PDO $pdo,int $accountId): array {
 try {
     $root = dirname(__DIR__, 2);
     require_once $root.'/includes/central-auth.php';
-    require_once $root.'/includes/central-wallet-bootstrap.php';
-    $pdo = nu_cwallet_pdo();
+    $pdo = nu_auth_pdo();
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $route = '/'.trim((string)($_GET['route'] ?? ''), '/');
     // Mobile endpoint accepts bearer tokens only, never ambient browser cookies.
@@ -157,10 +158,17 @@ try {
         require_once $root.'/nu-mobile/account-settings/service.php';
         $bootstrapWorkspace=(new NuStudentWorkspace($pdo))->get($accountId);
         $bootstrapSettings=(new NuAccountSettings($pdo))->get($accountId);
-        $walletSnapshot=optionalWalletSnapshot($pdo,$accountId);
+        $walletWarning=null;
+        try{$walletSnapshot=optionalWalletSnapshot($pdo,$accountId);}
+        catch(Throwable $e){
+            error_log('[CENTRAL MOBILE WALLET] '.$e->getMessage());
+            $walletSnapshot=['wallet_id'=>0,'wallet'=>null];
+            $walletWarning='Your wallet is temporarily unavailable. Your student account remains available.';
+        }
         response(['data'=>[
             'profile'=>['id'=>$accountId,'name'=>$account['display_name'] ?: 'Student','email'=>$account['email']],
             'wallet'=>$walletSnapshot['wallet'],
+            'wallet_warning'=>$walletWarning,
             'workspace'=>$bootstrapWorkspace,
             'settings'=>$bootstrapSettings,
             'feature_flags'=>[
@@ -178,6 +186,9 @@ try {
             ]
         ]]);
     }
+    // Only recognised money routes may enter the existing wallet gate.
+    if(!(($method==='GET' && $route==='/wallet') || ($method==='POST' && $route==='/premium/purchase')))
+        failure(503,'NOT_AVAILABLE','This feature is being connected to your central account. Please try again later.');
     // Wallet and purchase operations below this point require an established link.
     $walletSnapshot=optionalWalletSnapshot($pdo,$accountId);
     $walletId=(int)$walletSnapshot['wallet_id'];

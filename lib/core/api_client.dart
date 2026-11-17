@@ -50,24 +50,62 @@ class ApiClient {
   final http.Client _client;
   final SessionStore _sessionStore;
   Future<bool>? _refreshing;
+  int _sessionGeneration=0;
+  int get sessionGeneration=>_sessionGeneration;
+  Future<void> _sessionWrites=Future<void>.value();
+  Future<void> _writeSession(Future<void> Function() action){
+    final next=_sessionWrites.catchError((Object _){}).then((_)=>action());
+    _sessionWrites=next;return next;
+  }
 
   Future<bool> hasSession() async {
     final token = await _sessionStore.readAccessToken();
     return token != null && token.isNotEmpty;
   }
 
-  Future<void> clearSession() => _sessionStore.clear();
+  Future<void> clearSession(){
+    _sessionGeneration++;
+    return _writeSession(_sessionStore.clear);
+  }
+  Future<void> saveSession({required String accessToken,required String refreshToken}){
+    _sessionGeneration++;
+    return _writeSession(()=>_sessionStore.saveTokens(accessToken:accessToken,refreshToken:refreshToken));
+  }
+  /// Device sign-out is always possible, including after expiry or lost connectivity.
+  Future<bool> signOut()async{
+    bool revoked=false;
+    try{await postJson('/auth/logout',{});revoked=true;}catch(_){/* Do not trap a student in an expired session. */}
+    finally{await clearSession();}
+    return revoked;
+  }
 
   Future<bool> _refresh() async {
+    final generation=_sessionGeneration;
     final token = await _sessionStore.readRefreshToken();
-    if (token == null || token.isEmpty) return false;
-    final response = await _client.post(Uri.parse('${AppConfig.apiBaseUrl}/auth/refresh'),
-      headers: {'Content-Type': 'application/json'}, body: jsonEncode({'refresh_token': token}))
+    if (token == null || token.isEmpty || generation!=_sessionGeneration) return false;
+    final response = await _client.post(_uri('/auth/refresh'),
+      headers: await _headers('/auth/refresh'), body: jsonEncode({'refresh_token': token}))
       .timeout(const Duration(seconds: 20));
-    if (response.statusCode == 401) { await _sessionStore.clear(); return false; }
-    final data = _decode(response)['data'] as Map<String, dynamic>;
-    await _sessionStore.saveTokens(accessToken: data['access_token'] as String, refreshToken: data['refresh_token'] as String);
-    return true;
+    bool refreshed=false;
+    if(response.statusCode==401){
+      await _writeSession(()async{
+        if(generation==_sessionGeneration && await _sessionStore.readRefreshToken()==token){
+          _sessionGeneration++;await _sessionStore.clear();
+        }
+      });
+      return false;
+    }
+    final data = _decode(response)['data'];
+    if(data is! Map || data['access_token'] is! String || data['refresh_token'] is! String ||
+       (data['access_token'] as String).isEmpty || (data['refresh_token'] as String).isEmpty){
+      throw const ApiException('Session renewal returned an invalid response. Please try again.');
+    }
+    await _writeSession(()async{
+      if(generation!=_sessionGeneration || await _sessionStore.readRefreshToken()!=token)return;
+      await _sessionStore.saveTokens(accessToken:data['access_token'] as String,refreshToken:data['refresh_token'] as String);
+      refreshed=true;
+    });
+    return refreshed;
   }
 
   Future<bool> _refreshOnce() async {
@@ -85,10 +123,12 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> getJson(String path) async {
+    final generation=_sessionGeneration;
     var response = await _client
         .get(_uri(path), headers: await _headers(path))
         .timeout(const Duration(seconds: 12));
-    if (response.statusCode == 401 && await _refreshOnce()) {
+    if (response.statusCode == 401 && _central(path) && generation==_sessionGeneration && await _refreshOnce()) {
+      if(generation!=_sessionGeneration)throw const ApiException('Your session changed. Reopen this page.',statusCode:401,code:'SESSION_CHANGED');
       response = await _client.get(_uri(path), headers: await _headers(path)).timeout(const Duration(seconds: 20));
     }
     return _decode(response);
@@ -99,6 +139,7 @@ class ApiClient {
     Map<String, dynamic> body, {
     String? idempotencyKey,
   }) async {
+    final generation=_sessionGeneration;
     final headers = await _headers(path);
     if (idempotencyKey != null) {
       headers['Idempotency-Key'] = idempotencyKey;
@@ -110,7 +151,8 @@ class ApiClient {
           body: jsonEncode(body),
         )
         .timeout(Duration(seconds: path.startsWith('/course-summary') ? 300 : 60));
-    if (response.statusCode == 401 && !path.startsWith('/auth/') && await _refreshOnce()) {
+    if (response.statusCode == 401 && _central(path) && !path.startsWith('/auth/') && generation==_sessionGeneration && await _refreshOnce()) {
+      if(generation!=_sessionGeneration)throw const ApiException('Your session changed. Reopen this page.',statusCode:401,code:'SESSION_CHANGED');
       final retryHeaders = await _headers(path);
       if (idempotencyKey != null) retryHeaders['Idempotency-Key'] = idempotencyKey;
       response = await _client.post(_uri(path), headers: retryHeaders,
@@ -141,7 +183,7 @@ class ApiClient {
       'Content-Type': 'application/json',
       'User-Agent': 'NOUNUpdateMobile/central-v1',
       'X-App-Platform': 'flutter',
-      'X-App-Version': '0.9.0',
+      'X-App-Version': '0.9.7',
       if (_central(path) && token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
