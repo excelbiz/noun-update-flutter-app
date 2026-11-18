@@ -1,0 +1,704 @@
+[
+  {
+    "id": "noun-student-resource-centre",
+    "label": "Resource Centre",
+    "path": "/noun-student-resource-centre",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "result",
+    "label": "Result Checker",
+    "path": "/result",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "ai-result-analytics",
+    "label": "AI Result Analytics",
+    "path": "/ai-result-analytics.php",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "ai-result-analytics-auto",
+    "label": "Auto Result Analytics",
+    "path": "/ai-result-analytics-auto.php",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "ai-result-analytics-dashboard",
+    "label": "Analytics Dashboard",
+    "path": "/ai-result-analytics-dashboard.php",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "cgpa-calculator",
+    "label": "CGPA Calculator",
+    "path": "/cgpa-calculator",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "graduation",
+    "label": "Graduation / Convocation Checker",
+    "path": "/graduation",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "graduation-predictor",
+    "label": "Graduation Predictor",
+    "path": "/graduation-predictor.php",
+    "group": "Academics",
+    "icon": "chart",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "fees",
+    "label": "Fee Checker",
+    "path": "/fees/",
+    "group": "Academics",
+    "icon": "wallet",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "personalized-timetable",
+    "label": "Personalised Timetable",
+    "path": "/personalized-timetable",
+    "group": "Academics",
+    "icon": "calendar",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "study-planner",
+    "label": "Study Planner",
+    "path": "/study-planner",
+    "group": "Academics",
+    "icon": "calendar",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "mock",
+    "label": "e-Exam Practice",
+    "path": "/mock",
+    "group": "Study",
+    "icon": "quiz",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "exam-practice.html",
+    "label": "POP Exam Practice",
+    "path": "/exam-practice.html",
+    "group": "Study",
+    "icon": "quiz",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "past-questions",
+    "label": "Past Questions",
+    "path": "/past-questions",
+    "group": "Study",
+    "icon": "book",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "tma-archive",
+    "label": "TMA Archive",
+    "path": "/tma-archive",
+    "group": "Study",
+    "icon": "book",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "courses",
+    "label": "Course Materials / Courseware",
+    "path": "/courses/",
+    "group": "Study",
+    "icon": "book",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "course-summary",
+    "label": "Course Summary",
+    "path": "/course/summary",
+    "group": "Study",
+    "icon": "book",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "exam-summary",
+    "label": "Exam Summary",
+    "path": "/exam-summary",
+    "group": "Study",
+    "icon": "document",
+    "enabled": true,
+    "mode": "native"
+  },
+  {
+    "id": "smart-eligibility-finder",
+    "label": "Smart Eligibility Finder",
+    "path": "/smart-eligibility-finder",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "eligibility_checker",
+    "label": "Eligibility Checker",
+    "path": "/eligibility_checker",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "admission-requirements",
+    "label": "Admission Requirements",
+    "path": "/admission-requirements.php",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "programmes",
+    "label": "NOUN Programmes",
+    "path": "/programmes/",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "programmes",
+    "label": "Programmes Directory",
+    "path": "/programmes.php",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "study-centres",
+    "label": "Study Centres",
+    "path": "/study-centres/",
+    "group": "Admission",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "ai-course-tutor",
+    "label": "AI Course Tutor",
+    "path": "/ai-course-tutor.php",
+    "group": "AI tools",
+    "icon": "spark",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "ai-exam-coach",
+    "label": "AI Exam Coach",
+    "path": "/ai-exam-coach.php",
+    "group": "AI tools",
+    "icon": "quiz",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "transcript-analyzer",
+    "label": "Transcript Analyzer",
+    "path": "/transcript-analyzer.php",
+    "group": "AI tools",
+    "icon": "spark",
+    "enabled": false,
+    "mode": "web"
+  },
+  {
+    "id": "gpa-rescue",
+    "label": "GPA Rescue Plan",
+    "path": "/gpa-rescue.php",
+    "group": "AI tools",
+    "icon": "spark",
+    "enabled": false,
+    "mode": "web"
+  },
+  {
+    "id": "project-topic-generator",
+    "label": "Project Topic Generator",
+    "path": "/project-topic-generator",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "topic-generator",
+    "label": "Topic Generator",
+    "path": "/topic-generator",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "generate-project-slip",
+    "label": "Generate Project Slip",
+    "path": "/generate-project-slip",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "generate-seminar-slip",
+    "label": "Generate Seminar Slip",
+    "path": "/generate-seminar-slip",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "project-seminar",
+    "label": "Project & Seminar Support",
+    "path": "/hire-project-seminar.php",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "projects",
+    "label": "Projects Library",
+    "path": "/projects",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "business-plan",
+    "label": "Premium Business Plan",
+    "path": "/business-plan.php",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "turnitin",
+    "label": "Turnitin / Plagiarism Checker",
+    "path": "/turnitin",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "marketplace",
+    "label": "Marketplace",
+    "path": "/marketplace",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "dashboard",
+    "label": "Student Dashboard",
+    "path": "/dashboard.php",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "my-account",
+    "label": "My Account & Purchases",
+    "path": "/course/central-wallet.php",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "cart",
+    "label": "Cart / Checkout",
+    "path": "/cart.php",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "student-success-hub",
+    "label": "Success Hub",
+    "path": "/student-success-hub",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "student-advisor",
+    "label": "Academic Advisor",
+    "path": "/student-advisor",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "career-hub",
+    "label": "Career & Internship Hub",
+    "path": "/career-hub.php",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "career-services",
+    "label": "Career Services",
+    "path": "/career-services",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "scholarships",
+    "label": "Scholarship Hub",
+    "path": "/scholarships.php",
+    "group": "Student life",
+    "icon": "people",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "fos",
+    "label": "Sciences",
+    "path": "/fos",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foas",
+    "label": "Agricultural Sciences",
+    "path": "/foas",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foa",
+    "label": "Arts",
+    "path": "/foa",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "fol",
+    "label": "Law",
+    "path": "/fol",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foms",
+    "label": "Management Sciences",
+    "path": "/foms",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foss",
+    "label": "Social Sciences",
+    "path": "/foss",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foe",
+    "label": "Education",
+    "path": "/foe",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "fohs",
+    "label": "Health Sciences",
+    "path": "/fohs",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "foc",
+    "label": "Computing",
+    "path": "/foc",
+    "group": "Faculties",
+    "icon": "building",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "search",
+    "label": "Search NOUN Update",
+    "path": "/search.php",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "glossary",
+    "label": "Glossary",
+    "path": "/glossary",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "about-noun",
+    "label": "About NOUN",
+    "path": "/about-noun",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "faqs",
+    "label": "FAQs",
+    "path": "/faqs",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "file-resizer",
+    "label": "File Resizer",
+    "path": "/file-resizer/",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "support",
+    "label": "Support",
+    "path": "/support.php",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "contact",
+    "label": "Contact",
+    "path": "/contact.php",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "premium",
+    "label": "Premium Access",
+    "path": "/premium.php",
+    "group": "Help & tools",
+    "icon": "compass",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "news",
+    "label": "News & Announcements",
+    "path": "/news/",
+    "group": "Updates",
+    "icon": "news",
+    "enabled": true,
+    "mode": "native"
+  },
+  {
+    "id": "guides",
+    "label": "Student Guides",
+    "path": "/guides/",
+    "group": "Updates",
+    "icon": "document",
+    "enabled": true,
+    "mode": "native"
+  },
+  {
+    "id": "scholarships",
+    "label": "Scholarships",
+    "path": "/scholarships.php",
+    "group": "Updates",
+    "icon": "cap",
+    "enabled": true,
+    "mode": "native"
+  },
+  {
+    "id": "calendar",
+    "label": "Academic Calendar",
+    "path": "/academic-calendar.php",
+    "group": "Academics",
+    "icon": "calendar",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "pas-status",
+    "label": "PAS Status",
+    "path": "/pas-status",
+    "group": "Academics",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "study-hub",
+    "label": "Study Hub",
+    "path": "/study-hub",
+    "group": "Study",
+    "icon": "book",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "wallet",
+    "label": "Central Wallet",
+    "path": "/course/central-wallet.php",
+    "group": "Account",
+    "icon": "wallet",
+    "enabled": true,
+    "mode": "native"
+  },
+  {
+    "id": "tma-service",
+    "label": "TMA Support",
+    "path": "/tma-service",
+    "group": "Study",
+    "icon": "quiz",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "gst302",
+    "label": "GST302 Form Assistant",
+    "path": "/gst302-form",
+    "group": "Projects & services",
+    "icon": "document",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "about",
+    "label": "About NOUN Update",
+    "path": "/about",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "editorial-policy",
+    "label": "Editorial Policy",
+    "path": "/editorial-policy",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "corrections",
+    "label": "Corrections",
+    "path": "/corrections",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "sources",
+    "label": "Sources",
+    "path": "/sources",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "advertising",
+    "label": "Advertising",
+    "path": "/advertising",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "privacy-policy",
+    "label": "Privacy Policy",
+    "path": "/privacy-policy",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  },
+  {
+    "id": "terms-of-use",
+    "label": "Terms of Use",
+    "path": "/terms-of-use",
+    "group": "Help & tools",
+    "icon": "shield",
+    "enabled": true,
+    "mode": "web"
+  }
+]
