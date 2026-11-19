@@ -187,7 +187,33 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final columns=compact?(_glass?(scale>=1.35?2:3):box.maxWidth>=350&&scale<1.3?5:4):(box.maxWidth>=330&&scale<1.3?3:2);
   return GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:entries.length,
    gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:compact?8:10,mainAxisSpacing:12,mainAxisExtent:(compact?100:154)+math.max(0,scale-1)*70),
-   itemBuilder:(c,i){final s=entries[i],id='${s['id']}';return Material(color:compact?Colors.transparent:Color.lerp(Theme.of(context).colorScheme.surface,serviceColour(id),nuIsDark(context)?0.13:0.055),borderRadius:BorderRadius.circular(16),child:InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>_service(s),child:Padding(padding:EdgeInsets.all(compact?2:8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[GlossIcon(serviceIcon(id),color:serviceColour(id),size:compact?46:50),const SizedBox(height:10),Text(compact&&id=='personalized-timetable'?'Timetable':serviceLabel(id,'${s['label']}'),textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:compact?9:12,fontWeight:FontWeight.w800,color:nuInk(context),height:1.15)),if(!compact)...[const SizedBox(height:5),Text(serviceCaption(id),textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,height:1.25))]]))));});
+   itemBuilder:(c,i){final s=entries[i],id='${s['id']}';
+    if(_glass&&compact){
+      final scheme=Theme.of(c).colorScheme;
+      final tone=switch(id){
+        'mock'||'wallet'=>const Color(0xff7339ab),
+        'courses'||'pas-status'=>const Color(0xff128744),
+        'past-questions'=>const Color(0xffb26a00),
+        'exam-summary'=>const Color(0xff1458a5),
+        'personalized-timetable'=>const Color(0xffbc235a),
+        'study-hub'=>const Color(0xff007c77),
+        _=>const Color(0xff0b6b46),
+      };
+      final radius=BorderRadius.circular(15);
+      return DecoratedBox(decoration:BoxDecoration(
+        borderRadius:radius,border:Border.all(color:scheme.outlineVariant),
+        gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,
+          colors:[scheme.surface,scheme.surfaceContainer])),
+        child:Material(color:Colors.transparent,borderRadius:radius,
+          child:InkWell(borderRadius:radius,onTap:()=>_service(s),child:Padding(
+            padding:const EdgeInsets.all(6),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+              GlossIcon(serviceIcon(id),color:tone,size:40),const SizedBox(height:8),
+              Text(id=='personalized-timetable'?'Timetable':serviceLabel(id,'${s['label']}'),
+                textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,
+                style:TextStyle(color:nuInk(c),fontSize:11,fontWeight:FontWeight.w800,height:1.12)),
+            ])))));
+    }
+    return Material(color:compact?Colors.transparent:Color.lerp(Theme.of(context).colorScheme.surface,serviceColour(id),nuIsDark(context)?0.13:0.055),borderRadius:BorderRadius.circular(16),child:InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>_service(s),child:Padding(padding:EdgeInsets.all(compact?2:8),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[GlossIcon(serviceIcon(id),color:serviceColour(id),size:compact?46:50),const SizedBox(height:10),Text(compact&&id=='personalized-timetable'?'Timetable':serviceLabel(id,'${s['label']}'),textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:compact?9:12,fontWeight:FontWeight.w800,color:nuInk(context),height:1.15)),if(!compact)...[const SizedBox(height:5),Text(serviceCaption(id),textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,height:1.25))]]))));});
  });
  String get _greeting=>'${DateTime.now().hour<12?'Good morning':DateTime.now().hour<18?'Good afternoon':'Good evening'}${(workspace.details['Name']??profile?['name']??'').toString().isEmpty?'':', ${workspace.details['Name']??profile?['name']}'}';
  String get _editorialGreeting{final name='${workspace.details['Name']??profile?['name']??''}'.trim().split(RegExp(r'\s+')).first;return '${DateTime.now().hour<12?'Good morning':DateTime.now().hour<18?'Good afternoon':'Good evening'}${name.isEmpty?'':', $name'}';}
@@ -232,8 +258,8 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     NuTitle(_greeting,subtitle:_meta.isEmpty?'Your student dashboard':_meta),
     WorkspaceConflictNotice(workspace:workspace),
     BirthdayBanner(name:'${profile?['name']??'Student'}'),
-    ServiceHero(title:'Prepare smarter for your POP & e-Exam',
-      subtitle:'Materials · Course summaries · Exam summaries',icon:Icons.auto_stories_rounded),
+    GreenBanner(title:'Prepare smarter for your POP & e-Exam',
+      text:'Materials · Course summaries · Exam summaries',icon:Icons.auto_stories_rounded),
     const SizedBox(height:14),
     _grid([for(final item in shortcuts)
       if(enabled.containsKey(item.$1)||studentRoute(item.$1)!=null)

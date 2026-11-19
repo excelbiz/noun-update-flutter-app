@@ -45,7 +45,9 @@ runtime policy. Source and previous designs remain on their original branches.
 ## PHP setup
 
 Add the `/information/{id}` route from `backend/public_html/api/v1/index.php`
-and `backend/public_html/nu-mobile/information.php` to a staging server after
+and the faculty-aware timetable handler to the hosted router, with
+`backend/public_html/nu-mobile/information.php` and the timetable changes in
+`backend/public_html/nu-mobile/content.php`, on a staging server after
 comparing the hosted router. Do not overwrite an independently updated router.
 No SQL migration is required for this change.
 
