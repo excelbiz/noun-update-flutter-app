@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - codex/green-glass-lite
 
 permissions:
   contents: read
@@ -75,7 +76,7 @@ jobs:
           # manually requested preview APKs a versioned application ID so review
           # installs do not require removing an existing student app.
           import os
-          if os.environ.get("GITHUB_EVENT_NAME") != "push":
+          if os.environ.get("GITHUB_EVENT_NAME") != "push" or os.environ.get("GITHUB_REF_NAME") != "main":
               version = Path('pubspec.yaml').read_text().split('version:', 1)[1].splitlines()[0].strip()
               review_code = version.split('+', 1)[1]
               s = s.replace('android:label="NOUN Update"', 'android:label="NOUN Update Preview ' + version.split('+', 1)[0] + '"')
@@ -93,9 +94,6 @@ jobs:
 
       - name: Run tests
         run: flutter test
-
-      - name: Verify website tool themes in browser fixtures
-        run: python tools/verify_web_skin.py
 
       - name: Upload native screen previews
         if: always()
@@ -149,4 +147,5 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
 

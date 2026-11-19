@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../core/skin_theme.dart';
+import '../core/green_glass.dart';
 import 'skin_art.dart';
 
 const nuGreen=Color(0xff006341),nuDeep=Color(0xff00452f),nuGold=Color(0xffffcf30),nuRed=Color(0xfff31e35),nuMint=Color(0xffe9f8f2);
@@ -13,6 +14,7 @@ Map<String,dynamic> unpack(Map<String,dynamic> r)=>Map<String,dynamic>.from(r['d
 List<Map<String,dynamic>> records(dynamic x)=>(x as List? ?? []).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
 Future<T?> pushNu<T>(BuildContext context,Widget page){
  final navigator=Navigator.of(context);
+ if(GreenGlass.of(context)!=null)return navigator.push<T>(MaterialPageRoute(builder:(_)=>page));
  final themes=InheritedTheme.capture(from:context,to:navigator.context);
  return navigator.push<T>(MaterialPageRoute(builder:(_)=>themes.wrap(page)));
 }
@@ -82,6 +84,17 @@ class NuPanel extends StatelessWidget {
  final Widget child;final Color color;final double padding;
  @override Widget build(BuildContext context){
   final theme=Theme.of(context),tokens=Theme.of(context).extension<SkinTokens>();
+  if(GreenGlass.of(context)!=null){
+   final scheme=theme.colorScheme;
+   final strong=color==nuDeep||color==nuGreen;
+   final fill=strong?nuDeep:color==Colors.white?scheme.surface:Color.lerp(scheme.surface,color,.09)!;
+   return Container(margin:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(
+    borderRadius:BorderRadius.circular(15),
+    gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,
+     colors:[fill,strong?const Color(0xff07663e):Color.lerp(fill,scheme.primaryContainer,.25)!]),
+    border:Border.all(color:strong?const Color(0xff387b59):scheme.outlineVariant)),
+    child:Material(color:Colors.transparent,child:Padding(padding:EdgeInsets.all(padding),child:child)));
+  }
   final skinned=tokens!=null&&tokens.skin.isPremium;
   final glass=skinned&&tokens.skin==AppSkin.glassmorphism;
   final tech=skinned&&tokens.skin==AppSkin.futureTech;
@@ -103,6 +116,10 @@ class NuPanel extends StatelessWidget {
 class NuPage extends StatelessWidget {const NuPage({super.key,required this.title,required this.child,this.actions});final String title;final Widget child;final List<Widget>? actions;
  @override Widget build(BuildContext context){
  final t=SkinTokens.of(context);
+ if(GreenGlass.of(context)!=null)return Scaffold(
+  appBar:AppBar(title:Text(title,maxLines:2,overflow:TextOverflow.ellipsis),actions:actions),
+  body:SkinBackdrop(child:SafeArea(top:false,child:child)),
+ );
  if(!t.skin.isPremium)return Scaffold(backgroundColor:nuDeep,appBar:AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:30),const SizedBox(width:9),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:17,fontWeight:FontWeight.w800)),Text(title,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Color(0xffc9e9dc)))]))]),actions:actions),body:ClipRRect(borderRadius:const BorderRadius.vertical(top:Radius.circular(24)),child:SkinBackdrop(child:SafeArea(top:false,child:child))));
  final scale=MediaQuery.textScalerOf(context).scale(14)/14;
  return Scaffold(backgroundColor:t.background,appBar:AppBar(backgroundColor:t.background,foregroundColor:t.ink,
@@ -171,3 +188,4 @@ class SkinQuotePanel extends StatelessWidget {
   ])));
  }
 }
+

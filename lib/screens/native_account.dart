@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
+import '../core/green_glass.dart';
 import '../widgets/native_ui.dart';
 import '../widgets/skin_art.dart';
 import '../core/skin_theme.dart';
@@ -44,7 +45,12 @@ class _NativeAuthState extends State<NativeAuth>{
  if(SkinTokens.of(context).skin==AppSkin.boldPremium && welcome && mode=='login')return BoldWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  if(SkinTokens.of(context).skin==AppSkin.elegantEditorial && welcome && mode=='login')return EditorialWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  return NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
- if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
+ if(GreenGlass.of(context)!=null)Padding(padding:const EdgeInsets.fromLTRB(20,24,20,34),child:Column(children:[
+  const BrandLogo(size:112),const SizedBox(height:12),
+  Text('NOUN Update',style:Theme.of(context).textTheme.titleLarge),
+  const SizedBox(height:8),Text(mode=='login'?'Welcome back':'Your next chapter',style:Theme.of(context).textTheme.headlineMedium),
+  const SizedBox(height:6),const Text('Your academic companion'),
+ ])) else if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
  Container(transform:Matrix4.translationValues(0,-18,0),padding:EdgeInsets.fromLTRB(20,23,20,18),decoration:BoxDecoration(color:Theme.of(context).colorScheme.surface,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  if(mode!='login')NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password',_=>'Enter your reset code'}),
  if(mode=='register')Padding(padding:EdgeInsets.only(bottom:12),child:TextField(controller:name,autofillHints:[AutofillHints.name],decoration:InputDecoration(labelText:'Full name',prefixIcon:Icon(Icons.person_outline)))),
@@ -70,4 +76,5 @@ class _NativeProfileState extends State<NativeProfile>{
  Future<void> save()async{setState(()=>busy=true);try{await widget.api.postJson('/profile',{'name':name.text,'programme':programme.text,'level':level.text,'matric_number':matric.text});if(mounted){nuMessage(context,'Profile saved.');Navigator.pop(context);}}catch(e){if(mounted)nuMessage(context,e);}finally{if(mounted)setState(()=>busy=false);}}
  @override Widget build(BuildContext context)=>NuPage(title:'Profile details',child:ListView(padding:EdgeInsets.all(22),children:[if(error!=null)AsyncError(error!,load)else if(loading)LinearProgressIndicator(),NuTitle('About you'),for(final field in [(name,'Full name'),(programme,'Programme'),(level,'Level'),(matric,'Matric number')])Padding(padding:EdgeInsets.only(bottom:14),child:TextField(controller:field.$1,enabled:!loading,decoration:InputDecoration(labelText:field.$2))),Text('Your matric number is profile information. Continue using your email to sign in.'),SizedBox(height:20),FilledButton(onPressed:busy||loading?null:save,child:Text('Save profile'))]));
 }
+
 

@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/core/appearance.dart';
+import 'package:noun_update_student_app/core/green_glass.dart';
+import 'package:noun_update_student_app/widgets/native_ui.dart';
 import 'package:noun_update_student_app/screens/student_workspace.dart';
 import 'package:noun_update_student_app/app/noun_update_app.dart';
 import 'package:noun_update_student_app/screens/appearance_settings.dart';
@@ -133,6 +135,43 @@ void main() {
     await capture(tester,key,'course-hub');await tester.pumpWidget(const SizedBox.shrink());
     workspace.dispose();restored.dispose();
   });
+  testWidgets('Green Glass renders native Home, Study Hub and a live-theme service route',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    await Appearance.instance.load();
+    await Appearance.instance.change(mode:ThemeMode.light);
+    tester.view.physicalSize=const Size(390,844);
+    tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(key:key,child:NounUpdateApp(
+      home:LivePortal(apiClient:DirectoryApi(services),serviceBundle:ServiceBundle(jsonEncode(services))))));
+    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(LivePortal))));
+    await tester.pumpAndSettle();
+    expect(GreenGlass.of(tester.element(find.byType(LivePortal))),isNotNull);
+    await capture(tester,key,'green-glass-home-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-home-dark');
+    await tester.tap(find.text('Mock e-Exam').hitTestable().first);
+    await tester.pumpAndSettle();
+    expect(find.byType(NativeUnavailable),findsOneWidget);
+    await Appearance.instance.change(mode:ThemeMode.light);
+    await tester.pumpAndSettle();
+    expect(Theme.of(tester.element(find.byType(NativeUnavailable))).brightness,Brightness.light);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Study Hub').hitTestable().first);
+    await tester.pumpAndSettle();
+    expect(find.text('Revision plan'),findsOneWidget);
+    await capture(tester,key,'green-glass-study-hub-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-study-hub-dark');
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('Appearance applies immediately and survives a reload',(tester)async{
     SharedPreferences.setMockInitialValues({});await Appearance.instance.load();
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
@@ -143,8 +182,7 @@ void main() {
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).brightness,Brightness.dark);
     await tester.scrollUntilVisible(find.text('Classic serif'),150,scrollable:find.byType(Scrollable).first);await Scrollable.ensureVisible(tester.element(find.text('Classic serif')),alignment:0.5);await tester.pumpAndSettle();await tester.tap(find.text('Classic serif').hitTestable());await tester.pumpAndSettle();
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).textTheme.bodyMedium?.fontFamily,'NUReading');
-    await Scrollable.ensureVisible(tester.element(find.text('Ocean')),alignment:0.5);await tester.pumpAndSettle();await tester.tap(find.text('Ocean'));await tester.pumpAndSettle();
-    final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(restored.accent,'Ocean');restored.dispose();
+    final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(find.text('Accent colour'),findsNothing);restored.dispose();
     await tester.drag(find.byType(ListView).first,const Offset(0,1000));await tester.pumpAndSettle();
     expect(tester.takeException(),isNull);await capture(tester,key,'settings-dark-serif');
     await Appearance.instance.change(mode:ThemeMode.light,font:'Modern sans',accent:'Emerald');await tester.pumpAndSettle();
@@ -181,3 +219,4 @@ Future<void> capture(WidgetTester tester,GlobalKey key,String name) async {
   File('screenshots/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());image.dispose();
  });
 }
+

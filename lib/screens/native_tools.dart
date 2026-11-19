@@ -3,12 +3,88 @@ import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../core/api_client.dart';
+import '../core/offline_materials.dart';
 import '../core/study_state_store.dart';
 import '../widgets/resource_bookmark.dart';
 import '../widgets/native_ui.dart';
 
-class NativePdf extends StatefulWidget {const NativePdf({super.key,required this.api,required this.path,required this.title});final ApiClient api;final String path,title;@override State<NativePdf> createState()=>_NativePdfState();}
-class _NativePdfState extends State<NativePdf>{PdfControllerPinch? controller;Object? error;@override void initState(){super.initState();load();}Future<void> load()async{try{final bytes=await widget.api.getPdf(widget.path);if(mounted)setState(()=>controller=PdfControllerPinch(document:PdfDocument.openData(bytes)));}catch(e){if(mounted)setState(()=>error=e);}}@override void dispose(){controller?.dispose();super.dispose();}@override Widget build(BuildContext context)=>NuPage(title:widget.title,child:controller!=null?PdfViewPinch(controller:controller!):error!=null?Center(child:AsyncError(error!,(){setState(()=>error=null);load();})):Center(child:CircularProgressIndicator()));}
+class NativePdf extends StatefulWidget {
+ const NativePdf({super.key,required this.api,required this.path,required this.title});
+ final ApiClient api;
+ final String path,title;
+ @override State<NativePdf> createState()=>_NativePdfState();
+}
+class _NativePdfState extends State<NativePdf>{
+ PdfControllerPinch? controller;
+ Object? error;
+ bool saved=false,saving=false;
+ int page=0,count=0;
+ bool get canDownload=>OfflineMaterials.idFor(widget.path)!=null;
+ @override void initState(){super.initState();load();}
+ Future<void> load()async{
+  try{
+   final cached=canDownload?await OfflineMaterials.find(widget.path):null;
+   final doc=cached!=null?await PdfDocument.openFile(cached.path):await PdfDocument.openData(await widget.api.getPdf(widget.path));
+   if(!mounted){await doc.close();return;}
+   setState((){saved=cached!=null;controller=PdfControllerPinch(document:Future.value(doc));count=doc.pagesCount;page=1;});
+  }catch(e){if(mounted)setState(()=>error=e);}
+ }
+ Future<void> save()async{
+  if(saving||saved||!canDownload)return;
+  setState(()=>saving=true);
+  try{
+   await OfflineMaterials.save(widget.path,widget.title,await widget.api.getPdf(widget.path));
+   if(mounted){setState(()=>saved=true);nuMessage(context,'Saved to Downloads on this device.');}
+  }catch(e){if(mounted)nuMessage(context,e is ApiException?e.message:'Could not save this PDF. Check your connection and available storage.');}
+  finally{if(mounted)setState(()=>saving=false);}
+ }
+ @override void dispose(){controller?.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>NuPage(title:widget.title,actions:[
+  if(canDownload&&controller!=null)IconButton(tooltip:saved?'Available offline':'Save for offline reading',
+   onPressed:saving||saved?null:save,icon:Icon(saved?Icons.download_done:Icons.download_outlined)),
+ ],child:controller!=null?Column(children:[
+  if(saving)const LinearProgressIndicator(),
+  Expanded(child:PdfViewPinch(controller:controller!,onPageChanged:(value)=>setState(()=>page=value))),
+  Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+   IconButton(tooltip:'Previous page',onPressed:page>1?()=>turn(page-1):null,icon:const Icon(Icons.chevron_left)),
+   Text('${page==0?1:page} / $count',semanticsLabel:'Page ${page==0?1:page} of $count'),
+   IconButton(tooltip:'Next page',onPressed:page<count?()=>turn(page+1):null,icon:const Icon(Icons.chevron_right)),
+  ])),
+ ]):error!=null?Center(child:AsyncError(error!,(){setState(()=>error=null);load();})):const Center(child:CircularProgressIndicator()));
+ void turn(int target)=>controller!.jumpToPage(target);
+}
+
+class NativeDownloads extends StatefulWidget {
+ const NativeDownloads({super.key,required this.api});
+ final ApiClient api;
+ @override State<NativeDownloads> createState()=>_NativeDownloadsState();
+}
+class _NativeDownloadsState extends State<NativeDownloads> {
+ late Future<List<OfflineMaterial>> items=OfflineMaterials.list();
+ void reload()=>setState(()=>items=OfflineMaterials.list());
+ @override Widget build(BuildContext context)=>NuPage(title:'Downloads',child:FutureBuilder(
+  future:items,builder:(context,snapshot){
+   if(snapshot.hasError)return Center(child:AsyncError('Downloads could not be opened.',reload));
+   if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
+   final rows=snapshot.data!;
+   if(rows.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(20),child:Text('Open a public course material in the reader and use Save for offline reading.')));
+   return ListView.builder(padding:const EdgeInsets.all(18),itemCount:rows.length,itemBuilder:(context,i){
+    final item=rows[i];
+    return NuPanel(padding:0,child:ListTile(leading:const Icon(Icons.picture_as_pdf_outlined),
+     title:Text(item.title),subtitle:Text('${(item.size/1000000).toStringAsFixed(1)} MB · available offline'),
+     onTap:()=>pushNu(context,NativePdf(api:widget.api,path:item.path,title:item.title)),
+     trailing:IconButton(tooltip:'Remove offline copy',icon:const Icon(Icons.delete_outline),onPressed:()async{
+      final remove=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+       title:const Text('Remove offline copy?'),content:Text(item.title),
+       actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));
+      if(remove!=true||!mounted)return;
+      try{await OfflineMaterials.remove(item);if(mounted)reload();}
+      catch(_){if(mounted)nuMessage(this.context,'Unable to remove this file.');}
+     })));
+   });
+  }));
+}
 
 class NativeCheckout extends StatefulWidget {const NativeCheckout(this.url,{super.key});final String url;@override State<NativeCheckout> createState()=>_NativeCheckoutState();}
 class _NativeCheckoutState extends State<NativeCheckout>{WebViewController? controller;String? error;bool returned=false;int progress=0;
@@ -127,3 +203,4 @@ class _SavedMaterialPageState extends State<SavedMaterialPage>{
   }
   @override Widget build(BuildContext context)=>row!=null?NativeStudy(api:widget.api,row:row!,userId:widget.userId):NuPage(title:widget.code,child:Center(child:error!=null?AsyncError(error!,load):const CircularProgressIndicator()));
 }
+

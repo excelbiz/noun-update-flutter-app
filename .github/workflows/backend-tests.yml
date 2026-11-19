@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [codex/mobile-api-central-wallet]
+    branches: [codex/mobile-api-central-wallet, codex/green-glass-lite]
 permissions:
   contents: read
 jobs:
@@ -56,3 +56,7 @@ jobs:
 
       - name: Test central HTTP routes during wallet outages
         run: php backend/tests/central-router.php
+
+
+      - name: Test structured native information pages
+        run: php backend/tests/native-information.php
