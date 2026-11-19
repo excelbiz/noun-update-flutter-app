@@ -91,6 +91,7 @@ class GlassAction extends StatelessWidget {
       const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xff00863b),Color(0xff005234)])),
       child:FilledButton(onPressed:onPressed,style:FilledButton.styleFrom(
         backgroundColor:Colors.transparent,shadowColor:Colors.transparent,foregroundColor:Colors.white,
+        textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight:FontWeight.w800),
         minimumSize:const Size(double.infinity,48),shape:RoundedRectangleBorder(borderRadius:border)),
         child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
           if(icon!=null)...[Icon(icon,size:18),const SizedBox(width:8)],

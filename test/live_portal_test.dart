@@ -200,14 +200,14 @@ void main() {
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
     addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
     final key=GlobalKey();
-    Widget app()=>RepaintBoundary(key:key,child:MaterialApp(theme:buildGreenGlass(),
+    Widget app()=>RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildGreenGlass(),
       home:const GlassWelcomeGate(home:Scaffold(body:Text('Dashboard ready')))));
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tester.runAsync(()async{
       final context=tester.element(find.byType(GlassWelcomeGate));
       await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),context);
-      if(context.mounted)await precacheImage(const AssetImage('assets/images/skins/campus.webp'),context);
+      if(context.mounted)await precacheImage(const ResizeImage(AssetImage('assets/images/skins/campus.webp'),width:720),context);
     });
     await tester.pumpAndSettle();
     expect(find.text('NOUN Update'),findsOneWidget);
@@ -241,7 +241,7 @@ void main() {
       expect(await StudyStateStore(api:workspace.api,courseCode:'CIT411',userId:'other').cachedProgress(),isNull);
       final key=GlobalKey();
       Future<void> render(Widget screen,String name)async{
-        final host=RepaintBoundary(key:key,child:MaterialApp(theme:buildGreenGlass(),darkTheme:buildGreenGlass(brightness:Brightness.dark),
+        final host=RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildGreenGlass(),darkTheme:buildGreenGlass(brightness:Brightness.dark),
           themeMode:ThemeMode.light,builder:(context,child)=>MediaQuery(
             data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen));
         await tester.pumpWidget(host);await tester.pumpAndSettle();
@@ -252,7 +252,7 @@ void main() {
         if(screen is MyCoursesPage)expect(find.text('75%'),scaling==1?findsOneWidget:findsNothing);
         expect(tester.takeException(),isNull,reason:name);
         if(width==390)await capture(tester,key,'green-glass-$name-light');
-        await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(
+        await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,
           theme:buildGreenGlass(brightness:Brightness.dark),builder:(context,child)=>MediaQuery(
             data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen)));
         await tester.pumpAndSettle();

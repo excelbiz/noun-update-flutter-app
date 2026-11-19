@@ -55,6 +55,15 @@ ThemeData buildGreenGlass({Brightness brightness = Brightness.light, String? fon
       labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(fontSize: 11,
         fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
         color: states.contains(WidgetState.selected) ? primary : scheme.onSurfaceVariant))),
+    chipTheme: base.chipTheme.copyWith(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      selectedColor: const Color(0xff008442),
+      backgroundColor: scheme.surfaceContainer,
+      labelStyle: WidgetStateTextStyle.resolveWith((states) =>
+        (base.textTheme.labelLarge ?? const TextStyle()).copyWith(
+          color: states.contains(WidgetState.selected) ? Colors.white : scheme.onSurface, fontSize: 12)),
+      secondaryLabelStyle: base.textTheme.labelLarge?.copyWith(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+    ),
     cardTheme: CardThemeData(color: surface, elevation: 0, margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: border))),
     inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: scheme.surfaceContainer,
