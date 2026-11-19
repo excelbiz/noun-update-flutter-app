@@ -75,7 +75,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final request=++_timetableLoad,targetWorkspace=workspace;
   if(workspace.courses.isEmpty){if(mounted)setState((){timetable=null;timetableError=null;timetableLoading=false;});return;}
   if(mounted)setState(()=>timetableLoading=true);
-  try{final value=await TimetableSnapshot.fetch(api,List<String>.from(targetWorkspace.courses));if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState((){timetable=value;timetableError=null;});}
+  try{final value=await TimetableSnapshot.fetch(api,List<String>.from(targetWorkspace.courses),faculty:targetWorkspace.details['Faculty']);if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState((){timetable=value;timetableError=null;});}
   catch(e){if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState(()=>timetableError=e);}
   finally{if(mounted&&request==_timetableLoad&&identical(workspace,targetWorkspace))setState(()=>timetableLoading=false);}
  }
@@ -174,7 +174,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     onCourses:_courses,onSaved:_saved,onFocus:()=>pushNu(context,const FocusTimer())),
    StudentRoute.courseSummary=>MaterialLibrary(api:api,userId:uid,summaries:true),
    StudentRoute.examSummary=>ExamShop(api:api,signedIn:profile!=null,onWallet:(){Navigator.pop(context);_openWallet();}),
-   StudentRoute.timetable=>NativeTimetable(api:api,scope:workspace.scope,courses:List<String>.from(workspace.courses),onManageCourses:(){Navigator.of(context).pop();_courses();}),
+   StudentRoute.timetable=>NativeTimetable(api:api,scope:workspace.scope,faculty:workspace.details['Faculty'],courses:List<String>.from(workspace.courses),onManageCourses:(){Navigator.of(context).pop();_courses();}),
    StudentRoute.calendar=>NativeCalendar(api),StudentRoute.fees=>NativeFees(api),
    StudentRoute.cgpa=>const NativeCgpa(),StudentRoute.premium=>PremiumPage(api:api),
    StudentRoute.info=>NativeInformation(api:api,id:id,title:title),

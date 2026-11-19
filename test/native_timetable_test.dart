@@ -5,14 +5,17 @@ import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/screens/native_timetable.dart';
 
 class _TimetableApi extends ApiClient {
-  _TimetableApi({this.mismatch=false});
+  _TimetableApi({this.mismatch=false,this.faculty});
   final bool mismatch;
+  final String? faculty;
 
   @override
   Future<Map<String,dynamic>> getJson(String path) async {
     expect(path,contains('/timetable?courses='));
+    if(faculty!=null)expect(Uri.parse(path).queryParameters['faculty'],faculty);
     return {'data':{
       'current_period':'2026_2',
+      if(faculty!=null)...{'faculty_id':'computing','exam_batch':'A','faculty_options':[{'id':'computing','label':'Faculty of Computing'}]},
       'source_period':mismatch?'2026_1':'2026_2',
       'period_mismatch':mismatch,
       'items':[
@@ -48,6 +51,17 @@ void main(){
     expect(snapshot.nextExamSummary,'CIT411 · 2026-10-20 · 9:00 am');
   });
 
+  test('uses the server faculty and batch result rather than inferring one in Flutter',()async{
+    final snapshot=await TimetableSnapshot.fetch(_TimetableApi(faculty:'Faculty of Computing'),
+      ['CIT411'],faculty:'Faculty of Computing');
+    expect(snapshot.facultyId,'computing');
+    expect(snapshot.batch,'A');
+    final restored=TimetableSnapshot.fromJson(snapshot.toJson());
+    expect(restored.facultyId,snapshot.facultyId);
+    expect(restored.batch,snapshot.batch);
+    expect(restored.nextExam,isNull,reason:'Offline snapshots do not promise a next exam.');
+  });
+
   testWidgets('native timetable renders matched exams and missing course warning',(tester)async{
     tester.view.physicalSize=const Size(390,844);
     tester.view.devicePixelRatio=1;
@@ -81,3 +95,4 @@ void main(){
     expect(tester.takeException(),isNull);
   });
 }
+

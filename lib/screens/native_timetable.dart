@@ -46,6 +46,7 @@ class TimetableSnapshot {
     required this.items,
     required this.missingCourses,
     required this.nextExam,
+    this.facultyOptions=const [],this.facultyId,this.batch,this.batchUnresolved=const [],
   });
 
   final String currentPeriod;
@@ -54,19 +55,23 @@ class TimetableSnapshot {
   final List<TimetableEntry> items;
   final List<String> missingCourses;
   final TimetableEntry? nextExam;
+  final List<Map<String,dynamic>> facultyOptions;
+  final String? facultyId,batch;
+  final List<String> batchUnresolved;
 
   Map<String,dynamic> toJson()=> {
     'current_period':currentPeriod,'source_period':sourcePeriod,'period_mismatch':periodMismatch,
     'items':items.map((item)=>{'course_code':item.courseCode,'course_title':item.courseTitle,'day':item.day,
       'date':item.date,'time':item.time,'exam_type':item.examType,
       'exam_datetime':item.examDateTime?.toIso8601String(),'is_past':item.isPast}).toList(),
-    'missing_courses':missingCourses,
+    'missing_courses':missingCourses,'faculty_options':facultyOptions,'faculty_id':facultyId,
+    'exam_batch':batch,'batch_unresolved_courses':batchUnresolved,
   };
 
-  static Future<TimetableSnapshot> fetch(ApiClient api,List<String> courses)async{
+  static Future<TimetableSnapshot> fetch(ApiClient api,List<String> courses,{String? faculty})async{
     if(courses.isEmpty)return const TimetableSnapshot(currentPeriod:'',sourcePeriod:null,periodMismatch:false,items:[],missingCourses:[],nextExam:null);
-    final query=Uri.encodeQueryComponent(courses.join(','));
-    final response=await api.getJson('/timetable?courses=$query');
+    final query=Uri(queryParameters:{'courses':courses.join(','),if(faculty!=null&&faculty.trim().isNotEmpty)'faculty':faculty}).query;
+    final response=await api.getJson('/timetable?$query');
     return fromJson(unpack(response));
   }
 
@@ -74,6 +79,9 @@ class TimetableSnapshot {
     final items=records(data['items']).map(TimetableEntry.fromJson).toList(growable:false);
     final rawNext=data['next_exam'];
     return TimetableSnapshot(
+      facultyOptions:records(data['faculty_options']),
+      facultyId:data['faculty_id'] as String?,batch:data['exam_batch'] as String?,
+      batchUnresolved:(data['batch_unresolved_courses'] as List? ?? const []).map((value)=>'$value').toList(),
       currentPeriod:'${data['current_period']??''}',
       sourcePeriod:data['source_period']==null?null:'${data['source_period']}',
       periodMismatch:data['period_mismatch']==true,
@@ -94,29 +102,43 @@ class TimetableSnapshot {
 }
 
 class NativeTimetable extends StatefulWidget {
-  const NativeTimetable({super.key,required this.api,required this.courses,required this.onManageCourses,this.scope='guest'});
+  const NativeTimetable({super.key,required this.api,required this.courses,required this.onManageCourses,this.scope='guest',this.faculty});
   final ApiClient api;
   final List<String> courses;
   final VoidCallback onManageCourses;
   final String scope;
+  final String? faculty;
   @override State<NativeTimetable> createState()=>_NativeTimetableState();
 }
 
 class _NativeTimetableState extends State<NativeTimetable>{
   late Future<(TimetableSnapshot,DateTime?)> future;
   bool saving=false;
+  late String? faculty=widget.faculty;
   String get _cacheKey=>'nu-timetable-v1-${widget.scope}';
   String get _courseKey=>([...widget.courses]..sort()).join(',');
-  @override void initState(){super.initState();future=_fetch();}
+  @override void initState(){super.initState();future=_initialise();}
+  Future<(TimetableSnapshot,DateTime?)> _initialise()async{
+    try{
+      final saved=(await SharedPreferences.getInstance()).getString(_cacheKey);
+      if(saved!=null){
+        final stored=jsonDecode(saved) as Map;
+        if(stored['courses']==_courseKey&&stored['profile_faculty']==widget.faculty&&stored['faculty'] is String){
+          faculty=stored['faculty'] as String;
+        }
+      }
+    }catch(_){/* Corrupt cache must not prevent the live timetable. */}
+    return _fetch();
+  }
   void reload()=>setState(()=>future=_fetch());
   Future<(TimetableSnapshot,DateTime?)> _fetch()async{
-    try{return (await TimetableSnapshot.fetch(widget.api,widget.courses),null);}
+    try{return (await TimetableSnapshot.fetch(widget.api,widget.courses,faculty:faculty),null);}
     catch(_){
       final raw=(await SharedPreferences.getInstance()).getString(_cacheKey);
       if(raw==null)rethrow;
       final cache=jsonDecode(raw) as Map;
       final saved=DateTime.tryParse('${cache['saved_at']}');
-      if(saved==null||cache['courses']!=_courseKey)rethrow;
+      if(saved==null||cache['courses']!=_courseKey||cache['faculty']!=faculty)rethrow;
       return (TimetableSnapshot.fromJson(Map<String,dynamic>.from(cache['data'] as Map)),saved);
     }
   }
@@ -125,7 +147,7 @@ class _NativeTimetableState extends State<NativeTimetable>{
     setState(()=>saving=true);
     try{
       final ok=await (await SharedPreferences.getInstance()).setString(_cacheKey,jsonEncode({
-        'courses':_courseKey,'saved_at':DateTime.now().toIso8601String(),'data':timetable.toJson(),
+        'courses':_courseKey,'faculty':faculty,'profile_faculty':widget.faculty,'saved_at':DateTime.now().toIso8601String(),'data':timetable.toJson(),
       }));
       if(!ok)throw StateError('Save failed');
       if(mounted)nuMessage(context,'Timetable saved on this device.');
@@ -141,11 +163,23 @@ class _NativeTimetableState extends State<NativeTimetable>{
       FilledButton.icon(onPressed:widget.onManageCourses,icon:const Icon(Icons.add),label:const Text('Add My Courses')),
     ])
     :FutureBuilder<(TimetableSnapshot,DateTime?)>(future:future,builder:(context,s){
+      if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
       if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(20),child:AsyncError('Your timetable could not be loaded. Please retry.',reload)));
       if(!s.hasData)return const Center(child:CircularProgressIndicator());
       final (t,savedAt)=s.data!;
       return RefreshIndicator(onRefresh:()async{reload();try{await future;}catch(_){/* The builder shows the retry state. */}},child:ListView(padding:const EdgeInsets.fromLTRB(18,18,18,30),children:[
         ServiceHero(title:'${t.currentPeriod.isEmpty?'Current':t.currentPeriod} Exam Timetable',subtitle:savedAt==null?'Matched from the timetable records currently imported into NOUN Update.':'Saved timetable · offline copy',icon:Icons.event_available_rounded),
+        if(t.facultyOptions.isNotEmpty&&savedAt==null)NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          DropdownButtonFormField<String>(key:ValueKey(t.facultyId),initialValue:t.facultyId,isExpanded:true,
+            decoration:const InputDecoration(labelText:'Faculty'),
+            items:[for(final option in t.facultyOptions)DropdownMenuItem(value:option['id'] as String,
+              child:Text('${option['label']}',overflow:TextOverflow.ellipsis))],
+            onChanged:(value){faculty=value;reload();}),
+          const SizedBox(height:8),
+          Text(t.batch==null?'Choose your faculty to include batch-specific exams.':'Batch ${t.batch} · ${t.currentPeriod} general-course sittings'),
+        ])),
+        if(t.batchUnresolved.isNotEmpty)NuPanel(child:Text(
+          'A verified batch is required for ${t.batchUnresolved.join(', ')}. Select your faculty or confirm with your study centre.')),
         if(t.periodMismatch)const Padding(padding:EdgeInsets.only(top:12),child:NuPanel(child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.warning_amber_rounded),SizedBox(width:10),Expanded(child:Text('The imported timetable appears to belong to a different academic period. Recheck this schedule before relying on it; NOUN Update will not relabel older records as the current semester.'))]))),
         const SizedBox(height:18),
         if(savedAt!=null)NuPanel(child:Text('Saved ${MaterialLocalizations.of(context).formatMediumDate(savedAt)}. Reconnect to check for changes before relying on this timetable.'))

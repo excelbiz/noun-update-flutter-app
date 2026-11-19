@@ -24,8 +24,10 @@ catalogue with a native availability message while their adapters are built.
   controls. Paid ticket URLs are excluded from the offline store.
 - A student can explicitly save the current verified personal timetable on the
   device. Offline copies are account/course-set scoped and marked with their
-  save date; the offline view does not call old entries upcoming. Faculty
-  batch mapping and timetable variants remain outstanding.
+  save date; the offline view does not call old entries upcoming. The PHP API
+  applies the supplied 2026_2 faculty mapping to A/B variants only within that
+  period; no default batch is inferred for other periods. Paid reminders are
+  still separate and need their matching native adapter.
 - The accessible native information reader displays approved structured copy.
   Provision the content below before publishing legal/help pages.
 - Existing payment and entitlement endpoints are unchanged. The sole retained
@@ -92,7 +94,7 @@ An iOS build and physical-device test are separate verification gates.
 
 Use the current hosted mobile routers and the deployed service APIs or PHP
 source/contracts for Mock e-Exam attempts and question bank, PAS, result
-extraction, the latest authoritative faculty batch mapping, the order/checkout
+extraction, the authoritative mapping for future timetable periods, the order/checkout
 adapters and the relevant published legal copy. Do not put credentials or
 gateway keys in the mobile source. Do not route unimplemented functions to
 the website or fabricate sample transactions, exam scores or batch assignments.
