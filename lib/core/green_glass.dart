@@ -26,8 +26,8 @@ ThemeData buildGreenGlass({Brightness brightness = Brightness.light, String? fon
   final dark = brightness == Brightness.dark;
   final base = buildAppTheme(brightness: brightness, fontFamily: fontFamily);
   final primary = Color(dark ? 0xff67e88e : 0xff006341);
-  final background = Color(dark ? 0xff041a12 : 0xfff5fdf8);
-  final surface = Color(dark ? 0xff0c2b20 : 0xfffbfffd);
+  final background = Color(dark ? 0xff041811 : 0xfff8fdfa);
+  final surface = Color(dark ? 0xff0c2b20 : 0xfffcfffe);
   final ink = Color(dark ? 0xffedf9f0 : 0xff10291e);
   final border = Color(dark ? 0xff285241 : 0xffcce5d7);
   final tint = Color(dark ? 0xff194831 : 0xffdff5e7);
@@ -48,6 +48,7 @@ ThemeData buildGreenGlass({Brightness brightness = Brightness.light, String? fon
         primary: primary, gold: Color(dark ? 0xffffd45e : 0xff785600), ink: ink, radius: 15),
     ],
     appBarTheme: AppBarTheme(backgroundColor: background, foregroundColor: ink,
+      titleTextStyle: base.textTheme.titleMedium?.copyWith(color: ink, fontWeight: FontWeight.w800, fontSize: 17),
       centerTitle: true, elevation: 0, scrolledUnderElevation: 0, surfaceTintColor: Colors.transparent),
     navigationBarTheme: base.navigationBarTheme.copyWith(backgroundColor: surface,
       indicatorColor: tint, surfaceTintColor: Colors.transparent,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
+import '../core/green_glass.dart';
 
 class NativeInformation extends StatefulWidget {
   const NativeInformation({super.key, required this.api, required this.id, required this.title});
@@ -92,6 +94,14 @@ class _NativeStudyHubState extends State<NativeStudyHub> {
   @override Widget build(BuildContext context){
     final completed=tasks.where((task)=>task['done']==true).length;
     return NuPage(title:'Study Hub',child:ListView(padding:const EdgeInsets.all(18),children:[
+      if(GreenGlass.of(context)!=null)...[
+        const GlassHero(title:'Your all-in-one Study Space',subtitle:'Learn · Practice · Revise',artwork:BookStackArt()),
+        const SizedBox(height:11),
+        GlassRow(icon:Icons.menu_book_outlined,title:'Course Materials',onTap:widget.onMaterials),
+        GlassRow(icon:Icons.edit_note_rounded,title:'My Courses & Revision Notes',onTap:widget.onCourses),
+        GlassRow(icon:Icons.bookmark_outline,title:'Saved Resources',onTap:widget.onSaved),
+        GlassRow(icon:Icons.timer_outlined,title:'Focus Timer',onTap:widget.onFocus),
+      ]else...[
       const ServiceHero(title:'Your all-in-one study space',subtitle:'Plan your revision and return to your courses.',icon:Icons.school_outlined),
       NuPanel(padding:0,child:Column(children:[
         ListTile(leading:const Icon(Icons.menu_book_outlined),title:const Text('Course materials'),onTap:widget.onMaterials,trailing:const Icon(Icons.chevron_right)),
@@ -99,6 +109,7 @@ class _NativeStudyHubState extends State<NativeStudyHub> {
         ListTile(leading:const Icon(Icons.bookmark_outline),title:const Text('Saved resources'),onTap:widget.onSaved,trailing:const Icon(Icons.chevron_right)),
         ListTile(leading:const Icon(Icons.timer_outlined),title:const Text('Focus timer'),onTap:widget.onFocus,trailing:const Icon(Icons.chevron_right)),
       ])),
+      ],
       NuTitle('Revision plan',subtitle:'$completed of ${tasks.length} complete · saved on this device'),
       if(tasks.isNotEmpty) Padding(padding:const EdgeInsets.only(bottom:12),
         child:LinearProgressIndicator(value:completed/tasks.length,semanticsLabel:'Revision tasks completed')),

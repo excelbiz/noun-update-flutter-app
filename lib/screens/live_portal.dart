@@ -1,3 +1,4 @@
+import '../widgets/glass_components.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -186,14 +187,14 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final scale=MediaQuery.textScalerOf(context).scale(14)/14;
   final columns=compact?(_glass?(scale>=1.35?2:3):box.maxWidth>=350&&scale<1.3?5:4):(box.maxWidth>=330&&scale<1.3?3:2);
   return GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:entries.length,
-   gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:compact?8:10,mainAxisSpacing:12,mainAxisExtent:(compact?100:154)+math.max(0,scale-1)*70),
+   gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:compact?8:10,mainAxisSpacing:12,mainAxisExtent:(compact?(_glass?80:100):154)+math.max(0,scale-1)*85),
    itemBuilder:(c,i){final s=entries[i],id='${s['id']}';
     if(_glass&&compact){
       final scheme=Theme.of(c).colorScheme;
       final tone=switch(id){
-        'mock'||'wallet'=>const Color(0xff7339ab),
+        'mock'||'wallet'||'calendar'=>const Color(0xff7339ab),
         'courses'||'pas-status'=>const Color(0xff128744),
-        'past-questions'=>const Color(0xffb26a00),
+        'past-questions'||'project-seminar'=>const Color(0xffb26a00),
         'exam-summary'=>const Color(0xff1458a5),
         'personalized-timetable'=>const Color(0xffbc235a),
         'study-hub'=>const Color(0xff007c77),
@@ -207,7 +208,7 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
         child:Material(color:Colors.transparent,borderRadius:radius,
           child:InkWell(borderRadius:radius,onTap:()=>_service(s),child:Padding(
             padding:const EdgeInsets.all(6),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-              GlossIcon(serviceIcon(id),color:tone,size:40),const SizedBox(height:8),
+              GlassLineIcon(serviceIcon(id),tone:tone,size:33),const SizedBox(height:5),
               Text(id=='personalized-timetable'?'Timetable':serviceLabel(id,'${s['label']}'),
                 textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis,
                 style:TextStyle(color:nuInk(c),fontSize:11,fontWeight:FontWeight.w800,height:1.12)),
@@ -229,8 +230,9 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
 
  Widget _glassWallet()=>ListenableBuilder(listenable:_walletUpdates,builder:(context,_)=>ListView(
   padding:const EdgeInsets.all(18),children:[
-   GreenBanner(title:wallet==null?'Balance unavailable':naira(wallet!['balance_kobo']),
-     text:profile==null?'Sign in to see your central wallet.':'Your NOUN Update central wallet',icon:Icons.account_balance_wallet_rounded),
+   GlassHero(title:wallet==null?'Balance unavailable':naira(wallet!['balance_kobo']),
+     subtitle:profile==null?'Sign in to see your central wallet.':'Available wallet balance',icon:Icons.account_balance_wallet_rounded),
+   const SizedBox(height:12),
    if(accountError!=null)NuPanel(child:Text(accountError!)),
    if(profile==null)FilledButton(onPressed:()async{Navigator.of(context).pop();await _login();},child:const Text('Sign in')),
    if(profile!=null)...[
@@ -241,32 +243,35 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
     if(pendingReference!=null)OutlinedButton(onPressed:busy?null:()=>_run(_recheck),child:const Text('Check pending payment')),
     const NuTitle('Recent transactions'),
     if(wallet!=null&&records(wallet?['transactions']).isEmpty)const NuPanel(child:Text('No wallet transactions yet.')),
-    for(final entry in records(wallet?['transactions']))NuPanel(padding:0,child:ListTile(
-     title:Text('${entry['title']??'Wallet transaction'}'),subtitle:Text('${entry['created_at']??''}'),
-     trailing:Text(naira(entry['amount_kobo'])))),
+    for(final entry in records(wallet?['transactions']))GlassRow(
+     icon:Icons.receipt_long_outlined,title:'${entry['title']??'Wallet transaction'}',
+     subtitle:'${entry['created_at']??''}',end:Text(naira(entry['amount_kobo']),style:const TextStyle(fontWeight:FontWeight.w800))),
    ],
  ]));
  Widget _glassHome(){
   const shortcuts=[
     ('mock','Mock e-Exam'),('courses','Course Materials'),('past-questions','Past Questions'),
     ('exam-summary','Exam Summary'),('personalized-timetable','Timetable'),('study-hub','Study Hub'),
-    ('pas-status','PAS Status'),('wallet','Wallet'),('calendar','Academic Calendar'),
+    ('pas-status','PAS Status'),('calendar','Academic Calendar'),('project-seminar','Hire a Writer'),
   ];
   final enabled={for(final row in services)row['id']:row};
   return RefreshIndicator(onRefresh:()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());},
    child:ListView(key:const PageStorageKey('glass-home'),padding:const EdgeInsets.fromLTRB(16,5,16,28),children:[
-    NuTitle(_greeting,subtitle:_meta.isEmpty?'Your student dashboard':_meta),
+    Row(children:[Expanded(child:NuTitle(_greeting,subtitle:_meta.isEmpty?'Your student dashboard':_meta)),
+      if(profile!=null)PremiumProfileAvatar(name:'${profile?['name']??'Student'}',size:46)],
+    ),
     WorkspaceConflictNotice(workspace:workspace),
     BirthdayBanner(name:'${profile?['name']??'Student'}'),
-    GreenBanner(title:'Prepare smarter for your POP & e-Exam',
-      text:'Materials · Course summaries · Exam summaries',icon:Icons.auto_stories_rounded),
-    const SizedBox(height:14),
+    const GlassHero(title:'Prepare smarter for your POP & e-Exam',
+      subtitle:'Materials · Summaries · Mock',artwork:BookStackArt()),
+    const SizedBox(height:10),
     _grid([for(final item in shortcuts)
       if(enabled.containsKey(item.$1)||studentRoute(item.$1)!=null)
-        enabled[item.$1]??{'id':item.$1,'label':item.$2}],compact:true),
-    NuPanel(padding:0,child:_row('Next examination',_nextExamSubtitle,Icons.event_outlined,
-      ()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'}))),
-    NuPanel(padding:0,child:_row('My Courses','${workspace.courses.length} registered courses',Icons.school_outlined,_courses)),
+        {...?enabled[item.$1],'id':item.$1,'label':item.$2}],compact:true),
+    const SizedBox(height:12),
+    GlassRow(icon:Icons.event_outlined,title:'Next examination',subtitle:_nextExamSubtitle,
+      onTap:()=>_service({'id':'personalized-timetable','label':'Personalised Timetable'})),
+    GlassRow(icon:Icons.school_outlined,title:'My Courses',subtitle:'${workspace.courses.length} registered courses',onTap:_courses),
     if(workspace.details.isEmpty)NuPanel(padding:0,child:_row('Set up your student details','Programme, level and study centre',Icons.badge_outlined,_setup)),
     MotivationCard(api:api,preview:widget.preview),
     const NuTitle('Latest updates'),_news(compact:true),
@@ -358,7 +363,61 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
    _row('Terms of Use','Using NOUN Update',Icons.gavel_outlined,()=>_service({'id':'terms-of-use','label':'Terms of Use'})),
   ])),
  ]);
+ Future<void> _glassSignOut()async{
+  final revoked=await api.signOut();
+  PremiumService.instance.clear();
+  if(!mounted)return;
+  setState((){profile=null;wallet=null;walletFundingAvailable=false;pendingReference=null;accountError=null;});
+  _walletUpdates.value++;
+  await _workspace('guest');
+  if(!revoked&&mounted)nuMessage(context,'Signed out on this device. The server could not confirm session revocation.');
+ }
+ Widget _glassProfile(){
+  final student=profile;
+  final name='${student?['name']??'Your NOUN Update account'}';
+  return ListView(key:const PageStorageKey('glass-account'),padding:const EdgeInsets.fromLTRB(15,4,15,25),children:[
+   const NuTitle('My Account'),
+   NuPanel(color:nuMint,padding:12,child:Row(children:[
+    if(student!=null)PremiumProfileAvatar(name:name,size:52)else const GlassLineIcon(Icons.person_outline_rounded,size:52),
+    const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(name,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800)),
+     const SizedBox(height:3),Text(student==null?'Sign in to sync your workspace and purchases.':_meta.isEmpty?'${student['email']??''}':_meta,
+      style:TextStyle(fontSize:12,color:nuMuted(context))),
+    ])),
+    if(student!=null)IconButton(tooltip:'Edit profile',onPressed:()=>pushNu(context,NativeProfile(api:api,name:name)).then((_)=>_loadAccount()),
+     icon:const Icon(Icons.edit_outlined)),
+   ])),
+   if(student==null)...[
+    GlassAction(label:'Sign in',onPressed:_login,icon:Icons.login_rounded),
+    TextButton(onPressed:()=>pushNu<bool>(context,NativeAuth(api,initialMode:'register')).then((ok){if(ok==true)_loadAccount();}),child:const Text('Create an account')),
+   ],
+   if(accountError!=null)AsyncError(accountError!,_loadAccount),
+   GlassRow(icon:Icons.badge_outlined,title:'Student details',onTap:_setup),
+   GlassRow(icon:Icons.menu_book_outlined,title:'My Courses',onTap:_courses),
+   if(student!=null)GlassRow(icon:Icons.shopping_bag_outlined,title:'My Exam Summaries',onTap:()=>pushNu(context,OrdersPage(api:api))),
+   GlassRow(icon:Icons.account_balance_wallet_outlined,title:'Wallet & transactions',onTap:_openWallet),
+   GlassRow(icon:Icons.bookmark_outline,title:'Saved resources',onTap:_saved),
+   GlassRow(icon:Icons.download_outlined,title:'Downloads',onTap:()=>pushNu(context,NativeDownloads(api:api))),
+   GlassRow(icon:Icons.tune_rounded,title:'App Settings',onTap:()=>pushNu(context,AppearanceSettings(api:api))),
+   GlassRow(icon:Icons.notifications_none_rounded,title:'Notifications',onTap:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))),
+   GlassRow(icon:Icons.workspace_premium_outlined,title:'Premium',onTap:()=>pushNu(context,PremiumPage(api:api))),
+   if(student!=null)GlassRow(icon:Icons.cake_outlined,title:'Birthday preferences',onTap:()=>pushNu(context,BirthdaySettings(api:api)).then((_){if(mounted)setState((){});})),
+   if(student!=null&&PremiumService.instance.isPremium)GlassRow(icon:Icons.auto_awesome_outlined,title:'Profile style',
+      onTap:()=>pushNu(context,ProfileCosmeticsPage(api:api,name:name)).then((_){if(mounted)setState((){});})),
+   GlassRow(icon:Icons.favorite_border,title:'Saved Motivation',onTap:()=>pushNu(context,SavedMotivation(api:api))),
+   GlassRow(icon:Icons.support_agent_rounded,title:'Help & Support',onTap:()=>pushNu(context,const NuPage(title:'Help & Support',
+    child:Padding(padding:EdgeInsets.all(18),child:NuPanel(child:SelectableText('NOUN Update Educational Consultant\ninfo@nounupdate.com\nWhatsApp: +234 916 627 2869')))))),
+   for(final item in [('about','About NOUN Update',Icons.info_outline),('privacy-policy','Privacy Policy',Icons.privacy_tip_outlined),('terms-of-use','Terms of Use',Icons.gavel_outlined)])
+    GlassRow(icon:item.$3,title:item.$2,onTap:()=>_service({'id':item.$1,'label':item.$2})),
+   if(student!=null)FilledButton.icon(
+    onPressed:busy?null:()=>_run(_glassSignOut),
+    style:FilledButton.styleFrom(backgroundColor:Theme.of(context).colorScheme.errorContainer,
+     foregroundColor:Theme.of(context).colorScheme.onErrorContainer),
+    icon:const Icon(Icons.logout_rounded),label:const Text('Log out')),
+  ]);
+ }
  Widget _profile(){
+  if(_glass)return _glassProfile();
   if(SkinTokens.of(context).skin!=AppSkin.elegantEditorial)return _standardProfile();
   void settings()=>pushNu(context,AppearanceSettings(api:api));
   void edit()=>profile==null?_setup():pushNu(context,NativeProfile(api:api,name:'${profile!['name']}')).then((_)=>_loadAccount());
@@ -402,14 +461,14 @@ class _LivePortalState extends State<LivePortal> with WidgetsBindingObserver {
   final premium=SkinTokens.of(context).skin.isPremium;
   final appBar=_glass?AppBar(
    leading:IconButton(tooltip:'Browse tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.menu_rounded)),
-   title:const Row(mainAxisSize:MainAxisSize.min,children:[BrandLogo(size:32),SizedBox(width:8),Flexible(child:Text('NOUN Update',maxLines:1,overflow:TextOverflow.ellipsis))]),
+   title:const Row(mainAxisSize:MainAxisSize.min,children:[BrandLogo(size:30),SizedBox(width:8),Flexible(child:Text('NOUN Update',maxLines:1,overflow:TextOverflow.ellipsis))]),
    actions:[IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]):_tech?TechTopBar(page:tab,name:'${workspace.details['Name']??profile?['name']??'NOUN Student'}',scale:MediaQuery.textScalerOf(context).scale(14)/14,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):_bold?BoldTopBar(page:tab,name:'${workspace.details['Name']??profile?['name']??'NOUN Student'}',textScale:MediaQuery.textScalerOf(context).scale(14)/14,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):SkinTokens.of(context).skin==AppSkin.elegantEditorial?EditorialTopBar(page:tab,textScale:MediaQuery.textScalerOf(context).scale(14)/14,greeting:_editorialGreeting,onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),onSettings:()=>pushNu(context,AppearanceSettings(api:api))):premium?PremiumTopBar(onTools:()=>setState(()=>tab=2),onRefresh:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),onNotifications:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications()))):AppBar(backgroundColor:nuDeep,foregroundColor:Colors.white,title:Row(children:[const BrandLogo(size:38),const SizedBox(width:10),Expanded(child:FittedBox(fit:BoxFit.scaleDown,alignment:Alignment.centerLeft,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('NOUN Update',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800)),Text('Your academic companion',style:TextStyle(fontSize:9,color:const Color(0xffc9e9dc)))])))]),actions:[IconButton(tooltip:'Search tools',onPressed:()=>setState(()=>tab=2),icon:const Icon(Icons.search)),IconButton(tooltip:'Refresh',onPressed:()=>_run(()async{await _loadAccount();await _refreshTimetable();if(mounted)setState(()=>feed=_feed());}),icon:const Icon(Icons.refresh,size:21)),IconButton(tooltip:'Notifications',onPressed:()=>pushNu(context,NuPage(title:'Notifications',child:_notifications())),icon:const Icon(Icons.notifications_none_rounded))]);
   if(_glass){
    final index=switch(tab){0=>0,1=>2,4=>4,_=>0};
    return Scaffold(appBar:appBar,body:SkinBackdrop(child:SafeArea(top:false,child:Column(children:[
     if(busy)const LinearProgressIndicator(minHeight:2),
     Expanded(child:switch(tab){0=>_home(),1=>_study(),2=>_tools(),3=>_updates(),_=>_profile()}),
-   ]))),bottomNavigationBar:NavigationBar(height:65,selectedIndex:index,onDestinationSelected:(value){
+   ]))),bottomNavigationBar:NavigationBar(height:60,selectedIndex:index,onDestinationSelected:(value){
     if(value==1){_courses();return;}
     if(value==3){_service({'id':'personalized-timetable','label':'Personalised Timetable'});return;}
     setState(()=>tab=value==2?1:value);

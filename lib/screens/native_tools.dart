@@ -7,6 +7,8 @@ import '../core/offline_materials.dart';
 import '../core/study_state_store.dart';
 import '../widgets/resource_bookmark.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
+import '../core/green_glass.dart';
 
 class NativePdf extends StatefulWidget {
  const NativePdf({super.key,required this.api,required this.path,required this.title});
@@ -44,12 +46,19 @@ class _NativePdfState extends State<NativePdf>{
    onPressed:saving||saved?null:save,icon:Icon(saved?Icons.download_done:Icons.download_outlined)),
  ],child:controller!=null?Column(children:[
   if(saving)const LinearProgressIndicator(),
-  Expanded(child:PdfViewPinch(controller:controller!,onPageChanged:(value)=>setState(()=>page=value))),
+  Expanded(child:Padding(padding:EdgeInsets.all(GreenGlass.of(context)==null?0:7),
+   child:ClipRRect(borderRadius:BorderRadius.circular(9),child:ColoredBox(color:Theme.of(context).colorScheme.surfaceContainer,
+    child:PdfViewPinch(controller:controller!,onPageChanged:(value)=>setState(()=>page=value)))))),
+
   Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
    IconButton(tooltip:'Previous page',onPressed:page>1?()=>turn(page-1):null,icon:const Icon(Icons.chevron_left)),
    Text('${page==0?1:page} / $count',semanticsLabel:'Page ${page==0?1:page} of $count'),
    IconButton(tooltip:'Next page',onPressed:page<count?()=>turn(page+1):null,icon:const Icon(Icons.chevron_right)),
   ])),
+  if(GreenGlass.of(context)!=null&&count>1)Slider(
+    value:page.clamp(1,count).toDouble(),min:1,max:count.toDouble(),
+    semanticFormatterCallback:(value)=>'Page ${value.round()}',
+    onChanged:(value)=>turn(value.round())),
  ]):error!=null?Center(child:AsyncError(error!,(){setState(()=>error=null);load();})):const Center(child:CircularProgressIndicator()));
  void turn(int target)=>controller!.jumpToPage(target);
 }
@@ -146,7 +155,50 @@ class _NativeFeesState extends State<NativeFees>{List<Map<String,dynamic>> optio
  @override Widget build(BuildContext context)=>NuPage(title:'Fee Checker',child:ListView(padding:EdgeInsets.all(18),children:[NuTitle('Plan your registration',subtitle:'Course and fee records from NOUN Update.'),select('Programme',program,options.map((x)=>'${x['program']}').toList(),(v)=>setState((){program=v;level=null;semester=null;result=null;})),KeyedSubtree(key:ValueKey(program),child:select('Level',level,options.where((x)=>x['program']==program).map((x)=>'${x['level']}').toList(),(v)=>setState((){level=v;semester=null;result=null;}))),KeyedSubtree(key:ValueKey('$program-$level'),child:select('Semester',semester,options.where((x)=>x['program']==program&&'${x['level']}'==level).map((x)=>'${x['semester']}').toList(),(v)=>setState(()=>semester=v))),FilledButton(onPressed:busy?null:calculate,child:Text('Check fees')),if(busy)LinearProgressIndicator(),if(error!=null)AsyncError(error!,load),if(result!=null)...[NuTitle('Fee summary'),NuPanel(color:nuMint,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('DATABASE-LISTED TOTAL'),Text(result!['total_kobo']==null?'Semester fee needs confirmation':naira(result!['total_kobo']),style:TextStyle(fontSize:28,fontWeight:FontWeight.w800,color:Theme.of(context).colorScheme.primary)),Text('Course fees ${naira(result!['course_kobo'])} · Exam fees ${naira(result!['exam_kobo'])}'),Text('${result!['units']} units'),SizedBox(height:10),Text('${result!['notice']}',style:TextStyle(fontSize:12))])),for(final r in records(result!['items']))NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['code']} · ${r['title']}',style:TextStyle(fontWeight:FontWeight.w700)),Text('${r['units']} units · ${r['status']}'),Text('Course ${naira(r['course_kobo'])} · Exam ${naira(r['exam_kobo'])}'),if(r['examinable']==false)Text('Not examinable',style:TextStyle(color:Theme.of(context).colorScheme.primary))]))]]));}
 
 class NativeCalendar extends StatefulWidget{const NativeCalendar(this.api,{super.key});final ApiClient api;@override State<NativeCalendar> createState()=>_NativeCalendarState();}
-class _NativeCalendarState extends State<NativeCalendar>{late Future<Map<String,dynamic>> data;String query='';@override void initState(){super.initState();reload();}void reload(){data=widget.api.getJson('/calendar').then(unpack);}@override Widget build(BuildContext context)=>NuPage(title:'Academic Calendar',child:ListView(padding:EdgeInsets.all(18),children:[GreenBanner(title:'Stay one step ahead.',text:'Academic dates, registration, TMAs and examinations.',icon:Icons.calendar_month_rounded),SizedBox(height:16),TextField(onChanged:(v)=>setState(()=>query=v),decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search dates and events')),FutureBuilder<Map<String,dynamic>>(future:data,builder:(c,s){if(s.hasError)return AsyncError(s.error!,()=>setState(reload));if(!s.hasData)return Padding(padding:EdgeInsets.all(30),child:Center(child:CircularProgressIndicator()));final events=records(s.data!['events']).where((e)=>'${e['title']} ${e['category']}'.toLowerCase().contains(query.toLowerCase())).toList();return Column(children:[NuTitle('Your academic dates'),for(final e in events)NuPanel(child:ListTile(contentPadding:EdgeInsets.zero,leading:GlossIcon(Icons.calendar_month,size:46),title:Text('${e['title']}',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:Text('${e['start_at']??'Date to be confirmed'}\n${e['end_at']??''}'),onTap:()=>pushNu(context,NuPage(title:'Academic date',child:ListView(padding:EdgeInsets.all(24),children:[NuTitle('${e['title']}'),Text('${e['start_at']??''}'),SizedBox(height:16),SelectableText('${e['description']??e['notes']??''}')]))))),if(events.isEmpty)Padding(padding:EdgeInsets.all(25),child:Text('No dates match this search.'))]);})]));}
+class _NativeCalendarState extends State<NativeCalendar>{
+ late Future<Map<String,dynamic>> data;
+ String query='',period='All';
+ @override void initState(){super.initState();reload();}
+ void reload(){data=widget.api.getJson('/calendar').then(unpack);}
+ String session(Map<String,dynamic> event){
+  final listed='${event['semester']??event['session']??''}';
+  return RegExp(r'^[0-9]{4}_[12]$').hasMatch(listed)?listed:'';
+ }
+ String date(BuildContext context,Object? value){
+  final d=DateTime.tryParse('${value??''}');
+  if(d!=null)return MaterialLocalizations.of(context).formatMediumDate(d);
+  final raw='${value??''}'.trim();
+  return raw.isEmpty?'Date to be confirmed':raw;
+ }
+ void detail(Map<String,dynamic> event)=>pushNu(context,NuPage(title:'Academic date',child:ListView(
+  padding:const EdgeInsets.all(18),children:[
+   GlassHero(title:'${event['title']}',subtitle:date(context,event['start_at']),icon:Icons.calendar_month_outlined),
+   const SizedBox(height:12),
+   if(event['end_at']!=null)GlassRow(icon:Icons.flag_outlined,title:'Ends',subtitle:date(context,event['end_at'])),
+   if('${event['description']??event['notes']??''}'.trim().isNotEmpty)
+    NuPanel(child:SelectableText('${event['description']??event['notes']}')),
+ ])));
+ @override Widget build(BuildContext context)=>NuPage(title:'Academic Calendar',child:FutureBuilder(
+  future:data,builder:(context,snapshot){
+   if(snapshot.hasError)return Center(child:AsyncError(snapshot.error!,()=>setState(reload)));
+   if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
+   final all=records(snapshot.data!['events']);
+   final periods=all.map(session).where((v)=>v.isNotEmpty).toSet().toList()..sort();
+   final events=all.where((ev)=>(period=='All'||session(ev)==period)&&
+    '${ev['title']} ${ev['category']}'.toLowerCase().contains(query)).toList();
+   return ListView(padding:const EdgeInsets.fromLTRB(15,8,15,25),children:[
+    if(periods.isNotEmpty)Wrap(spacing:6,children:[for(final p in ['All',...periods])
+      ChoiceChip(label:Text(p),showCheckmark:false,selected:p==period,onSelected:(_)=>setState(()=>period=p))]),
+    TextField(onChanged:(v)=>setState(()=>query=v.trim().toLowerCase()),
+     decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search dates and events')),
+    const SizedBox(height:10),
+    for(final ev in events)GlassRow(icon:Icons.event_available_outlined,title:'${ev['title']}',
+      subtitle:[date(context,ev['start_at']),if(ev['end_at']!=null)date(context,ev['end_at'])].join(' – '),
+      onTap:()=>detail(ev)),
+    if(events.isEmpty)const NuPanel(child:Text('No dates match this search.')),
+   ]);
+  }));
+}
 
 class FocusTimer extends StatefulWidget{const FocusTimer({super.key});@override State<FocusTimer> createState()=>_FocusTimerState();}
 class _FocusTimerState extends State<FocusTimer>{int seconds=1500;Timer? timer;@override void dispose(){timer?.cancel();super.dispose();}void toggle(){if(timer?.isActive==true){timer?.cancel();setState((){});return;}timer=Timer.periodic(Duration(seconds:1),(t){if(seconds==0){t.cancel();}else{setState(()=>seconds--);}});setState((){});}@override Widget build(BuildContext context)=>NuPage(title:'Pomodoro focus',child:Center(child:Padding(padding:EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[GlossIcon(Icons.timer_rounded,size:100),NuTitle('One focused session'),Text('${seconds~/60}:${(seconds%60).toString().padLeft(2,'0')}',style:TextStyle(fontSize:62,fontWeight:FontWeight.w800,color:Theme.of(context).colorScheme.primary)),FilledButton(onPressed:toggle,child:Text(timer?.isActive==true?'Pause':'Start')),TextButton(onPressed:(){timer?.cancel();setState(()=>seconds=1500);},child:Text('Reset 25 minutes'))]))));}

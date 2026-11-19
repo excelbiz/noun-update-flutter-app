@@ -4,6 +4,8 @@ import '../core/api_client.dart';
 import '../core/notification_preferences.dart';
 import '../core/notification_service.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
+import '../core/green_glass.dart';
 import 'native_tools.dart';
 
 class NativeNotifications extends StatefulWidget {
@@ -43,7 +45,37 @@ class _NativeNotificationsState extends State<NativeNotifications>{
    OutlinedButton.icon(onPressed:!preferences.enabled?null:()async{final granted=await NotificationService.requestPermission();if(context.mounted)nuMessage(context,granted?'Device notifications are allowed.':'Notification permission was not granted. You can change this later in your device settings.');},icon:Icon(Icons.notifications_active_outlined),label:Text('Allow on this device')),
   ]));
  });
- @override Widget build(BuildContext context){final shown=rows.where((r)=>(filter=='All'||r['category']==filter)&&(!unreadOnly||!read.contains(r['key']))).toList();return RefreshIndicator(onRefresh:()async{await Future.wait([load(),preferences.load()]);},child:ListView(key:PageStorageKey('notifications'),physics:AlwaysScrollableScrollPhysics(),padding:EdgeInsets.all(16),children:[
+ Widget glassInbox(List<Map<String,dynamic>> shown)=>RefreshIndicator(
+   onRefresh:()async{await Future.wait([load(),preferences.load()]);},
+   child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(15,5,15,25),children:[
+    Row(children:[
+      Expanded(child:Text('${rows.where((r)=>!read.contains(r['key'])).length} unread updates',
+        style:TextStyle(fontWeight:FontWeight.w800,color:nuInk(context)))),
+      IconButton(tooltip:'Notification settings',icon:const Icon(Icons.tune_rounded),onPressed:()=>
+        showModalBottomSheet<void>(context:context,isScrollControlled:true,
+          builder:(context)=>SafeArea(child:FractionallySizedBox(heightFactor:.86,child:ListView(
+            padding:const EdgeInsets.all(14),children:[preferencePanel()]))))),
+    ]),
+    Wrap(spacing:5,children:[for(final c in ['All','Exams','TMAs','Results','Fees','General'])
+      ChoiceChip(showCheckmark:false,label:Text(c),selected:filter==c,onSelected:(_)=>setState(()=>filter=c))]),
+    const SizedBox(height:7),
+    Wrap(spacing:6,children:[
+      FilterChip(label:const Text('Unread only'),selected:unreadOnly,onSelected:(v)=>setState(()=>unreadOnly=v)),
+      TextButton(onPressed:rows.isEmpty?null:()=>mark(rows.map((r)=>'${r['key']}')),child:const Text('Mark all read')),
+    ]),
+    if(loading)const LinearProgressIndicator(),
+    if(error!=null)AsyncError('Some updates could not load.',load),
+    for(final r in shown)GlassRow(
+      icon:switch(r['category']){'Exams'=>Icons.calendar_month_rounded,'TMAs'=>Icons.assignment_outlined,
+        'Results'=>Icons.insights_rounded,'Fees'=>Icons.receipt_long_outlined,_=>Icons.campaign_outlined},
+      tone:r['category']=='Exams'?const Color(0xff9c6200):null,
+      title:'${r['title']}',subtitle:'${r['text']}\n${displayDate(r['date'])}',
+      end:!read.contains(r['key'])?Icon(Icons.circle,size:8,color:Theme.of(context).colorScheme.primary,semanticLabel:'Unread'):null,
+      onTap:(){mark(['${r['key']}']);widget.onArticle(Map<String,dynamic>.from(r['article'] as Map));}),
+    if(!loading&&shown.isEmpty)const NuPanel(child:Text('No published updates in this category yet.')),
+    GlassRow(icon:Icons.calendar_month_outlined,title:'Academic dates & deadlines',onTap:()=>pushNu(context,NativeCalendar(widget.api))),
+   ]));
+ @override Widget build(BuildContext context){final shown=rows.where((r)=>(filter=='All'||r['category']==filter)&&(!unreadOnly||!read.contains(r['key']))).toList();if(GreenGlass.of(context)!=null)return glassInbox(shown);return RefreshIndicator(onRefresh:()async{await Future.wait([load(),preferences.load()]);},child:ListView(key:PageStorageKey('notifications'),physics:AlwaysScrollableScrollPhysics(),padding:EdgeInsets.all(16),children:[
   NuTitle('Your inbox',subtitle:'Published updates from NOUN Update'),preferencePanel(),NuPanel(child:Row(children:[GlossIcon(Icons.notifications_active_outlined,size:44),SizedBox(width:14),Expanded(child:Text('${rows.where((r)=>!read.contains(r['key'])).length} unread updates',style:TextStyle(fontSize:19,fontWeight:FontWeight.w800)))])),Material(color:Colors.transparent,child:SwitchListTile(contentPadding:EdgeInsets.zero,title:Text('Unread only'),value:unreadOnly,onChanged:(v)=>setState(()=>unreadOnly=v))),Align(alignment:Alignment.centerRight,child:TextButton(onPressed:rows.isEmpty?null:()=>mark(rows.map((r)=>'${r['key']}')),child:Text('Mark all read',style:TextStyle(fontSize:10)))),
   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final c in ['All','TMAs','Exams','Results','Fees','General'])Padding(padding:EdgeInsets.only(right:6),child:ChoiceChip(showCheckmark:false,label:Text(c,style:TextStyle(fontSize:11)),selected:filter==c,onSelected:(_)=>setState(()=>filter=c)))])),
   if(loading)Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator())),
@@ -54,3 +86,4 @@ class _NativeNotificationsState extends State<NativeNotifications>{
   NuPanel(color:nuMint,child:ListTile(contentPadding:EdgeInsets.zero,leading:GlossIcon(Icons.calendar_month,size:40),title:Text('Academic dates & deadlines',style:TextStyle(fontSize:13,fontWeight:FontWeight.w700)),subtitle:Text('TMAs, registration and examinations',style:TextStyle(fontSize:11)),onTap:()=>pushNu(context,NativeCalendar(widget.api)))),
  ]));}
 }
+

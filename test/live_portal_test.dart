@@ -17,6 +17,10 @@ import 'package:noun_update_student_app/app/noun_update_app.dart';
 import 'package:noun_update_student_app/screens/appearance_settings.dart';
 import 'package:noun_update_student_app/screens/live_portal.dart';
 import 'package:noun_update_student_app/screens/native_tools.dart';
+import 'package:noun_update_student_app/screens/glass_welcome.dart';
+import 'package:noun_update_student_app/screens/native_account.dart';
+import 'package:noun_update_student_app/screens/native_notifications.dart';
+import 'package:noun_update_student_app/screens/native_timetable.dart';
 
 class DirectoryApi extends ApiClient {
   DirectoryApi(this.services,{this.signedIn=false});
@@ -34,6 +38,24 @@ class DirectoryApi extends ApiClient {
       {'id':3,'category':'news','title':'General student update','excerpt':'Find study materials and revision resources in the app.','published_at':DateTime.now().subtract(const Duration(days:9)).toIso8601String()},
     ]}};
     return {'data': {'items': path == '/services' ? services : <dynamic>[]}};
+  }
+}
+
+class GlassVisualApi extends DirectoryApi{
+  GlassVisualApi(super.services);
+  @override Future<Map<String,dynamic>> getJson(String path)async{
+    if(path.startsWith('/materials?'))return {'data':{'items':[{'id':14,'course_code':'CIT411','title':'Internet Programming'}]}};
+    if(path=='/calendar')return {'data':{'events':[
+      {'semester':'2026_2','title':'Registration closes','start_at':'2026-11-12','category':'Registration'},
+      {'semester':'2026_2','title':'E-Exam begins','start_at':'2026-11-18','category':'Examinations'},
+    ]}};
+    if(path.startsWith('/timetable?'))return {'data':{
+      'current_period':'2026_2','source_period':'2026_2','items':[
+        {'course_code':'CIT411','course_title':'Internet Programming','date':'2026-11-26','time':'9:00 AM','exam_type':'POP'},
+        {'course_code':'GST302','course_title':'Business Creation and Growth','date':'2026-11-27','time':'11:00 AM','exam_type':'CBT'},
+      ],
+    }};
+    return super.getJson(path);
   }
 }
 
@@ -172,6 +194,69 @@ void main() {
     expect(tester.takeException(),isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+  testWidgets('Green Glass welcome completes once and persists on relaunch',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    Widget app()=>RepaintBoundary(key:key,child:MaterialApp(theme:buildGreenGlass(),
+      home:const GlassWelcomeGate(home:Scaffold(body:Text('Dashboard ready')))));
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.runAsync(()async{
+      final context=tester.element(find.byType(GlassWelcomeGate));
+      await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),context);
+      if(context.mounted)await precacheImage(const AssetImage('assets/images/skins/campus.webp'),context);
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('NOUN Update'),findsOneWidget);
+    await capture(tester,key,'green-glass-welcome');
+    await tester.ensureVisible(find.text('Next'));
+    await tester.tap(find.text('Next'));await tester.pumpAndSettle();
+    expect(find.text('All your NOUN study tools'),findsOneWidget);
+    await capture(tester,key,'green-glass-onboarding');
+    await tester.ensureVisible(find.text('Get started'));
+    await tester.tap(find.text('Get started'));await tester.pumpAndSettle();
+    expect(find.text('Dashboard ready'),findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());await tester.pumpAndSettle();
+    await tester.pumpWidget(app());await tester.pumpAndSettle();
+    expect(find.text('Dashboard ready'),findsOneWidget);
+  });
+  for(final (width,scaling) in [(390.0,1.0),(320.0,1.5)]){
+    testWidgets('Green Glass inner routes fit at $width with $scaling text',(tester)async{
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      tester.view.physicalSize=Size(width,844);tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+      final workspace=StudentWorkspace('glass-test',api:GlassVisualApi(services))
+        ..courses=['CIT411','GST302']
+        ..details={'Programme':'BSc Computer Science','Faculty':'Faculty of Computing'};
+      addTearDown(workspace.dispose);
+      final key=GlobalKey();
+      Future<void> render(Widget screen,String name)async{
+        final host=RepaintBoundary(key:key,child:MaterialApp(theme:buildGreenGlass(),darkTheme:buildGreenGlass(brightness:Brightness.dark),
+          themeMode:ThemeMode.light,builder:(context,child)=>MediaQuery(
+            data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen));
+        await tester.pumpWidget(host);await tester.pumpAndSettle();
+        expect(tester.takeException(),isNull,reason:name);
+        if(width==390)await capture(tester,key,'green-glass-$name-light');
+        await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(
+          theme:buildGreenGlass(brightness:Brightness.dark),builder:(context,child)=>MediaQuery(
+            data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen)));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(),isNull,reason:'$name dark');
+        if(width==390)await capture(tester,key,'green-glass-$name-dark');
+        await tester.pumpWidget(const SizedBox.shrink());await tester.pumpAndSettle();
+      }
+      await render(NativeAuth(workspace.api),'login');
+      await render(MyCoursesPage(workspace:workspace,openResource:(_,__){}),'registered');
+      await render(GlassCourseOverview(api:workspace.api,code:'CIT411',programme:workspace.details['Programme'],
+        faculty:workspace.details['Faculty'],openResource:(_,__){}),'course-overview');
+      await render(NativeTimetable(api:workspace.api,courses:workspace.courses,onManageCourses:(){}),'timetable');
+      await render(NativeCalendar(workspace.api),'calendar');
+      await render(NuPage(title:'Notifications',child:NativeNotifications(api:workspace.api,onArticle:(_){})),'inbox');
+    });
+  }
   testWidgets('Appearance applies immediately and survives a reload',(tester)async{
     SharedPreferences.setMockInitialValues({});await Appearance.instance.load();
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;

@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
+import '../core/green_glass.dart';
 
 class TimetableEntry {
   const TimetableEntry({
@@ -113,7 +115,7 @@ class NativeTimetable extends StatefulWidget {
 
 class _NativeTimetableState extends State<NativeTimetable>{
   late Future<(TimetableSnapshot,DateTime?)> future;
-  bool saving=false;
+  bool saving=false,pastOnly=false;
   late String? faculty=widget.faculty;
   String get _cacheKey=>'nu-timetable-v1-${widget.scope}';
   String get _courseKey=>([...widget.courses]..sort()).join(',');
@@ -168,7 +170,15 @@ class _NativeTimetableState extends State<NativeTimetable>{
       if(!s.hasData)return const Center(child:CircularProgressIndicator());
       final (t,savedAt)=s.data!;
       return RefreshIndicator(onRefresh:()async{reload();try{await future;}catch(_){/* The builder shows the retry state. */}},child:ListView(padding:const EdgeInsets.fromLTRB(18,18,18,30),children:[
-        ServiceHero(title:'${t.currentPeriod.isEmpty?'Current':t.currentPeriod} Exam Timetable',subtitle:savedAt==null?'Matched from the timetable records currently imported into NOUN Update.':'Saved timetable · offline copy',icon:Icons.event_available_rounded),
+        if(GreenGlass.of(context)!=null)...[
+          Wrap(spacing:6,children:[
+            ChoiceChip(label:const Text('My Timetable'),selected:!pastOnly,showCheckmark:false,onSelected:(_)=>setState(()=>pastOnly=false)),
+            if(savedAt==null)ChoiceChip(label:const Text('Past exams'),selected:pastOnly,showCheckmark:false,onSelected:(_)=>setState(()=>pastOnly=true)),
+          ]),
+          const SizedBox(height:7),
+          GlassRow(icon:Icons.calendar_month_rounded,title:'Personalised Timetable',
+            subtitle:savedAt==null?t.currentPeriod:'Saved timetable · offline copy'),
+        ]else ServiceHero(title:'${t.currentPeriod.isEmpty?'Current':t.currentPeriod} Exam Timetable',subtitle:savedAt==null?'Matched from the timetable records currently imported into NOUN Update.':'Saved timetable · offline copy',icon:Icons.event_available_rounded),
         if(t.facultyOptions.isNotEmpty&&savedAt==null)NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           DropdownButtonFormField<String>(key:ValueKey(t.facultyId),initialValue:t.facultyId,isExpanded:true,
             decoration:const InputDecoration(labelText:'Faculty'),
@@ -187,9 +197,10 @@ class _NativeTimetableState extends State<NativeTimetable>{
           const NuTitle('Next examination'),
           if(t.nextExam==null)NuPanel(child:Text(t.nextExamSummary)) else _examCard(t.nextExam!,featured:true),
         ],
-        const NuTitle('Your matched schedule'),
+        NuTitle(GreenGlass.of(context)==null?'Your matched schedule':pastOnly&&savedAt==null?'Past exams':'Your matched schedule'),
         if(t.items.isEmpty)const NuPanel(child:Text('None of your registered courses has a timetable record yet. This can happen before the timetable import is complete.')),
-        for(final exam in t.items)_examCard(exam,showStatus:savedAt==null),
+        for(final exam in t.items.where((row)=>!pastOnly||savedAt!=null||row.isPast))_examCard(exam,showStatus:savedAt==null),
+        if(pastOnly&&savedAt==null&&!t.items.any((row)=>row.isPast))const NuPanel(child:Text('No past exams in these records.')),
         if(t.missingCourses.isNotEmpty)...[
           const NuTitle('Courses not found'),
           NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('These saved courses are not in the currently imported timetable:'),const SizedBox(height:10),Wrap(spacing:7,runSpacing:7,children:[for(final code in t.missingCourses)Chip(label:Text(code))]),const SizedBox(height:8),const Text('Keep them in My Courses. They will appear here automatically when matching timetable records are imported.',style:TextStyle(fontSize:12))])),
@@ -201,6 +212,17 @@ class _NativeTimetableState extends State<NativeTimetable>{
     }));
 
   Widget _examCard(TimetableEntry exam,{bool featured=false,bool showStatus=true}){
+    if(GreenGlass.of(context)!=null)return GlassRow(
+      icon:Icons.event_available_outlined,title:exam.courseCode,
+      subtitle:[if(exam.courseTitle.isNotEmpty)exam.courseTitle, '${exam.date} · ${exam.time}',
+        if(showStatus&&exam.isPast)'Past date'].join('\n'),
+      onTap:()=>pushNu(context,NuPage(title:exam.courseCode,child:ListView(padding:const EdgeInsets.all(16),children:[
+        GlassHero(title:exam.courseCode,subtitle:exam.courseTitle,icon:Icons.event_note_rounded),
+        const SizedBox(height:12),
+        GlassRow(icon:Icons.event_outlined,title:'Exam date',subtitle:exam.date),
+        GlassRow(icon:Icons.schedule_rounded,title:'Time',subtitle:exam.time),
+        GlassRow(icon:Icons.assignment_outlined,title:'Exam type',subtitle:exam.examType),
+      ]))));
     final tone=_tone(exam.examType);
     final fill=featured?Color.lerp(Theme.of(context).colorScheme.surface,tone,.10)!:Theme.of(context).colorScheme.surface;
     return Padding(padding:const EdgeInsets.only(bottom:10),child:NuPanel(color:fill,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/green_glass.dart';
 import '../core/appearance.dart';
 import '../screens/live_portal.dart';
+import '../screens/glass_welcome.dart';
 
 class NounUpdateApp extends StatefulWidget {
   const NounUpdateApp({super.key, this.home});
@@ -74,7 +75,7 @@ class _NounUpdateAppState extends State<NounUpdateApp> with WidgetsBindingObserv
             child: child!,
           );
         },
-        home: widget.home ?? const LivePortal(),
+        home: widget.home ?? const GlassWelcomeGate(home:LivePortal()),
       );
     },
   );

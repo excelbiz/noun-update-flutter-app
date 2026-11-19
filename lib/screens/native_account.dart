@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../core/green_glass.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
 import '../widgets/skin_art.dart';
 import '../core/skin_theme.dart';
 import '../widgets/editorial_layouts.dart';
@@ -40,17 +41,57 @@ class _NativeAuthState extends State<NativeAuth>{
    ]),
   ],
  ));
+ Widget glassLogin(BuildContext context){
+  final title=switch(mode){'register'=>'Create your account','reset'=>'Reset your password','code'=>'Enter your reset code',_=>'Welcome Back'};
+  final subtitle=switch(mode){'register'=>'Start organising your study resources.','reset'=>'Request a code for your account.','code'=>'Enter your code and choose a new password.',_=>'Sign in to your NOUN Update account'};
+  final label=switch(mode){'register'=>'Create account','reset'=>'Send reset code','code'=>'Change password',_=>'Login'};
+  return NuPage(title:'NOUN Update',child:Stack(fit:StackFit.expand,children:[
+   const Align(alignment:Alignment.bottomCenter,child:SizedBox(width:double.infinity,height:150,child:GlassWaves())),
+   AutofillGroup(child:ListView(padding:const EdgeInsets.fromLTRB(23,22,23,44),children:[
+    const Center(child:BrandLogo(size:118)),
+    const SizedBox(height:22),
+    Text(title,style:Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight:FontWeight.w800)),
+    const SizedBox(height:5),Text(subtitle,style:TextStyle(color:nuMuted(context))),
+    const SizedBox(height:23),
+    if(mode=='register')...[
+      TextField(controller:name,autofillHints:const [AutofillHints.name],
+        textInputAction:TextInputAction.next,decoration:const InputDecoration(labelText:'Full name',prefixIcon:Icon(Icons.person_outline))),
+      const SizedBox(height:10),
+    ],
+    TextField(controller:email,keyboardType:TextInputType.emailAddress,autofillHints:const [AutofillHints.username],
+      textInputAction:mode=='reset'?TextInputAction.done:TextInputAction.next,
+      onSubmitted:mode=='reset'?(_)=>submit():null,decoration:const InputDecoration(labelText:'Email address',prefixIcon:Icon(Icons.mail_outline))),
+    if(mode=='code')...[
+      const SizedBox(height:10),TextField(controller:code,keyboardType:TextInputType.number,
+        textInputAction:TextInputAction.next,decoration:const InputDecoration(labelText:'8-digit reset code',prefixIcon:Icon(Icons.pin_outlined))),
+    ],
+    if(mode!='reset')...[
+      const SizedBox(height:10),TextField(controller:password,obscureText:hidden,onSubmitted:(_)=>submit(),
+        autofillHints:mode=='login'?const [AutofillHints.password]:const [AutofillHints.newPassword],
+        decoration:InputDecoration(labelText:mode=='code'?'New password':'Password',
+          helperText:mode=='register'||mode=='code'?'Use 10–128 characters':null,
+          prefixIcon:const Icon(Icons.lock_outline_rounded),suffixIcon:IconButton(
+            tooltip:hidden?'Show password':'Hide password',onPressed:()=>setState(()=>hidden=!hidden),
+            icon:Icon(hidden?Icons.visibility_outlined:Icons.visibility_off_outlined)))),
+    ],
+    if(message!=null)Padding(padding:const EdgeInsets.only(top:12),child:Text(message!)),
+    const SizedBox(height:16),GlassAction(label:busy?'Please wait…':label,onPressed:busy?null:submit),
+    if(mode=='login')TextButton(onPressed:busy?null:()=>setState((){mode='reset';message=null;}),child:const Text('Forgot password?')),
+    const SizedBox(height:8),
+    OutlinedButton.icon(onPressed:busy?null:()=>setState((){mode=mode=='login'?'register':'login';message=null;}),
+      icon:Icon(mode=='login'?Icons.person_add_alt_1_outlined:Icons.arrow_back_rounded),
+      label:Text(mode=='login'?'Create New Account':'Back to sign in')),
+    TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Continue as guest')),
+   ])),
+  ]));
+ }
  @override Widget build(BuildContext context) {
+ if(GreenGlass.of(context)!=null)return glassLogin(context);
  if(SkinTokens.of(context).skin==AppSkin.futureTech && welcome && mode=='login')return TechWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  if(SkinTokens.of(context).skin==AppSkin.boldPremium && welcome && mode=='login')return BoldWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  if(SkinTokens.of(context).skin==AppSkin.elegantEditorial && welcome && mode=='login')return EditorialWelcome(onLogin:()=>setState(()=>welcome=false),onRegister:()=>setState((){welcome=false;mode='register';}),onGuest:()=>Navigator.pop(context));
  return NuPage(title:'Your student space',child:ListView(padding:EdgeInsets.zero,children:[
- if(GreenGlass.of(context)!=null)Padding(padding:const EdgeInsets.fromLTRB(20,24,20,34),child:Column(children:[
-  const BrandLogo(size:112),const SizedBox(height:12),
-  Text('NOUN Update',style:Theme.of(context).textTheme.titleLarge),
-  const SizedBox(height:8),Text(mode=='login'?'Welcome back':'Your next chapter',style:Theme.of(context).textTheme.headlineMedium),
-  const SizedBox(height:6),const Text('Your academic companion'),
- ])) else if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
+ if(SkinTokens.of(context).skin.isPremium)SkinHero(login:true,title:mode=='login'?'Your academic journey, made easier.':'Your next chapter.',subtitle:'Learn at your pace. Build your future.') else StudentHero(title:mode=='login'?'Welcome back!':'Your next chapter.',height:MediaQuery.textScalerOf(context).scale(16)>20?300:245),
  Container(transform:Matrix4.translationValues(0,-18,0),padding:EdgeInsets.fromLTRB(20,23,20,18),decoration:BoxDecoration(color:Theme.of(context).colorScheme.surface,borderRadius:BorderRadius.vertical(top:Radius.circular(24))),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  if(mode!='login')NuTitle(switch(mode){'register'=>'Create your account','reset'=>'Reset your password',_=>'Enter your reset code'}),
  if(mode=='register')Padding(padding:EdgeInsets.only(bottom:12),child:TextField(controller:name,autofillHints:[AutofillHints.name],decoration:InputDecoration(labelText:'Full name',prefixIcon:Icon(Icons.person_outline)))),
