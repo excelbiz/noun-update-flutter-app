@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/skin_theme.dart';
+import '../core/green_glass.dart';
 
 /// Decorative artwork only. Data, text, actions and navigation stay native.
 class SkinBackdrop extends StatelessWidget {
@@ -7,6 +8,10 @@ class SkinBackdrop extends StatelessWidget {
   final Widget child;
   @override Widget build(BuildContext context) {
     final t=SkinTokens.of(context);
+    final glass=GreenGlass.of(context);
+    if(glass!=null)return Material(color:glass.top,child:DecoratedBox(decoration:BoxDecoration(
+      gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[glass.top,glass.bottom])),
+      child:child));
     if(!t.skin.isPremium)return Material(color:Theme.of(context).scaffoldBackgroundColor,child:child);
     if(t.skin==AppSkin.futureTech)return Material(color:t.background,child:Stack(fit:StackFit.expand,children:[const Positioned.fill(child:IgnorePointer(child:CustomPaint(painter:_LightPaths()))),child]));
     if(t.skin==AppSkin.elegantEditorial||t.skin==AppSkin.boldPremium)return Material(color:t.background,child:child);
@@ -176,3 +181,4 @@ class _SkinGlyph extends StatelessWidget {
    ])));
  }
 }
+

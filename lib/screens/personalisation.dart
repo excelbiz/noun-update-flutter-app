@@ -9,8 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import '../core/api_client.dart';
 import '../core/premium_service.dart';
 import '../core/skin_theme.dart';
+import '../core/green_glass.dart';
 import '../widgets/native_ui.dart';
-import 'skin_gallery.dart';
 import 'profile_cosmetics.dart';
 
 class PremiumPage extends StatefulWidget {
@@ -65,7 +65,6 @@ class _PremiumPageState extends State<PremiumPage>{
   }
   @override Widget build(BuildContext context)=>NuPage(title:'NOUN Update Premium',child:ListView(padding:const EdgeInsets.all(20),children:[
     const ServiceHero(title:'Make it yours.\nUnderstand your progress.',subtitle:'Your academic essentials stay free.',icon:Icons.workspace_premium_outlined),
-    const SizedBox(height:16),OutlinedButton.icon(onPressed:()=>pushNu(context,SkinGallery(api:widget.api)),icon:const Icon(Icons.palette_outlined),label:const Text('Preview all 10 Premium skins')),
     const SizedBox(height:8),OutlinedButton.icon(onPressed:()=>pushNu(context,ProfileCosmeticsPage(api:widget.api)),icon:const Icon(Icons.account_circle_outlined),label:const Text('Preview Premium profile styles')),
     FutureBuilder<Map<String,dynamic>>(future:config,builder:(context,s){
       if(s.hasError)return AsyncError('Premium plans are not available right now. No payment has been started.',()=>setState(()=>config=widget.api.getJson('/premium/config').then(unpack)));
@@ -76,7 +75,7 @@ class _PremiumPageState extends State<PremiumPage>{
       const labels={'ad_free':'Completely ad-free','premium_skins':'10 Premium skins','mock_analytics':'Advanced Mock analytics','pop_analytics':'Advanced POP analytics','reports':'Downloadable analytics reports','custom_icons':'Custom app icons','profile_frames':'Premium profile styles','seasonal_skins':'Seasonal skins','milestone_celebrations':'Enhanced milestone celebrations'};
       final premium=PremiumService.instance;final saleOpen=premium.isPremium?c['renewals_enabled']==true:c['new_subscriptions_enabled']==true;
       return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        const NuTitle('Your Premium experience'),for(final entry in labels.entries)if(features[entry.key]==true)ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.check_circle_outline),title:Text(entry.value)),
+        const NuTitle('Your Premium experience'),for(final entry in labels.entries)if(features[entry.key]==true&&(GreenGlass.of(context)==null||!['premium_skins','seasonal_skins','custom_icons'].contains(entry.key)))ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.check_circle_outline),title:Text(entry.value)),
         const NuTitle('Choose your plan'),for(final p in records(c['plans']))NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(p['badge']!=null)Chip(label:Text('${p['badge']}')),Text('${p['name']}',style:Theme.of(context).textTheme.titleLarge),
           if(p['promotion_active']==true)Text('${p['currency']} ${((p['regular_price_minor'] as num)/100).toStringAsFixed(0)}',style:const TextStyle(decoration:TextDecoration.lineThrough)),
@@ -84,7 +83,7 @@ class _PremiumPageState extends State<PremiumPage>{
           if(p['promotion_active']==true&&p['promotion_text']!=null)Text('${p['promotion_text']}'),const SizedBox(height:12),
           FilledButton.icon(onPressed:saleOpen&&!purchasing?()=>_buy(p):null,icon:const Icon(Icons.account_balance_wallet_outlined),label:Text(premium.isPremium?'Extend with central wallet':'Buy with central wallet')),
         ])),
-        if(!saleOpen)NuPanel(child:Text(premium.isPremium?'Premium renewals are not open yet. Your current access remains unchanged.':'Premium purchases are not open yet. You can still preview every skin, and all free study tools remain available.')),
+        if(!saleOpen)NuPanel(child:Text(premium.isPremium?'Premium renewals are not open yet. Your current access remains unchanged.':'Premium purchases are not open yet. All free study tools remain available.')),
         const NuPanel(child:Text('Premium payments use your existing NOUN Update central wallet. The server rechecks the live price, entitlement and wallet balance before any debit.')),
       ]);
     }),
@@ -245,3 +244,4 @@ class _BrandedShareCardState extends State<BrandedShareCard>{
     const SizedBox(height:10),const Text('Choose an installed social app from your phone’s sharing menu. Nothing is posted automatically.'),
   ]));
 }
+

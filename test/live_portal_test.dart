@@ -10,11 +10,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/core/appearance.dart';
+import 'package:noun_update_student_app/core/green_glass.dart';
+import 'package:noun_update_student_app/core/study_state_store.dart';
+import 'package:noun_update_student_app/widgets/native_ui.dart';
 import 'package:noun_update_student_app/screens/student_workspace.dart';
 import 'package:noun_update_student_app/app/noun_update_app.dart';
 import 'package:noun_update_student_app/screens/appearance_settings.dart';
 import 'package:noun_update_student_app/screens/live_portal.dart';
 import 'package:noun_update_student_app/screens/native_tools.dart';
+import 'package:noun_update_student_app/screens/glass_welcome.dart';
+import 'package:noun_update_student_app/screens/native_account.dart';
+import 'package:noun_update_student_app/screens/native_notifications.dart';
+import 'package:noun_update_student_app/screens/native_timetable.dart';
 
 class DirectoryApi extends ApiClient {
   DirectoryApi(this.services,{this.signedIn=false});
@@ -32,6 +39,24 @@ class DirectoryApi extends ApiClient {
       {'id':3,'category':'news','title':'General student update','excerpt':'Find study materials and revision resources in the app.','published_at':DateTime.now().subtract(const Duration(days:9)).toIso8601String()},
     ]}};
     return {'data': {'items': path == '/services' ? services : <dynamic>[]}};
+  }
+}
+
+class GlassVisualApi extends DirectoryApi{
+  GlassVisualApi(super.services);
+  @override Future<Map<String,dynamic>> getJson(String path)async{
+    if(path.startsWith('/materials?'))return {'data':{'items':[{'id':14,'course_code':'CIT411','title':'Internet Programming'}]}};
+    if(path=='/calendar')return {'data':{'events':[
+      {'semester':'2026_2','title':'Registration closes','start_at':'2026-11-12','category':'Registration'},
+      {'semester':'2026_2','title':'E-Exam begins','start_at':'2026-11-18','category':'Examinations'},
+    ]}};
+    if(path.startsWith('/timetable?'))return {'data':{
+      'current_period':'2026_2','source_period':'2026_2','items':[
+        {'course_code':'CIT411','course_title':'Internet Programming','date':'2026-11-26','time':'9:00 AM','exam_type':'POP'},
+        {'course_code':'GST302','course_title':'Business Creation and Growth','date':'2026-11-27','time':'11:00 AM','exam_type':'CBT'},
+      ],
+    }};
+    return super.getJson(path);
   }
 }
 
@@ -133,6 +158,149 @@ void main() {
     await capture(tester,key,'course-hub');await tester.pumpWidget(const SizedBox.shrink());
     workspace.dispose();restored.dispose();
   });
+  testWidgets('Green Glass renders native Home, Study Hub and a live-theme service route',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    await Appearance.instance.load();
+    await Appearance.instance.change(mode:ThemeMode.light);
+    tester.view.physicalSize=const Size(390,844);
+    tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(key:key,child:NounUpdateApp(
+      home:LivePortal(apiClient:DirectoryApi(services),serviceBundle:ServiceBundle(jsonEncode(services))))));
+    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(LivePortal))));
+    await tester.pumpAndSettle();
+    expect(GreenGlass.of(tester.element(find.byType(LivePortal))),isNotNull);
+    await capture(tester,key,'green-glass-home-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-home-dark');
+    await tester.tap(find.text('Mock e-Exam').hitTestable().first);
+    await tester.pumpAndSettle();
+    expect(find.byType(NativeUnavailable),findsOneWidget);
+    await Appearance.instance.change(mode:ThemeMode.light);
+    await tester.pumpAndSettle();
+    expect(Theme.of(tester.element(find.byType(NativeUnavailable))).brightness,Brightness.light);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Study Hub').hitTestable().first);
+    await tester.pumpAndSettle();
+    expect(find.text('Revision plan'),findsOneWidget);
+    await capture(tester,key,'green-glass-study-hub-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-study-hub-dark');
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('Green Glass welcome completes once and persists on relaunch',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    Widget app()=>RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildGreenGlass(),
+      home:const GlassWelcomeGate(home:Scaffold(body:Text('Dashboard ready')))));
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.runAsync(()async{
+      final context=tester.element(find.byType(GlassWelcomeGate));
+      await precacheImage(const AssetImage('assets/images/noun_update_logo.png'),context);
+      if(context.mounted)await precacheImage(const ResizeImage(AssetImage('assets/images/skins/campus.webp'),width:720),context);
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('NOUN Update'),findsOneWidget);
+    await capture(tester,key,'green-glass-welcome');
+    await tester.ensureVisible(find.text('Next'));
+    await tester.tap(find.text('Next'));await tester.pumpAndSettle();
+    expect(find.text('All your NOUN study tools'),findsOneWidget);
+    await capture(tester,key,'green-glass-onboarding');
+    await tester.ensureVisible(find.text('Get started'));
+    await tester.tap(find.text('Get started'));await tester.pumpAndSettle();
+    expect(find.text('Dashboard ready'),findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());await tester.pumpAndSettle();
+    await tester.pumpWidget(app());await tester.pumpAndSettle();
+    expect(find.text('Dashboard ready'),findsOneWidget);
+  });
+  for(final (width,scaling) in [(390.0,1.0),(320.0,1.5)]){
+    testWidgets('Green Glass inner routes fit at $width with $scaling text',(tester)async{
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      tester.view.physicalSize=Size(width,844);tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+      final workspace=StudentWorkspace('glass-test',api:GlassVisualApi(services))
+        ..courses=['CIT411','GST302']
+        ..details={'Programme':'BSc Computer Science','Faculty':'Faculty of Computing'};
+      addTearDown(workspace.dispose);
+      final reading=StudyStateStore(api:workspace.api,courseCode:'CIT411');
+      expect(await reading.cachedProgress(),isNull);
+      await reading.rememberUnitCount(4);
+      await reading.save({0,1,2},'');
+      expect(await reading.cachedProgress(),.75);
+      expect(await StudyStateStore(api:workspace.api,courseCode:'CIT411',userId:'other').cachedProgress(),isNull);
+      final key=GlobalKey();
+      Future<void> render(Widget screen,String name)async{
+        final host=RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,theme:buildGreenGlass(),darkTheme:buildGreenGlass(brightness:Brightness.dark),
+          themeMode:ThemeMode.light,builder:(context,child)=>MediaQuery(
+            data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen));
+        await tester.pumpWidget(host);await tester.pumpAndSettle();
+        if(screen is NativeAuth){
+          await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(NativeAuth))));
+          await tester.pumpAndSettle();
+        }
+        if(screen is MyCoursesPage)expect(find.text('75%'),scaling==1?findsOneWidget:findsNothing);
+        expect(tester.takeException(),isNull,reason:name);
+        if(width==390)await capture(tester,key,'green-glass-$name-light');
+        await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(debugShowCheckedModeBanner:false,
+          theme:buildGreenGlass(brightness:Brightness.dark),builder:(context,child)=>MediaQuery(
+            data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen)));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(),isNull,reason:'$name dark');
+        if(width==390)await capture(tester,key,'green-glass-$name-dark');
+        await tester.pumpWidget(const SizedBox.shrink());await tester.pumpAndSettle();
+      }
+      await render(NativeAuth(workspace.api),'login');
+      await render(MyCoursesPage(workspace:workspace,openResource:(_,__){}),'registered');
+      await render(GlassCourseOverview(api:workspace.api,code:'CIT411',programme:workspace.details['Programme'],
+        faculty:workspace.details['Faculty'],openResource:(_,__){}),'course-overview');
+      await render(NativeTimetable(api:workspace.api,courses:workspace.courses,onManageCourses:(){}),'timetable');
+      await render(NativeCalendar(workspace.api),'calendar');
+      await render(NuPage(title:'Notifications',child:NativeNotifications(api:workspace.api,onArticle:(_){})),'inbox');
+    });
+  }
+  testWidgets('Green Glass account opens the native wallet in both appearances',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    await Appearance.instance.load();
+    await Appearance.instance.change(mode:ThemeMode.light);
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(key:key,child:NounUpdateApp(home:LivePortal(
+      apiClient:GlassVisualApi(services),serviceBundle:ServiceBundle(jsonEncode(services)),preview:true,previewData:const{
+        'profile':{'id':'12','name':'Preview Student','email':'student@example.test'},
+        'details':{'Programme':'BSc Computer Science','Faculty':'Faculty of Computing'},
+        'wallet':{'balance_kobo':250000,'transactions':[
+          {'title':'Wallet funding','amount_kobo':350000,'created_at':'19 Nov 2026'},
+          {'title':'Exam Summary','amount_kobo':-100000,'created_at':'18 Nov 2026'},
+        ]},
+      }))));
+    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(LivePortal))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Account'));await tester.pumpAndSettle();
+    expect(find.text('Preview Student'),findsOneWidget);
+    await capture(tester,key,'green-glass-account-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-account-dark');
+    await tester.tap(find.text('Wallet & transactions'));await tester.pumpAndSettle();
+    expect(find.text('₦2500.00'),findsOneWidget);
+    await capture(tester,key,'green-glass-wallet-dark');
+    await Appearance.instance.change(mode:ThemeMode.light);await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-wallet-light');
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('Appearance applies immediately and survives a reload',(tester)async{
     SharedPreferences.setMockInitialValues({});await Appearance.instance.load();
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
@@ -143,8 +311,7 @@ void main() {
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).brightness,Brightness.dark);
     await tester.scrollUntilVisible(find.text('Classic serif'),150,scrollable:find.byType(Scrollable).first);await Scrollable.ensureVisible(tester.element(find.text('Classic serif')),alignment:0.5);await tester.pumpAndSettle();await tester.tap(find.text('Classic serif').hitTestable());await tester.pumpAndSettle();
     expect(Theme.of(tester.element(find.byType(AppearanceSettings))).textTheme.bodyMedium?.fontFamily,'NUReading');
-    await Scrollable.ensureVisible(tester.element(find.text('Ocean')),alignment:0.5);await tester.pumpAndSettle();await tester.tap(find.text('Ocean'));await tester.pumpAndSettle();
-    final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(restored.accent,'Ocean');restored.dispose();
+    final restored=Appearance();await restored.load();expect(restored.mode,ThemeMode.dark);expect(restored.font,'Classic serif');expect(find.text('Accent colour'),findsNothing);restored.dispose();
     await tester.drag(find.byType(ListView).first,const Offset(0,1000));await tester.pumpAndSettle();
     expect(tester.takeException(),isNull);await capture(tester,key,'settings-dark-serif');
     await Appearance.instance.change(mode:ThemeMode.light,font:'Modern sans',accent:'Emerald');await tester.pumpAndSettle();
@@ -181,3 +348,4 @@ Future<void> capture(WidgetTester tester,GlobalKey key,String name) async {
   File('screenshots/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());image.dispose();
  });
 }
+

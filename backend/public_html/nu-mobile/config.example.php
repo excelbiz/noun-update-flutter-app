@@ -4,6 +4,8 @@
 // Never point the wallet connection at a new/empty database.
 return [
     'site_url' => 'https://nounupdate.com',
+    // Optional operator-approved JSON outside the public web root.
+    // 'native_information_file' => '/home/your-account/private/mobile-information.json',
     'content_db' => [
         'host' => getenv('NU_CONTENT_DB_HOST') ?: getenv('DB_HOST'),
         'name' => getenv('NU_CONTENT_DB_NAME') ?: getenv('DB_NAME'),
@@ -15,3 +17,4 @@ return [
     // Local purchased files may ONLY be streamed from these directories.
     'download_roots' => [dirname(__DIR__) . '/file_storage'],
 ];
+

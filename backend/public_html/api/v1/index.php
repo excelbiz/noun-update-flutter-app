@@ -25,6 +25,10 @@ try {
     if(isset($_GET['route']))$path='/'.trim((string)$_GET['route'],'/');
     if($method==='GET'&&$path==='/')nu_send(['name'=>'NOUN Update mobile API','version'=>'1.0','health_url'=>'/api/v1/health','logo_url'=>$nuConfig['site_url'].'/images/logo.webp']);
     if($method==='GET'&&$path==='/services')nu_send(['items'=>nu_services($nuConfig)]);
+    if($method==='GET'&&preg_match('#^/information/([a-z-]+)$#D',$path,$m)){
+        require_once dirname(__DIR__,2).'/nu-mobile/information.php';
+        nu_send(nu_native_information($nuConfig,$m[1]));
+    }
     $db=nu_connect($nuConfig['wallet_db']);
     $content=nu_connect($nuConfig['content_db']);
     $store=new NuStore($db,$content,$nuConfig);
@@ -49,7 +53,7 @@ try {
         nu_send(nu_posts($content,$nuConfig,$m[1],(int)($_GET['page']??1),isset($m[2])?(int)$m[2]:null));
     }
     if($method==='GET'&&$path==='/exam-summaries')nu_send(nu_exam_catalogue($content,(string)($_GET['q']??''),(int)($_GET['page']??1)));
-    if($method==='GET'&&$path==='/timetable')nu_send(nu_timetable($content,(string)($_GET['courses']??'')));
+    if($method==='GET'&&$path==='/timetable')nu_send(nu_timetable($content,(string)($_GET['courses']??''),is_string($_GET['faculty']??null)?$_GET['faculty']:''));
     if($method==='GET'&&$path==='/calendar'){
         $file=$nuConfig['root'].'/academic-calendar-core/calendar.php';
         if(!is_file($file))throw new NuFailure(503,'UNAVAILABLE','The calendar is temporarily unavailable.');
@@ -115,3 +119,4 @@ try {
     echo json_encode(['error'=>['code'=>$known?$e->reason:'SERVICE_UNAVAILABLE',
         'message'=>$known?$e->getMessage():'This service is temporarily unavailable. Please retry shortly.', 'request_id'=>$requestId]]);
 }
+

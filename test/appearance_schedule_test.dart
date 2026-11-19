@@ -11,12 +11,14 @@ void main() {
     final a = Appearance();
     await a.load();
     expect(a.automatic, isTrue);
-    for (final hour in [0, 5, 19, 23]) {
+    for (final hour in [0, 6, 19, 23]) {
       expect(a.effectiveMode(DateTime(2026, 9, 22, hour, 59)), ThemeMode.dark);
     }
-    for (final hour in [6, 12, 18]) {
+    for (final hour in [7, 12, 18]) {
       expect(a.effectiveMode(DateTime(2026, 9, 22, hour)), ThemeMode.light);
     }
+    expect(a.effectiveMode(DateTime(2026, 9, 22, 18, 59)), ThemeMode.light);
+    expect(a.effectiveMode(DateTime(2026, 9, 22, 19)), ThemeMode.dark);
     a.dispose();
   });
   test('Manual choice overrides clock and all preferences persist', () async {
@@ -44,3 +46,4 @@ void main() {
     a.dispose();
   });
 }
+

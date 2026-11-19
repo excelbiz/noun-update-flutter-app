@@ -3,12 +3,97 @@ import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../core/api_client.dart';
+import '../core/offline_materials.dart';
 import '../core/study_state_store.dart';
 import '../widgets/resource_bookmark.dart';
 import '../widgets/native_ui.dart';
+import '../widgets/glass_components.dart';
+import '../core/green_glass.dart';
 
-class NativePdf extends StatefulWidget {const NativePdf({super.key,required this.api,required this.path,required this.title});final ApiClient api;final String path,title;@override State<NativePdf> createState()=>_NativePdfState();}
-class _NativePdfState extends State<NativePdf>{PdfControllerPinch? controller;Object? error;@override void initState(){super.initState();load();}Future<void> load()async{try{final bytes=await widget.api.getPdf(widget.path);if(mounted)setState(()=>controller=PdfControllerPinch(document:PdfDocument.openData(bytes)));}catch(e){if(mounted)setState(()=>error=e);}}@override void dispose(){controller?.dispose();super.dispose();}@override Widget build(BuildContext context)=>NuPage(title:widget.title,child:controller!=null?PdfViewPinch(controller:controller!):error!=null?Center(child:AsyncError(error!,(){setState(()=>error=null);load();})):Center(child:CircularProgressIndicator()));}
+class NativePdf extends StatefulWidget {
+ const NativePdf({super.key,required this.api,required this.path,required this.title});
+ final ApiClient api;
+ final String path,title;
+ @override State<NativePdf> createState()=>_NativePdfState();
+}
+class _NativePdfState extends State<NativePdf>{
+ PdfControllerPinch? controller;
+ Object? error;
+ bool saved=false,saving=false;
+ int page=0,count=0;
+ bool get canDownload=>OfflineMaterials.idFor(widget.path)!=null;
+ @override void initState(){super.initState();load();}
+ Future<void> load()async{
+  try{
+   final cached=canDownload?await OfflineMaterials.find(widget.path):null;
+   final doc=cached!=null?await PdfDocument.openFile(cached.path):await PdfDocument.openData(await widget.api.getPdf(widget.path));
+   if(!mounted){await doc.close();return;}
+   setState((){saved=cached!=null;controller=PdfControllerPinch(document:Future.value(doc));count=doc.pagesCount;page=1;});
+  }catch(e){if(mounted)setState(()=>error=e);}
+ }
+ Future<void> save()async{
+  if(saving||saved||!canDownload)return;
+  setState(()=>saving=true);
+  try{
+   await OfflineMaterials.save(widget.path,widget.title,await widget.api.getPdf(widget.path));
+   if(mounted){setState(()=>saved=true);nuMessage(context,'Saved to Downloads on this device.');}
+  }catch(e){if(mounted)nuMessage(context,e is ApiException?e.message:'Could not save this PDF. Check your connection and available storage.');}
+  finally{if(mounted)setState(()=>saving=false);}
+ }
+ @override void dispose(){controller?.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>NuPage(title:widget.title,actions:[
+  if(canDownload&&controller!=null)IconButton(tooltip:saved?'Available offline':'Save for offline reading',
+   onPressed:saving||saved?null:save,icon:Icon(saved?Icons.download_done:Icons.download_outlined)),
+ ],child:controller!=null?Column(children:[
+  if(saving)const LinearProgressIndicator(),
+  Expanded(child:Padding(padding:EdgeInsets.all(GreenGlass.of(context)==null?0:7),
+   child:ClipRRect(borderRadius:BorderRadius.circular(9),child:ColoredBox(color:Theme.of(context).colorScheme.surfaceContainer,
+    child:PdfViewPinch(controller:controller!,onPageChanged:(value)=>setState(()=>page=value)))))),
+
+  Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+   IconButton(tooltip:'Previous page',onPressed:page>1?()=>turn(page-1):null,icon:const Icon(Icons.chevron_left)),
+   Text('${page==0?1:page} / $count',semanticsLabel:'Page ${page==0?1:page} of $count'),
+   IconButton(tooltip:'Next page',onPressed:page<count?()=>turn(page+1):null,icon:const Icon(Icons.chevron_right)),
+  ])),
+  if(GreenGlass.of(context)!=null&&count>1)Slider(
+    value:page.clamp(1,count).toDouble(),min:1,max:count.toDouble(),
+    semanticFormatterCallback:(value)=>'Page ${value.round()}',
+    onChanged:(value)=>turn(value.round())),
+ ]):error!=null?Center(child:AsyncError(error!,(){setState(()=>error=null);load();})):const Center(child:CircularProgressIndicator()));
+ void turn(int target)=>controller!.jumpToPage(target);
+}
+
+class NativeDownloads extends StatefulWidget {
+ const NativeDownloads({super.key,required this.api});
+ final ApiClient api;
+ @override State<NativeDownloads> createState()=>_NativeDownloadsState();
+}
+class _NativeDownloadsState extends State<NativeDownloads> {
+ late Future<List<OfflineMaterial>> items=OfflineMaterials.list();
+ void reload()=>setState(()=>items=OfflineMaterials.list());
+ @override Widget build(BuildContext context)=>NuPage(title:'Downloads',child:FutureBuilder(
+  future:items,builder:(context,snapshot){
+   if(snapshot.hasError)return Center(child:AsyncError('Downloads could not be opened.',reload));
+   if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
+   final rows=snapshot.data!;
+   if(rows.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(20),child:Text('Open a public course material in the reader and use Save for offline reading.')));
+   return ListView.builder(padding:const EdgeInsets.all(18),itemCount:rows.length,itemBuilder:(context,i){
+    final item=rows[i];
+    return NuPanel(padding:0,child:ListTile(leading:const Icon(Icons.picture_as_pdf_outlined),
+     title:Text(item.title),subtitle:Text('${(item.size/1000000).toStringAsFixed(1)} MB · available offline'),
+     onTap:()=>pushNu(context,NativePdf(api:widget.api,path:item.path,title:item.title)),
+     trailing:IconButton(tooltip:'Remove offline copy',icon:const Icon(Icons.delete_outline),onPressed:()async{
+      final remove=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+       title:const Text('Remove offline copy?'),content:Text(item.title),
+       actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Remove'))]));
+      if(remove!=true||!mounted)return;
+      try{await OfflineMaterials.remove(item);if(mounted)reload();}
+      catch(_){if(mounted)nuMessage(this.context,'Unable to remove this file.');}
+     })));
+   });
+  }));
+}
 
 class NativeCheckout extends StatefulWidget {const NativeCheckout(this.url,{super.key});final String url;@override State<NativeCheckout> createState()=>_NativeCheckoutState();}
 class _NativeCheckoutState extends State<NativeCheckout>{WebViewController? controller;String? error;bool returned=false;int progress=0;
@@ -31,7 +116,11 @@ class _NativeStudyState extends State<NativeStudy>{
  void syncFromState(){done=Set<int>.from(state.done);if(notes.text!=state.notes)notes.text=state.notes;}
  Future<void> load()async{
   if(mounted)setState(()=>loading=true);Object? materialError;
-  try{final data=unpack(await widget.api.getJson('/study/$code'));sections=records(data['sections']);}catch(e){materialError=e;}
+  try{
+    final data=unpack(await widget.api.getJson('/study/$code'));
+    sections=records(data['sections']);
+    try{await state.rememberUnitCount(sections.length);}catch(_){/* Cache metadata is optional. */}
+  }catch(e){materialError=e;}
   await state.load();
   if(mounted)setState((){syncFromState();stateReady=true;error=materialError;loading=false;});
  }
@@ -70,7 +159,50 @@ class _NativeFeesState extends State<NativeFees>{List<Map<String,dynamic>> optio
  @override Widget build(BuildContext context)=>NuPage(title:'Fee Checker',child:ListView(padding:EdgeInsets.all(18),children:[NuTitle('Plan your registration',subtitle:'Course and fee records from NOUN Update.'),select('Programme',program,options.map((x)=>'${x['program']}').toList(),(v)=>setState((){program=v;level=null;semester=null;result=null;})),KeyedSubtree(key:ValueKey(program),child:select('Level',level,options.where((x)=>x['program']==program).map((x)=>'${x['level']}').toList(),(v)=>setState((){level=v;semester=null;result=null;}))),KeyedSubtree(key:ValueKey('$program-$level'),child:select('Semester',semester,options.where((x)=>x['program']==program&&'${x['level']}'==level).map((x)=>'${x['semester']}').toList(),(v)=>setState(()=>semester=v))),FilledButton(onPressed:busy?null:calculate,child:Text('Check fees')),if(busy)LinearProgressIndicator(),if(error!=null)AsyncError(error!,load),if(result!=null)...[NuTitle('Fee summary'),NuPanel(color:nuMint,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('DATABASE-LISTED TOTAL'),Text(result!['total_kobo']==null?'Semester fee needs confirmation':naira(result!['total_kobo']),style:TextStyle(fontSize:28,fontWeight:FontWeight.w800,color:Theme.of(context).colorScheme.primary)),Text('Course fees ${naira(result!['course_kobo'])} · Exam fees ${naira(result!['exam_kobo'])}'),Text('${result!['units']} units'),SizedBox(height:10),Text('${result!['notice']}',style:TextStyle(fontSize:12))])),for(final r in records(result!['items']))NuPanel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${r['code']} · ${r['title']}',style:TextStyle(fontWeight:FontWeight.w700)),Text('${r['units']} units · ${r['status']}'),Text('Course ${naira(r['course_kobo'])} · Exam ${naira(r['exam_kobo'])}'),if(r['examinable']==false)Text('Not examinable',style:TextStyle(color:Theme.of(context).colorScheme.primary))]))]]));}
 
 class NativeCalendar extends StatefulWidget{const NativeCalendar(this.api,{super.key});final ApiClient api;@override State<NativeCalendar> createState()=>_NativeCalendarState();}
-class _NativeCalendarState extends State<NativeCalendar>{late Future<Map<String,dynamic>> data;String query='';@override void initState(){super.initState();reload();}void reload(){data=widget.api.getJson('/calendar').then(unpack);}@override Widget build(BuildContext context)=>NuPage(title:'Academic Calendar',child:ListView(padding:EdgeInsets.all(18),children:[GreenBanner(title:'Stay one step ahead.',text:'Academic dates, registration, TMAs and examinations.',icon:Icons.calendar_month_rounded),SizedBox(height:16),TextField(onChanged:(v)=>setState(()=>query=v),decoration:InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search dates and events')),FutureBuilder<Map<String,dynamic>>(future:data,builder:(c,s){if(s.hasError)return AsyncError(s.error!,()=>setState(reload));if(!s.hasData)return Padding(padding:EdgeInsets.all(30),child:Center(child:CircularProgressIndicator()));final events=records(s.data!['events']).where((e)=>'${e['title']} ${e['category']}'.toLowerCase().contains(query.toLowerCase())).toList();return Column(children:[NuTitle('Your academic dates'),for(final e in events)NuPanel(child:ListTile(contentPadding:EdgeInsets.zero,leading:GlossIcon(Icons.calendar_month,size:46),title:Text('${e['title']}',style:TextStyle(fontWeight:FontWeight.w700)),subtitle:Text('${e['start_at']??'Date to be confirmed'}\n${e['end_at']??''}'),onTap:()=>pushNu(context,NuPage(title:'Academic date',child:ListView(padding:EdgeInsets.all(24),children:[NuTitle('${e['title']}'),Text('${e['start_at']??''}'),SizedBox(height:16),SelectableText('${e['description']??e['notes']??''}')]))))),if(events.isEmpty)Padding(padding:EdgeInsets.all(25),child:Text('No dates match this search.'))]);})]));}
+class _NativeCalendarState extends State<NativeCalendar>{
+ late Future<Map<String,dynamic>> data;
+ String query='',period='All';
+ @override void initState(){super.initState();reload();}
+ void reload(){data=widget.api.getJson('/calendar').then(unpack);}
+ String session(Map<String,dynamic> event){
+  final listed='${event['semester']??event['session']??''}';
+  return RegExp(r'^[0-9]{4}_[12]$').hasMatch(listed)?listed:'';
+ }
+ String date(BuildContext context,Object? value){
+  final d=DateTime.tryParse('${value??''}');
+  if(d!=null)return MaterialLocalizations.of(context).formatMediumDate(d);
+  final raw='${value??''}'.trim();
+  return raw.isEmpty?'Date to be confirmed':raw;
+ }
+ void detail(Map<String,dynamic> event)=>pushNu(context,NuPage(title:'Academic date',child:ListView(
+  padding:const EdgeInsets.all(18),children:[
+   GlassHero(title:'${event['title']}',subtitle:date(context,event['start_at']),icon:Icons.calendar_month_outlined),
+   const SizedBox(height:12),
+   if(event['end_at']!=null)GlassRow(icon:Icons.flag_outlined,title:'Ends',subtitle:date(context,event['end_at'])),
+   if('${event['description']??event['notes']??''}'.trim().isNotEmpty)
+    NuPanel(child:SelectableText('${event['description']??event['notes']}')),
+ ])));
+ @override Widget build(BuildContext context)=>NuPage(title:'Academic Calendar',child:FutureBuilder(
+  future:data,builder:(context,snapshot){
+   if(snapshot.hasError)return Center(child:AsyncError(snapshot.error!,()=>setState(reload)));
+   if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
+   final all=records(snapshot.data!['events']);
+   final periods=all.map(session).where((v)=>v.isNotEmpty).toSet().toList()..sort();
+   final events=all.where((ev)=>(period=='All'||session(ev)==period)&&
+    '${ev['title']} ${ev['category']}'.toLowerCase().contains(query)).toList();
+   return ListView(padding:const EdgeInsets.fromLTRB(15,8,15,25),children:[
+    if(periods.isNotEmpty)Wrap(spacing:6,children:[for(final p in ['All',...periods])
+      ChoiceChip(label:Text(p),showCheckmark:false,selected:p==period,onSelected:(_)=>setState(()=>period=p))]),
+    TextField(onChanged:(v)=>setState(()=>query=v.trim().toLowerCase()),
+     decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search dates and events')),
+    const SizedBox(height:10),
+    for(final ev in events)GlassRow(icon:Icons.event_available_outlined,title:'${ev['title']}',
+      subtitle:[date(context,ev['start_at']),if(ev['end_at']!=null)date(context,ev['end_at'])].join(' – '),
+      onTap:()=>detail(ev)),
+    if(events.isEmpty)const NuPanel(child:Text('No dates match this search.')),
+   ]);
+  }));
+}
 
 class FocusTimer extends StatefulWidget{const FocusTimer({super.key});@override State<FocusTimer> createState()=>_FocusTimerState();}
 class _FocusTimerState extends State<FocusTimer>{int seconds=1500;Timer? timer;@override void dispose(){timer?.cancel();super.dispose();}void toggle(){if(timer?.isActive==true){timer?.cancel();setState((){});return;}timer=Timer.periodic(Duration(seconds:1),(t){if(seconds==0){t.cancel();}else{setState(()=>seconds--);}});setState((){});}@override Widget build(BuildContext context)=>NuPage(title:'Pomodoro focus',child:Center(child:Padding(padding:EdgeInsets.all(30),child:Column(mainAxisSize:MainAxisSize.min,children:[GlossIcon(Icons.timer_rounded,size:100),NuTitle('One focused session'),Text('${seconds~/60}:${(seconds%60).toString().padLeft(2,'0')}',style:TextStyle(fontSize:62,fontWeight:FontWeight.w800,color:Theme.of(context).colorScheme.primary)),FilledButton(onPressed:toggle,child:Text(timer?.isActive==true?'Pause':'Start')),TextButton(onPressed:(){timer?.cancel();setState(()=>seconds=1500);},child:Text('Reset 25 minutes'))]))));}
@@ -127,3 +259,4 @@ class _SavedMaterialPageState extends State<SavedMaterialPage>{
   }
   @override Widget build(BuildContext context)=>row!=null?NativeStudy(api:widget.api,row:row!,userId:widget.userId):NuPage(title:widget.code,child:Center(child:error!=null?AsyncError(error!,load):const CircularProgressIndicator()));
 }
+

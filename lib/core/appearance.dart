@@ -15,7 +15,7 @@ class Appearance extends ChangeNotifier {
   String textSize = 'Default';
   double get textScale => textSizes[textSize]!;
   ThemeMode effectiveMode(DateTime localTime) => automatic
-      ? (localTime.hour >= 6 && localTime.hour < 19 ? ThemeMode.light : ThemeMode.dark)
+      ? (localTime.hour >= 7 && localTime.hour < 19 ? ThemeMode.light : ThemeMode.dark)
       : mode;
   String font = 'Modern sans', accent = 'Emerald';
   bool dataSaver = false;
@@ -109,3 +109,4 @@ class Appearance extends ChangeNotifier {
     }
   }
 }
+

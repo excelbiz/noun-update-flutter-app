@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../core/skin_theme.dart';
-import '../core/premium_service.dart';
+import '../core/green_glass.dart';
 import '../core/appearance.dart';
 import '../screens/live_portal.dart';
+import '../screens/glass_welcome.dart';
 
 class NounUpdateApp extends StatefulWidget {
   const NounUpdateApp({super.key, this.home});
@@ -57,14 +57,14 @@ class _NounUpdateAppState extends State<NounUpdateApp> with WidgetsBindingObserv
   }
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([Appearance.instance,PremiumService.instance]),
+    listenable: Appearance.instance,
     builder: (context, _) {
       final a = Appearance.instance;
       _lastMode = _mode;
       return MaterialApp(
         title: 'NOUN Update', debugShowCheckedModeBanner: false,
-        theme: buildSkinTheme(PremiumService.instance.effectiveSkin,fontFamily: a.family, accent: a.colour),
-        darkTheme: buildSkinTheme(PremiumService.instance.effectiveSkin,brightness: Brightness.dark, fontFamily: a.family, accent: a.colour),
+        theme: buildGreenGlass(fontFamily: a.family),
+        darkTheme: buildGreenGlass(brightness: Brightness.dark, fontFamily: a.family),
         themeMode: _mode,
         themeAnimationDuration: WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations
             ? Duration.zero : const Duration(milliseconds: 200),
@@ -75,7 +75,7 @@ class _NounUpdateAppState extends State<NounUpdateApp> with WidgetsBindingObserv
             child: child!,
           );
         },
-        home: widget.home ?? const LivePortal(),
+        home: widget.home ?? const GlassWelcomeGate(home:LivePortal()),
       );
     },
   );
@@ -91,3 +91,4 @@ class _PreferredTextScaler extends TextScaler {
   @override
   double get textScaleFactor => system.scale(14) / 14 * factor;
 }
+

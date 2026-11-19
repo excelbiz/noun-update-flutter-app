@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/screens/native_timetable.dart';
 
 class _TimetableApi extends ApiClient {
-  _TimetableApi({this.mismatch=false});
-  final bool mismatch;
+  _TimetableApi({this.mismatch=false,this.faculty,this.offline=false});
+  final bool mismatch,offline;
+  final String? faculty;
 
   @override
   Future<Map<String,dynamic>> getJson(String path) async {
+    if(offline)throw const ApiException('Offline');
     expect(path,contains('/timetable?courses='));
+    if(faculty!=null)expect(Uri.parse(path).queryParameters['faculty'],faculty);
     return {'data':{
       'current_period':'2026_2',
+      if(faculty!=null)...{'faculty_id':'computing','exam_batch':'A','faculty_options':[{'id':'computing','label':'Faculty of Computing'}]},
       'source_period':mismatch?'2026_1':'2026_2',
       'period_mismatch':mismatch,
       'items':[
@@ -38,6 +43,8 @@ class _TimetableApi extends ApiClient {
 }
 
 void main(){
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(()=>SharedPreferences.setMockInitialValues({}));
   test('timetable snapshot exposes verified next exam summary',()async{
     final snapshot=await TimetableSnapshot.fetch(_TimetableApi(),['CIT411','GST302','CIT999']);
     expect(snapshot.currentPeriod,'2026_2');
@@ -46,6 +53,17 @@ void main(){
     expect(snapshot.missingCourses,['CIT999']);
     expect(snapshot.nextExam?.courseCode,'CIT411');
     expect(snapshot.nextExamSummary,'CIT411 · 2026-10-20 · 9:00 am');
+  });
+
+  test('uses the server faculty and batch result rather than inferring one in Flutter',()async{
+    final snapshot=await TimetableSnapshot.fetch(_TimetableApi(faculty:'Faculty of Computing'),
+      ['CIT411'],faculty:'Faculty of Computing');
+    expect(snapshot.facultyId,'computing');
+    expect(snapshot.batch,'A');
+    final restored=TimetableSnapshot.fromJson(snapshot.toJson());
+    expect(restored.facultyId,snapshot.facultyId);
+    expect(restored.batch,snapshot.batch);
+    expect(restored.nextExam,isNull,reason:'Offline snapshots do not promise a next exam.');
   });
 
   testWidgets('native timetable renders matched exams and missing course warning',(tester)async{
@@ -80,4 +98,24 @@ void main(){
     expect(find.textContaining('different academic period'),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
+  testWidgets('explicitly saved timetable reopens offline for the same student and course set',(tester)async{
+    const courses=['CIT411','GST302','CIT999'];
+    Widget app({required bool offline,required String scope})=>MaterialApp(theme:buildAppTheme(),home:NativeTimetable(
+      key:ValueKey('$scope-$offline'),api:_TimetableApi(offline:offline),scope:scope,courses:courses,onManageCourses:(){},
+    ));
+    await tester.pumpWidget(app(offline:false,scope:'student-1'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Save timetable offline'),250,scrollable:find.byType(Scrollable).first);
+    await tester.tap(find.text('Save timetable offline'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(app(offline:true,scope:'student-1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Saved timetable · offline copy'),findsOneWidget);
+    expect(find.text('Next examination'),findsNothing);
+    await tester.pumpWidget(app(offline:true,scope:'student-2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your timetable could not be loaded. Please retry.'),findsOneWidget);
+  });
+
 }
+

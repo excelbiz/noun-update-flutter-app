@@ -76,7 +76,7 @@ function nu_timetable_type(string $courseCode): string {
     static $practical=['CHM192','ESM222','BIO211','CHM292','PHY192','ESM234','CIT104','MTH101','PHY191','EMT409','BIO201','CIT191','ESM103','BIO191','EMT411','PHY291','CHM291','CHM191','BIO192'];
     static $pop=['CLL203','CLL231','CLL232','CLL233','CLL234','JIL100','JIL111','JIL112','JIL211'];
     static $cbt=['GST302','NOU807','NOU707'];
-    $code=nu_timetable_code($courseCode);
+    $code=preg_replace('/^NOUN-|-([AB])$/D','',nu_timetable_code($courseCode))??$courseCode;
     if(in_array($code,$practical,true))return 'Practical';
     if(in_array($code,$pop,true))return 'POP';
     if(in_array($code,$cbt,true))return 'CBT';
@@ -103,18 +103,51 @@ function nu_timetable_datetime(string $rawDate,string $rawTime): ?DateTimeImmuta
         return null;
     }
 }
-function nu_timetable(PDO $db,string $rawCourses): array {
+function nu_timetable_faculties(string $period): array {
+    // Source: NOUN Update's approved 2026_2 faculty batch timetable package.
+    // No mapping is inferred for any other semester.
+    if($period!=='2026_2')return [];
+    return [
+        'arts'=>['label'=>'Faculty of Arts','batch'=>'A'],
+        'computing'=>['label'=>'Faculty of Computing','batch'=>'A'],
+        'education'=>['label'=>'Faculty of Education','batch'=>'A'],
+        'management'=>['label'=>'Faculty of Management Sciences','batch'=>'A'],
+        'agriculture'=>['label'=>'Faculty of Agricultural Sciences','batch'=>'B'],
+        'health'=>['label'=>'Faculty of Health Sciences','batch'=>'B'],
+        'law'=>['label'=>'Faculty of Law','batch'=>'B'],
+        'sciences'=>['label'=>'Faculty of Sciences','batch'=>'B'],
+        'social'=>['label'=>'Faculty of Social Sciences','batch'=>'B'],
+    ];
+}
+
+function nu_timetable(PDO $db,string $rawCourses,string $faculty='',?DateTimeImmutable $now=null): array {
+    $now=$now??new DateTimeImmutable('now',new DateTimeZone('Africa/Lagos'));
+    $currentPeriod=nu_academic_period($now);
+    $faculties=nu_timetable_faculties($currentPeriod);
+    $faculty=strtolower(trim($faculty));
+    $facultyId=null;
+    foreach($faculties as $id=>$option){
+        if($faculty===$id||$faculty===strtolower($option['label'])||$faculty===strtolower(substr($option['label'],11))){
+            $facultyId=$id;break;
+        }
+    }
+    $batch=$facultyId===null?null:$faculties[$facultyId]['batch'];
     $pieces=preg_split('/[,\s]+/',strtoupper($rawCourses),-1,PREG_SPLIT_NO_EMPTY)?:[];
     $codes=[];
     foreach($pieces as $piece){
         $code=nu_timetable_code($piece);
-        if(!preg_match('/^[A-Z]{2,5}[0-9]{3}$/D',$code))throw new NuFailure(422,'INVALID_COURSE','Use valid course codes such as CIT411.');
+        if(!preg_match('/^(?:NOUN-)?[A-Z]{2,6}[0-9]{3}(?:-[AB])?$/D',$code))throw new NuFailure(422,'INVALID_COURSE','Use valid course codes such as CIT411.');
         if(!in_array($code,$codes,true))$codes[]=$code;
         if(count($codes)>30)throw new NuFailure(422,'TOO_MANY_COURSES','A maximum of 30 registered courses can be checked at once.');
     }
     if(!$codes)throw new NuFailure(422,'COURSES_REQUIRED','Add at least one registered course to generate your timetable.');
 
-    $placeholders=implode(',',array_fill(0,count($codes),'?'));
+    $candidates=[];
+    foreach($codes as $code){
+        $base=preg_replace('/^NOUN-|-([AB])$/D','',$code);
+        foreach(['','NOUN-'] as $prefix)foreach(['','-A','-B'] as $suffix)$candidates[$prefix.$base.$suffix]=true;
+    }
+    $placeholders=implode(',',array_fill(0,count($candidates),'?'));
     $sql="SELECT `day`,`course_code`,`course_title`,`date`,`time`,
               CASE
                 WHEN `day` REGEXP '^Day[[:space:]]+[0-9]+$' THEN CAST(SUBSTRING_INDEX(`day`, ' ', -1) AS UNSIGNED)
@@ -124,25 +157,38 @@ function nu_timetable(PDO $db,string $rawCourses): array {
           FROM personalized_timetable
           WHERE UPPER(REPLACE(`course_code`, ' ', '')) IN ($placeholders)
           ORDER BY sortable_day ASC, course_code ASC";
-    $stmt=$db->prepare($sql);$stmt->execute($codes);$rows=$stmt->fetchAll();
-    $byCode=[];
-    foreach($rows as $row)$byCode[nu_timetable_code((string)$row['course_code'])]=$row;
+    $stmt=$db->prepare($sql);$stmt->execute(array_keys($candidates));$rows=$stmt->fetchAll();
 
-    $now=new DateTimeImmutable('now',new DateTimeZone('Africa/Lagos'));
-    $items=[];$sourcePeriods=[];$next=null;
-    foreach($codes as $code){
-        if(!isset($byCode[$code]))continue;
-        $row=$byCode[$code];
+    $items=[];$sourcePeriods=[];$next=null;$matched=[];$batchRequired=[];$seen=[];
+    foreach($rows as $row){
+        $stored=nu_timetable_code((string)$row['course_code']);
+        $key=preg_replace('/^NOUN-/','',$stored);
+        $suffix=preg_match('/-([AB])$/D',$stored,$match)?$match[1]:null;
+        $base=preg_replace('/-[AB]$/D','',$key);
         $dt=nu_timetable_datetime((string)($row['date']??''),(string)($row['time']??''));
         $period=$dt?nu_academic_period($dt):null;
+        $matches=[];
+        foreach($codes as $code){
+            $requested=preg_replace('/^NOUN-/','',$code);
+            if($requested!==$key&&$requested!==$base)continue;
+            if($suffix!==null&&($batch===null||$period!==$currentPeriod)){
+                $batchRequired[$code]=true;continue;
+            }
+            if($suffix!==null&&$suffix!==$batch)continue;
+            $matched[$code]=true;$matches[]=$code;
+        }
+        if(!$matches)continue;
+        $rowKey=json_encode([$key,$row['date'],$row['time'],$row['day']]);
+        if(isset($seen[$rowKey]))continue;
+        $seen[$rowKey]=true;
         if($period!==null)$sourcePeriods[$period]=($sourcePeriods[$period]??0)+1;
         $item=[
-            'course_code'=>$code,
+            'course_code'=>$stored,
             'course_title'=>trim((string)($row['course_title']??'')),
             'day'=>trim((string)($row['day']??'')),
             'date'=>trim((string)($row['date']??'')),
             'time'=>trim((string)($row['time']??'')),
-            'exam_type'=>nu_timetable_type($code),
+            'exam_type'=>nu_timetable_type($stored),
             'exam_datetime'=>$dt? $dt->format(DATE_ATOM):null,
             'is_past'=>$dt? $dt<$now:false,
         ];
@@ -158,16 +204,22 @@ function nu_timetable(PDO $db,string $rawCourses): array {
         return strcmp($a['exam_datetime'],$b['exam_datetime']);
     });
     if($next===null){foreach($items as $item){if($item['exam_datetime']!==null&&!$item['is_past']){$next=$item;break;}}}
-    $missing=array_values(array_filter($codes,fn(string $code):bool=>!isset($byCode[$code])));
+    $missing=array_values(array_filter($codes,fn(string $code):bool=>!isset($matched[$code])));
     arsort($sourcePeriods);$sourcePeriod=$sourcePeriods?array_key_first($sourcePeriods):null;
-    $currentPeriod=nu_academic_period($now);
+    $periodMismatch=(bool)array_diff(array_keys($sourcePeriods),[$currentPeriod]);
+    if($periodMismatch)$next=null;
     return [
         'current_period'=>$currentPeriod,
         'source_period'=>$sourcePeriod,
-        'period_mismatch'=>$sourcePeriod!==null&&$sourcePeriod!==$currentPeriod,
+        'period_mismatch'=>$periodMismatch,
+        'faculty_options'=>array_map(fn($id,$entry)=>['id'=>$id,'label'=>$entry['label']],array_keys($faculties),$faculties),
+        'faculty_id'=>$facultyId,
+        'exam_batch'=>$batch,
+        'batch_unresolved_courses'=>array_values(array_filter($missing,fn($code)=>isset($batchRequired[$code]))),
         'items'=>$items,
         'missing_courses'=>$missing,
         'next_exam'=>$next,
         'generated_at'=>$now->format(DATE_ATOM),
     ];
 }
+
