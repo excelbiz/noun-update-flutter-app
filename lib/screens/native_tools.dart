@@ -116,7 +116,11 @@ class _NativeStudyState extends State<NativeStudy>{
  void syncFromState(){done=Set<int>.from(state.done);if(notes.text!=state.notes)notes.text=state.notes;}
  Future<void> load()async{
   if(mounted)setState(()=>loading=true);Object? materialError;
-  try{final data=unpack(await widget.api.getJson('/study/$code'));sections=records(data['sections']);}catch(e){materialError=e;}
+  try{
+    final data=unpack(await widget.api.getJson('/study/$code'));
+    sections=records(data['sections']);
+    try{await state.rememberUnitCount(sections.length);}catch(_){/* Cache metadata is optional. */}
+  }catch(e){materialError=e;}
   await state.load();
   if(mounted)setState((){syncFromState();stateReady=true;error=materialError;loading=false;});
  }

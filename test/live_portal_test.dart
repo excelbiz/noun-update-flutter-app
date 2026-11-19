@@ -11,6 +11,7 @@ import 'package:noun_update_student_app/core/api_client.dart';
 import 'package:noun_update_student_app/core/app_theme.dart';
 import 'package:noun_update_student_app/core/appearance.dart';
 import 'package:noun_update_student_app/core/green_glass.dart';
+import 'package:noun_update_student_app/core/study_state_store.dart';
 import 'package:noun_update_student_app/widgets/native_ui.dart';
 import 'package:noun_update_student_app/screens/student_workspace.dart';
 import 'package:noun_update_student_app/app/noun_update_app.dart';
@@ -232,12 +233,23 @@ void main() {
         ..courses=['CIT411','GST302']
         ..details={'Programme':'BSc Computer Science','Faculty':'Faculty of Computing'};
       addTearDown(workspace.dispose);
+      final reading=StudyStateStore(api:workspace.api,courseCode:'CIT411');
+      expect(await reading.cachedProgress(),isNull);
+      await reading.rememberUnitCount(4);
+      await reading.save({0,1,2},'');
+      expect(await reading.cachedProgress(),.75);
+      expect(await StudyStateStore(api:workspace.api,courseCode:'CIT411',userId:'other').cachedProgress(),isNull);
       final key=GlobalKey();
       Future<void> render(Widget screen,String name)async{
         final host=RepaintBoundary(key:key,child:MaterialApp(theme:buildGreenGlass(),darkTheme:buildGreenGlass(brightness:Brightness.dark),
           themeMode:ThemeMode.light,builder:(context,child)=>MediaQuery(
             data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(scaling)),child:child!),home:screen));
         await tester.pumpWidget(host);await tester.pumpAndSettle();
+        if(screen is NativeAuth){
+          await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(NativeAuth))));
+          await tester.pumpAndSettle();
+        }
+        if(screen is MyCoursesPage)expect(find.text('75%'),scaling==1?findsOneWidget:findsNothing);
         expect(tester.takeException(),isNull,reason:name);
         if(width==390)await capture(tester,key,'green-glass-$name-light');
         await tester.pumpWidget(RepaintBoundary(key:key,child:MaterialApp(
@@ -257,6 +269,38 @@ void main() {
       await render(NuPage(title:'Notifications',child:NativeNotifications(api:workspace.api,onArticle:(_){})),'inbox');
     });
   }
+  testWidgets('Green Glass account opens the native wallet in both appearances',(tester)async{
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    await Appearance.instance.load();
+    await Appearance.instance.change(mode:ThemeMode.light);
+    tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final key=GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(key:key,child:NounUpdateApp(home:LivePortal(
+      apiClient:GlassVisualApi(services),serviceBundle:ServiceBundle(jsonEncode(services)),preview:true,previewData:const{
+        'profile':{'id':'12','name':'Preview Student','email':'student@example.test'},
+        'details':{'Programme':'BSc Computer Science','Faculty':'Faculty of Computing'},
+        'wallet':{'balance_kobo':250000,'transactions':[
+          {'title':'Wallet funding','amount_kobo':350000,'created_at':'19 Nov 2026'},
+          {'title':'Exam Summary','amount_kobo':-100000,'created_at':'18 Nov 2026'},
+        ]},
+      }))));
+    await tester.runAsync(()=>precacheImage(const AssetImage('assets/images/noun_update_logo.png'),tester.element(find.byType(LivePortal))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Account'));await tester.pumpAndSettle();
+    expect(find.text('Preview Student'),findsOneWidget);
+    await capture(tester,key,'green-glass-account-light');
+    await Appearance.instance.change(mode:ThemeMode.dark);await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-account-dark');
+    await tester.tap(find.text('Wallet & transactions'));await tester.pumpAndSettle();
+    expect(find.text('₦2500.00'),findsOneWidget);
+    await capture(tester,key,'green-glass-wallet-dark');
+    await Appearance.instance.change(mode:ThemeMode.light);await tester.pumpAndSettle();
+    await capture(tester,key,'green-glass-wallet-light');
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('Appearance applies immediately and survives a reload',(tester)async{
     SharedPreferences.setMockInitialValues({});await Appearance.instance.load();
     tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;

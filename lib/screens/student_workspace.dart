@@ -7,6 +7,7 @@ import '../core/saved_resource_store.dart';
 import '../widgets/native_ui.dart';
 import '../widgets/glass_components.dart';
 import '../core/green_glass.dart';
+import '../core/study_state_store.dart';
 import 'native_tools.dart';
 
 class StudentWorkspace extends ChangeNotifier {
@@ -205,6 +206,18 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
  bool libraryLoading=false;
  bool get glass=>GreenGlass.of(context)!=null;
  String? get studentId=>widget.workspace.canSync?widget.workspace.scope:null;
+ final progress=<String,double>{};
+ final _checked=<String>{};
+ @override void didChangeDependencies(){super.didChangeDependencies();if(glass)loadProgress();}
+ Future<void> loadProgress({bool refresh=false})async{
+  final courses=widget.workspace.courses.where((c)=>refresh||_checked.add(c)).toList();
+  await Future.wait(courses.map((course)async{
+    try{
+      final ratio=await StudyStateStore(api:widget.workspace.api,courseCode:course,userId:studentId).cachedProgress();
+      if(mounted)setState((){if(ratio==null){progress.remove(course);}else{progress[course]=ratio;}});
+    }catch(_){/* Reading history is optional. */}
+  }));
+ }
  Future<void> searchLibrary()async{
   if(libraryLoading)return;
   final search=query;
@@ -230,7 +243,7 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
  }
  void glassHub(String course)=>pushNu(context,GlassCourseOverview(api:widget.workspace.api,code:course,userId:studentId,
     programme:widget.workspace.details['Programme'],faculty:widget.workspace.details['Faculty'],
-    openResource:widget.openResource));
+    openResource:widget.openResource)).then((_){if(mounted)loadProgress(refresh:true);});
  Widget glassCourses(BuildContext context){
   final items=widget.workspace.courses.where((c)=>c.contains(query.toUpperCase())&&
     (section!='Favourites'||saved.contains(bookmarkKey(c)))).toList();
@@ -256,12 +269,15 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
         query.isEmpty?'Add your registered courses to build your study list.':'No registered course matches this search.')),
       for(final c in items)GlassRow(icon:Icons.menu_book_rounded,title:c,
         subtitle:'Course materials and study tools',
-        onTap:()=>glassHub(c),end:PopupMenuButton<String>(tooltip:'Options for $c',
+        onTap:()=>glassHub(c),end:Row(mainAxisSize:MainAxisSize.min,children:[
+          if(progress[c]!=null&&MediaQuery.textScalerOf(context).scale(12)<=15)GlassProgress(value:progress[c]!),
+          PopupMenuButton<String>(tooltip:'Options for $c',
           icon:Icon(saved.contains(bookmarkKey(c))?Icons.bookmark_rounded:Icons.more_vert_rounded),
           onSelected:(value){if(value=='save'){toggleBookmark(c);}else{removeCourse(c);}},itemBuilder:(_)=>[
             PopupMenuItem(value:'save',enabled:bookmarksReady,child:Text(saved.contains(bookmarkKey(c))?'Remove favourite':'Add favourite')),
             PopupMenuItem(value:'remove',enabled:!saving,child:const Text('Remove course')),
-          ])),
+          ]),
+        ])),
       if(section=='Registered')...[
         const NuTitle('Add a course'),
         TextField(controller:code,textCapitalization:TextCapitalization.characters,onSubmitted:(_){if(!saving)addCourse();},
@@ -293,7 +309,7 @@ class _MyCoursesPageState extends State<MyCoursesPage>{
     nuMessage(context,!wasSaved?(pending?'Course saved on this device. Account sync is pending.':'Course saved to your resources.'):'Course removed from saved resources.');
   }
  }
- Future<void> update(List<String> next) async {if(saving)return;setState(()=>saving=true);final old=List<String>.from(widget.workspace.courses);widget.workspace.courses=next;try{await widget.workspace.save();code.clear();if(mounted)setState(()=>error=null);}catch(_){widget.workspace.courses=old;if(mounted)setState(()=>error='Could not save your courses. Try again.');}finally{if(mounted)setState(()=>saving=false);}}
+ Future<void> update(List<String> next) async {if(saving)return;setState(()=>saving=true);final old=List<String>.from(widget.workspace.courses);widget.workspace.courses=next;try{await widget.workspace.save();code.clear();if(mounted){setState(()=>error=null);if(glass)loadProgress();}}catch(_){widget.workspace.courses=old;if(mounted)setState(()=>error='Could not save your courses. Try again.');}finally{if(mounted)setState(()=>saving=false);}}
  void hub(String course)=>pushNu(context,NuPage(title:course,child:ListView(padding:const EdgeInsets.all(20),children:[
   NuTitle('$course Course Hub',subtitle:'Your resources, together.',trailing:IconButton(tooltip:saved.contains(bookmarkKey(course))?'Remove saved course':'Save course hub',onPressed:bookmarksReady?()=>toggleBookmark(course):null,icon:Icon(saved.contains(bookmarkKey(course))?Icons.bookmark_rounded:Icons.bookmark_border_rounded))),
   const NuPanel(child:Text('Exam date and assessment classification have not been verified. A non-examinable course is not automatically a PAS course.')),

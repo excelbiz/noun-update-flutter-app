@@ -32,6 +32,24 @@ class StudyStateStore {
   bool get syncPending => signedIn && dirty;
   String get slot => 'nu-study-${userId ?? 'guest'}-${courseCode.replaceAll(' ', '').toUpperCase()}';
 
+  /// A progress fraction is only shown after loading real course units.
+  Future<double?> cachedProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final units = prefs.getInt('$slot-total');
+    if (units == null || units < 1) return null;
+    await _loadLocal();
+    return done.where((index) => index >= 0 && index < units).length / units;
+  }
+
+  Future<void> rememberUnitCount(int units) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (units > 0) {
+      await prefs.setInt('$slot-total', units);
+    } else {
+      await prefs.remove('$slot-total');
+    }
+  }
+
   Map<String, dynamic> _data(Map<String, dynamic> response) =>
       Map<String, dynamic>.from(response['data'] as Map);
 
@@ -267,3 +285,4 @@ class StudyStateStore {
     if (!ok) throw StateError('Could not save Study progress on this device.');
   }
 }
+

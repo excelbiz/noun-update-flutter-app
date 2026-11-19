@@ -35,7 +35,7 @@ class GlassLineIcon extends StatelessWidget {
     return ExcludeSemantics(child:Container(width:size,height:size,
       decoration:BoxDecoration(borderRadius:BorderRadius.circular(10),
         gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[
-          Color.lerp(s.surface,colour,dark?.25:.12)!,Color.lerp(s.surface,colour,dark?.12:.05)!,
+          Color.lerp(s.surface,colour,dark ? .25 : .12)!,Color.lerp(s.surface,colour,dark ? .12 : .05)!,
         ]),border:Border.all(color:colour.withValues(alpha:.22))),
       child:Icon(icon,size:size*.61,color:dark?Color.lerp(colour,Colors.white,.32):colour)));
   }
@@ -62,6 +62,21 @@ class GlassRow extends StatelessWidget {
         trailing:end??(onTap==null?null:Icon(Icons.chevron_right_rounded,size:19,color:s.onSurfaceVariant)),
         onTap:onTap,
       )));
+  }
+}
+
+class GlassProgress extends StatelessWidget {
+  const GlassProgress({super.key,required this.value});
+  final double value;
+  @override Widget build(BuildContext context){
+    final scheme=Theme.of(context).colorScheme;
+    final percent='${(value*100).round()}%';
+    return Semantics(label:'$percent of units marked as read',child:SizedBox.square(dimension:35,
+      child:ExcludeSemantics(child:Stack(alignment:Alignment.center,children:[
+        SizedBox.expand(child:CircularProgressIndicator(value:value,strokeWidth:3,
+          backgroundColor:scheme.primaryContainer,color:scheme.primary)),
+        Text(percent,style:TextStyle(color:scheme.onSurface,fontSize:9,fontWeight:FontWeight.w800)),
+      ]))));
   }
 }
 
@@ -98,7 +113,7 @@ class _GreenRibbons extends CustomPainter {
     canvas.drawPath(path,Paint()..color=const Color(0x2825d17c));
     final edge=Path()..moveTo(w*.18,h)..quadraticBezierTo(w*.74,h*.93,w,h*.54)
       ..lineTo(w,h*.66)..quadraticBezierTo(w*.8,h*.96,w*.45,h)..close();
-    canvas.drawPath(edge,Paint()..color=(gold?const Color(0xfff4c833):const Color(0xff22a46b)).withValues(alpha:gold?.80:.38));
+    canvas.drawPath(edge,Paint()..color=(gold?const Color(0xfff4c833):const Color(0xff22a46b)).withValues(alpha:gold ? .80 : .38));
   }
   @override bool shouldRepaint(_GreenRibbons oldDelegate)=>oldDelegate.gold!=gold;
 }
